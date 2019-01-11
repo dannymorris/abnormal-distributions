@@ -6,10 +6,19 @@
     <description>Recent content in Posts on Abnormal Distributions</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Tue, 09 Jan 2018 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Mon, 17 Dec 2018 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Comparing down-sampling to no sampling for classifying imbalanced data</title>
+      <link>/post/2018/12/17/comparing-down-sampling-to-no-sampling-for-classifying-imbalanced-data/</link>
+      <pubDate>Mon, 17 Dec 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2018/12/17/comparing-down-sampling-to-no-sampling-for-classifying-imbalanced-data/</guid>
+      <description>R packagesDataTrain/test splitDown-sample training dataTraining parametersTraining on down-sampled training dataTraining on full training dataComparing ROC of models on validation setsComparing ROC of models on test setSession infoIn this article, we’ll explore the In the context of binary classification, data is said to be imbalanced when one of the classes is vastly under-represented. The popular Kaggle credit card fraud dataset will be used.</description>
+    </item>
     
     <item>
       <title>A specific comparison of feature engineering in R and Python</title>
