@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Posts on Abnormal Distributions</title>
+    <link>/post/</link>
+    <description>Recent content in Posts on Abnormal Distributions</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Tue, 09 Jan 2018 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>A specific comparison of feature engineering in R and Python</title>
+      <link>/post/2018/01/09/a-specific-comparison-of-feature-engineering-in-r-and-python/</link>
+      <pubDate>Tue, 09 Jan 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2018/01/09/a-specific-comparison-of-feature-engineering-in-r-and-python/</guid>
+      <description>AboutOriginal dataFeatures to engineerRPythonAboutFeature engineering is a central aspect of data science. It is often the case that data in its raw form is not immediately ready for discovery of insights, leading to the need for some degree of engineering.
+In this article, we’ll look at a dataset of sales transactions containing a minimal amount of detail in its raw form. With an end goal in mind, we’ll engineer some features using R, Python, and SQL to compare these three tools.</description>
+    </item>
+    
+    <item>
+      <title>Getting started with Python in R Markdown using the reticulate package</title>
+      <link>/post/2018/01/09/getting-started-with-python-in-r-markdown-using-the-reticulate-package/</link>
+      <pubDate>Tue, 09 Jan 2018 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2018/01/09/getting-started-with-python-in-r-markdown-using-the-reticulate-package/</guid>
+      <description>AboutInstall and load reticulateUsing conda environmentsInstalling Python librariesWriting Python code in R MarkdownAboutOne of my current goals is to gain basic familiarity with Python as a data science language. I’ve spent some time recently working with Pandas, seaborn, and sci-kit learn. I’ve had a pleasant experience working in the Spyder IDE. Still, nothing beats R Markdown for creating highly polished, reproducible documents and analyses.</description>
+    </item>
+    
+  </channel>
+</rss>

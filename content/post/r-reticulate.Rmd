@@ -1,0 +1,103 @@
+---
+title: "Getting started with Python in R Markdown using the reticulate package"
+author: "Danny Morris"
+date: "2018-01-09"
+categories: ['Python']
+output: 
+  blogdown::html_page:
+    toc: true
+editor_options: 
+  chunk_output_type: console
+---
+
+## About
+
+One of my current goals is to gain basic familiarity with Python as a data science language. I've spent some time recently working with Pandas, seaborn, and sci-kit learn. I've had a pleasant experience working in the Spyder IDE. Still, nothing beats R Markdown for creating highly polished, reproducible documents and analyses. Fortunately, the R Markdown engine now supports Python programming. In the same document, you can mix R and Python while sharing objects between the two (e.g. dataframes). The `reticulate` package is what makes this Python/R integration happen. 
+
+https://rstudio.github.io/reticulate/
+
+> Reticulate embeds a Python session within your R session, enabling seamless, high-performance interoperability. If you are an R developer that uses Python for some of your work or a member of data science team that uses both languages, reticulate can dramatically streamline your workflow!
+
+This article provides a simple introduction to getting started with Python in R Markdown. It covers the reticulate package, conda environments, Python library installation, and inserting Python code chunks.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Install and load reticulate
+
+```{r, eval = F}
+install.packages("reticulate")
+```
+
+or the development version...
+
+```{r, eval = F}
+devtools::install_github("rstudio/reticulate")
+```
+
+```{r}
+library(reticulate)
+packageVersion("reticulate")
+```
+
+## Using conda environments
+
+Prior to my recent experience with Python, I hadn't encountered conda. Here is a brief description of conda from the [conda website](https://conda.io/docs/index.html)...
+
+> Conda is an open source package management system and environment management system that runs on Windows, macOS and Linux. Conda quickly installs, runs and updates packages and their dependencies. Conda easily creates, saves, loads and switches between environments on your local computer. It was created for Python programs, but it can package and distribute software for any language.
+
+Essentially, you can use conda to install Python libraries and other dependencies to a particular environment. Once you "activate" the conda environment, libraries and dependencies within the environment are ready to be used.
+
+After you [install conda](https://conda.io/docs/user-guide/install/index.html) and the reticulate R package, you can create a conda environment using the following code.
+
+```{r, eval = F}
+reticulate::conda_create("r-reticulate")
+```
+
+If you already have a conda environment you want to use, you can activate like this.
+
+```{r}
+reticulate::use_condaenv("r-reticulate", required = TRUE)
+```
+
+For a little more information about conda environments, here is an excerpt from the conda website. 
+
+> A conda environment is a directory that contains a specific collection of conda packages that you have installed. For example, you may have one environment with NumPy 1.7 and its dependencies, and another environment with NumPy 1.6 for legacy testing. If you change one environment, your other environments are not affected. You can easily activate or deactivate environments, which is how you switch between them. You can also share your environment with someone by giving them a copy of your environment.yaml file
+
+## Installing Python libraries
+
+I was successfully able to install Python packages to my conda environment using the two different approaches:
+
+1. running `reticulate::py_install("LIB_NAME")`
+2. running `pip install LIB_NAME` in Anaconda Prompt
+
+For R users, option 1 is a breeze. Note that the library is installed into conda environment which is activated (run `reticulate::py_config()` to see the current configuration). To get option 2 to work, I used the following 3 steps.
+
+1. open Anaconda Prompt
+2. run `conda activate r-reticulate`
+3. run `pip install dfply`
+
+Using either approach, I've installed the `dfply` Python library and it now appears in `Lib/site-packages` in my r-reticulate conda environment. I did find option 2 to complete much quicker than option 1, though I can't explain why. 
+
+## Writing Python code in R Markdown
+
+In R Markdown, using Python is as simple as creating a new code chunk and specifying the Python engine.
+
+![Python code chunk](img/python-rmd-chunk.PNG)
+
+![](/post/r-reticulate_files/python-rmd-chunk.PNG)
+
+```{python}
+import pandas as pd
+
+sales = {'account': ['A1', 'A2'],
+         'value': ['10', '15']}
+         
+df = pd.DataFrame(sales)
+
+df.head()
+```
+
+
+

@@ -1,6 +1,6 @@
 baseurl = "/"
 languageCode = "en-us"
-title = "A minimal Hugo website"
+title = "Abnormal Distributions"
 theme = "hugo-xmin"
 googleAnalytics = ""
 disqusShortname = ""
@@ -24,14 +24,7 @@ footnotereturnlinkcontents = "↩"
     name = "Categories"
     url = "/categories/"
     weight = 3
-[[menu.main]]
-    name = "Tags"
-    url = "/tags/"
-    weight = 4
-[[menu.main]]
-    name = "Subscribe"
-    url = "/index.xml"
 
 [params]
     description = "A website built through Hugo and blogdown."
-    footer = "&copy; [Yihui Xie](https://yihui.name) 2017 -- 2018 | [Github](https://github.com/yihui) | [Twitter](https://twitter.com/xieyihui)"
+    footer = "[Github](https://github.com/dannymorris) | [LinkedIn](https://www.linkedin.com/in/drmorris87/) | [Email](mailto:drmorris87@outlook.com)"

@@ -1,0 +1,152 @@
+---
+title: "A specific comparison of feature engineering in R and Python"
+author: "Danny Morris"
+date: "2018-01-09"
+categories: ['Python']
+output: 
+  blogdown::html_page:
+    toc: true
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include = F}
+knitr::opts_chunk$set(
+  echo = T, message = F, warning = F
+)
+```
+
+## About
+
+Feature engineering is a central aspect of data science. It is often the case that data in its raw form is not immediately ready for discovery of insights, leading to the need for some degree of engineering.
+
+In this article, we'll look at a dataset of sales transactions containing a minimal amount of detail in its raw form. With an end goal in mind, we'll engineer some features using R, Python, and SQL to compare these three tools.
+
+## Original data
+
+```{r, echo = F, cache = F}
+library(dplyr)
+library(knitr)
+
+readr::read_csv("sales.csv") %>%
+  head() %>%
+  kable()
+```
+
+The raw data contains five variables:
+
+ID: salesperson identifier
+
+Prod: product identifier
+
+Quant: quantity of items sold in sale
+
+Val: total price of the sale
+
+Insp: whether the sale is known to be fraudulent or not
+
+Our end goal is to build a classifier to predict fraudulent sales. We won't actually do that in this article, but the features we engineer will be related to this goal.
+
+## Features to engineer
+
+Let's assume that fraudulent transactions can take many forms. For example, perhaps transactions for an extremely high price are an indication of credit card theft. Alternatively, transactions with many items sold for an extremely low price are an indication of suspicous discounts. 
+
+In our attempt to capture fraudulent sales and the various forms it can take, let's engineer the following five features:
+
+1. Price per quantity, log transformed (LPPQ): This is the total price divided by the toal quantity with a base 10 log transformation.
+
+2. Squared difference between LPPQ and global mean LPPQ
+
+3. Squared difference between LPPQ and mean LPPQ grouped by salesperson
+
+4. Squared difference between LPPQ and mean LPPQ grouped by product
+
+5. Squared difference between LPPQ and mean LPPQ grouped by salesperson and product
+
+In addition to these engineered features, we'll perform some additonal preprocessing steps:
+
+- remove rows with any missing values
+- randomly sample 500 fraudulent and 500 legitimate sales
+
+## R
+
+The tidyverse ecosystem in R contains some outstanding packages for data manipulation. Most notably, the dplyr package is excellent for transformations and the tidyr package is excellent for reshaping. Both are included in the tidyverse and do not need to be installed or loaded separately. Our entire pipeline is completed using these two packages (actually, we also use the readr package for importing the csv).
+
+The tidyverse utilizes the `%>%` symbol (known as the "pipe" symbol) for chaining together steps in an analysis pipeline. Here is the full feature engineering pipeline in R. 
+
+```{r}
+library(tidyverse)
+
+sales <- readr::read_csv("sales.csv") %>%
+  drop_na() %>%
+  filter(Insp %in% c("fraud", "ok")) %>%  
+  group_by(Insp) %>%
+  sample_n(size = 500) %>%
+  ungroup()
+
+sq_diff <- function(x, y) (x - y)^2
+
+r_engineered <- sales %>%
+  mutate(LPPQ = log10(Val / Quant)) %>%
+  mutate(LPPQ_2 = sq_diff(LPPQ, mean(LPPQ))) %>%
+  group_by(ID) %>%
+  mutate(LPPQ_3 = sq_diff(LPPQ, mean(LPPQ))) %>%
+  group_by(Prod) %>%
+  mutate(LPPQ_4 = sq_diff(LPPQ, mean(LPPQ))) %>%
+  group_by(ID, Prod) %>%
+  mutate(LPPQ_5 = sq_diff(LPPQ, mean(LPPQ))) %>%
+  ungroup()
+
+head(r_engineered)
+```
+
+## Python
+
+We'll use a combination of pandas, numpy, and scikit learn to engineer the features in Python.
+
+```{r}
+reticulate::use_condaenv("r-reticulate", required = TRUE)
+```
+
+```{python}
+import pandas as pd
+import numpy as np
+from sklearn.utils import resample 
+
+sales = pd.read_csv('sales.csv')
+
+sales = sales.dropna()
+
+sales_ok = sales[sales.Insp == 'ok']
+sales_fraud = sales[sales.Insp == 'fraud']
+
+resample_ok = resample(sales_ok, replace = False, n_samples = 500)
+resample_fraud = resample(sales_fraud, replace = False, n_samples = 500) 
+
+sales = pd.concat([resample_ok, resample_fraud])
+
+sales['LPPQ'] = np.log10(sales.Val/sales.Quant)
+sales['LPPQ_2'] = sales.LPPQ - np.mean(sales.LPPQ)
+
+def get_group_mean(group_vars, col_name):
+  group_df = sales.groupby(group_vars, as_index = False)['LPPQ']
+  group_mean = group_df.mean()
+  group_mean = group_mean.rename(index = str, columns = {"LPPQ": col_name})
+  return group_mean
+
+LPPQ_3 = get_group_mean(group_vars = ['ID'], col_name = 'LPPQ_3')
+LPPQ_4 = get_group_mean(group_vars = ['Prod'], col_name = 'LPPQ_4')
+LPPQ_5 = get_group_mean(group_vars = ['Prod', 'ID'], col_name = 'LPPQ_5')
+
+sales = sales.merge(LPPQ_3, how = 'inner', on = 'ID')
+sales = sales.merge(LPPQ_4, how = 'inner', on = 'Prod') 
+sales = sales.merge(LPPQ_5, how = 'inner', on = ['ID', 'Prod'])
+
+def sq_diff(x):
+  return (x - sales.LPPQ)**2
+  
+sales[['LPPQ_2','LPPQ_3', 'LPPQ_4', 'LPPQ_5']] = sales[['LPPQ_2','LPPQ_3', 'LPPQ_4', 'LPPQ_5']].apply(sq_diff)
+
+sales.head()
+```
+
