@@ -84,9 +84,7 @@ Using either approach, I've installed the `dfply` Python library and it now appe
 
 In R Markdown, using Python is as simple as creating a new code chunk and specifying the Python engine.
 
-![Python code chunk](img/python-rmd-chunk.PNG)
-
-![](/post/r-reticulate_files/python-rmd-chunk.PNG)
+![](/img/python-rmd-chunk.png)
 
 ```{python}
 import pandas as pd

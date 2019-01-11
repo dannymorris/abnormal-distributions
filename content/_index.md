@@ -2,7 +2,7 @@
 title: Home
 ---
 
-<img src="img/headshot.jpg" style="max-width:15%;min-width:40px;border-radius:200px;float:right;"/>
+<img src="/img/headshot.jpg" style="max-width:15%;min-width:40px;border-radius:200px;float:right;"/>
 
 # Abnormal Distributions
 
