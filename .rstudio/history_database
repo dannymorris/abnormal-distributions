@@ -1,0 +1,365 @@
+0:blogdown::serve_site()
+0:servr::daemon_stop("2853706097400")
+0:blogdown::serve_site()
+0:checkpoint::setSnapshot(Sys.Date())
+0:install.packages(c("rlang", "shiny"))
+0:install.packages(c("rlang", "shiny"))
+0:blogdown:::new_post_addin()
+0:blogdown:::new_post_addin()
+0:blogdown::serve_site()
+0:blogdown:::new_post_addin()
+0:blogdown:::insert_image_addin()
+0:knitr::opts_chunk$set(
+0:echo = T, message = F, warning = F
+0:)
+0:library(tidyverse) # for data manipulation and %>% operator
+0:library(caret)     # ML tools
+0:library(rsample)   # train/test split
+0:library(pROC)      # for ROC
+0:local_db <- rsqltools::sql_server_connect(
+0:server = "DESKTOP-07BKETP",
+0:database = "abn_distro"
+0:)
+0:sales_tbl <- DBI::dbReadTable(
+0:conn = local_db,
+0:name = "SALES_ENGINEERED"
+0:) %>%
+0:as_tibble() %>%
+0:filter(CLASS %in% c("ok", "fraud"))
+0:sales_tbl
+0:sales_tbl$CLASS
+0:sales_tbl <- DBI::dbReadTable(
+0:conn = local_db,
+0:name = "SALES_ENGINEERED"
+0:) %>%
+0:as_tibble() %>%
+0:filter(CLASS %in% c("ok", "fraud")) %>%
+0:mutate(CLASS = as.factor(CLASS))
+0:sales_tbl$CLASS
+0:sales_tbl <- DBI::dbReadTable(
+0:conn = local_db,
+0:name = "SALES_ENGINEERED"
+0:) %>%
+0:as_tibble() %>%
+0:filter(CLASS %in% c("ok", "fraud")) %>%
+0:mutate(CLASS = factor(CLASS, levels = c("ok", "fraud")))
+0:sales_tbl$CLASS
+0:library(tidyverse) # data manipulation and %>% operator
+0:library(DBI)       # SQL Server interaction
+0:library(caret)     # machine learning
+0:library(rsample)   # train/test split
+0:library(pROC)      # ROC score
+0:local_db <- rsqltools::sql_server_connect(
+0:server = "DESKTOP-07BKETP",
+0:database = "abn_distro"
+0:)
+0:sales_tbl <- DBI::dbReadTable(
+0:conn = local_db,
+0:name = "SALES_ENGINEERED"
+0:) %>%
+0:as_tibble() %>%
+0:filter(CLASS %in% c("ok", "fraud")) %>%
+0:mutate(CLASS = factor(CLASS, levels = c("ok", "fraud")))
+0:DBI::dbDisconnect(local_db)
+0:table(credit$Class)
+0:table(sales_tbl$CLASS)
+0:set.seed(9560)
+0:train_test_split <- rsample::initial_split(
+0:data = sales_tbl,
+0:prop = 0.8,
+0:strata = "CLASS"
+0:)
+0:imbal_train <- rsample::training(train_test_split)
+0:imbal_test <- rsample::testing(train_test_split)
+0:set.seed(9560)
+0:down_train <- caret::downSample(
+0:x = imbal_train %>% select(-CLASS),
+0:y = imbal_train$CLASS
+0:)
+0:table(down_train$CLASS)
+0:set.seed(9560)
+0:train_test_split <- rsample::initial_split(
+0:data = sales_tbl,
+0:prop = 0.8,
+0:strata = "CLASS"
+0:)
+0:imbal_train <- rsample::training(train_test_split)
+0:imbal_test <- rsample::testing(train_test_split)
+0:imbal_train
+0:set.seed(9560)
+0:down_train <- caret::downSample(
+0:x = imbal_train %>% select(-CLASS),
+0:y = imbal_train$CLASS
+0:)
+0:table(down_train$CLASS)
+0:caret::downSample(
+0:x = imbal_train %>% select(-CLASS),
+0:y = imbal_train$CLASS
+0:)
+0:imbal_test
+0:imbal_train
+0:imbal_train %>% select(-CLASS)
+0:imbal_train$CLASS
+0:down_train <- caret::downSample(
+0:x = imbal_train %>% select(-CLASS),
+0:y = imbal_train$CLASS
+0:)
+0:down_train
+0:head(down_train)
+0:set.seed(9560)
+0:down_train <- caret::downSample(
+0:x = imbal_train %>% select(-CLASS),
+0:y = imbal_train$CLASS
+0:)
+0:table(down_train$Class)
+0:train_control <- caret::trainControl(
+0:method = "repeatedcv",
+0:number = 5,
+0:repeats = 5,
+0:classProbs = TRUE,
+0:summaryFunction = twoClassSummary
+0:)
+0:set.seed(5627)
+0:downsample_model <- caret::train(
+0:form = Class ~ .,
+0:data = down_train,
+0:method = "glm",
+0:metric = "AUC",
+0:trControl = train_control
+0:)
+0:warnings()
+0:set.seed(5627)
+0:full_model <- caret::train(
+0:form = CLASS ~ .,
+0:data = imbal_train,
+0:method = "glm",
+0:metric = "ROC",
+0:trControl = train_control
+0:)
+0:models <- list(
+0:downsample_model = downsample_model,
+0:full_model = full_model
+0:)
+0:resampling_results <- caret::resamples(models)
+0:summary(resampling_results, metric = "ROC")$statistics$ROC
+0:test_roc <- function(model, data) {
+0:roc_obj <- roc(data$CLASS,
+0:predict(model, data, type = "prob")[, "fraud"],
+0:levels = c("ok", "fraud"))
+0:ci(roc_obj)
+0:}
+0:probs <- predict(downsample_model, newdata = imbal_test, type = "raw")
+0:lapply(
+0:models,
+0:test_roc,
+0:data = imbal_test
+0:) %>%
+0:do.call("rbind", .) %>%
+0:as.data.frame() %>%
+0:setNames(object = ., nm = c("lowerCI", "ROC", "upperCI"))
+0:# we'll store the AUC results for each validation replication in this vector
+0:auc_vector <- vector("double", length = 25L)
+0:imbal_train
+0:# split the original training data into training and validation sets
+0:train_validate_split <- rsample::initial_split(
+0:data = imbal_train,
+0:prop = 0.8,
+0:strata = "CLASS"
+0:)
+0:training_set <- rsample::training(train_validate_split)
+0:validation_set <- rsample::testing(train_validate_split)
+0:# down-sample the training data
+0:down_train <- caret::downSample(
+0:x = training_set %>% select(-CLASS),
+0:y = training_set$CLASS
+0:)
+0:# fit logistic regression to down-sampled training data
+0:downsample_model <- glm(
+0:formula = Class ~ .,
+0:data = down_train,
+0:family = "binomial"
+0:)
+0:set.seed(1234)
+0:# loop through 25 validation replications
+0:for (i in 1:2) {
+0:# split the original training data into training and validation sets
+0:train_validate_split <- rsample::initial_split(
+0:data = imbal_train,
+0:prop = 0.8,
+0:strata = "CLASS"
+0:)
+0:training_set <- rsample::training(train_validate_split)
+0:validation_set <- rsample::testing(train_validate_split)
+0:# the ensemble training procedure starts here...
+0:# the steps below are repeated 15 times via the map() function to form the ensemble
+0:ensemble_train <- vector("list", 5) %>%
+0:purrr::map(., function(x) {
+0:# down-sample the training data
+0:down_train <- caret::downSample(
+0:x = training_set %>% select(-CLASS),
+0:y = training_set$CLASS
+0:)
+0:# fit logistic regression to down-sampled training data
+0:downsample_model <- glm(
+0:formula = Class ~ .,
+0:data = down_train,
+0:family = "binomial"
+0:)
+0:# return the model
+0:downsample_model
+0:})
+0:# the ensemble training procedure ends here...
+0:# we now have 15 independently trained models
+0:# pass validation data to each of 15 models and average the predictions
+0:ensemble_predictions <- purrr::map(
+0:ensemble_train,
+0:predict,
+0:newdata = validation_set,
+0:type = "response"
+0:) %>%
+0:bind_cols() %>%
+0:apply(., 1, mean)
+0:# AUC of predictions on validation data
+0:AUC <- pROC::roc(
+0:validation_set$CLASS,
+0:ensemble_predictions,
+0:levels = c("ok", "fraud")
+0:) %>%
+0:pROC::auc()
+0:# store AUC from each validation replication
+0:auc_vector[i] <- AUC
+0:}
+0:auc_vector
+0:set.seed(1234)
+0:# loop through 25 validation replications
+0:for (i in 1:25) {
+0:# split the original training data into training and validation sets
+0:train_validate_split <- rsample::initial_split(
+0:data = imbal_train,
+0:prop = 0.8,
+0:strata = "CLASS"
+0:)
+0:training_set <- rsample::training(train_validate_split)
+0:validation_set <- rsample::testing(train_validate_split)
+0:# the ensemble training procedure starts here...
+0:# the steps below are repeated 15 times via the map() function to form the ensemble
+0:ensemble_train <- vector("list", 15) %>%
+0:purrr::map(., function(x) {
+0:# down-sample the training data
+0:down_train <- caret::downSample(
+0:x = training_set %>% select(-CLASS),
+0:y = training_set$CLASS
+0:)
+0:# fit logistic regression to down-sampled training data
+0:downsample_model <- glm(
+0:formula = Class ~ .,
+0:data = down_train,
+0:family = "binomial"
+0:)
+0:# return the model
+0:downsample_model
+0:})
+0:# the ensemble training procedure ends here...
+0:# we now have 15 independently trained models
+0:# pass validation data to each of 15 models and average the predictions
+0:ensemble_predictions <- purrr::map(
+0:ensemble_train,
+0:predict,
+0:newdata = validation_set,
+0:type = "response"
+0:) %>%
+0:bind_cols() %>%
+0:apply(., 1, mean)
+0:# AUC of predictions on validation data
+0:AUC <- pROC::roc(
+0:validation_set$CLASS,
+0:ensemble_predictions,
+0:levels = c("ok", "fraud")
+0:) %>%
+0:pROC::auc()
+0:# store AUC from each validation replication
+0:auc_vector[i] <- AUC
+0:}
+0:auc_vector
+0:lapply(
+0:models,
+0:test_roc,
+0:data = imbal_test
+0:) %>%
+0:do.call("rbind", .) %>%
+0:as.data.frame() %>%
+0:setNames(object = ., nm = c("lowerCI", "ROC", "upperCI"))
+0:summary(resampling_results, metric = "ROC")$statistics$ROC
+0:mean(auc_vector)
+0:set.seed(1234)
+0:ensemble_retrain <- vector("list", 15) %>%
+0:purrr::map(., function(x) {
+0:# downsample
+0:down_train <- caret::downSample(
+0:x = imbal_train %>% select(-CLASS),
+0:y = imbal_train$CLASS
+0:)
+0:# model fit
+0:downsample_model <- glm(
+0:formula = Class ~ .,
+0:data = down_train,
+0:family = "binomial"
+0:)
+0:downsample_model
+0:})
+0:ensemble_train
+0:ensemble_retrain
+0:ensemble_test_predictions <- purrr::map(
+0:ensemble_retrain,
+0:predict,
+0:newdata = imbal_test,
+0:type = "response") %>%
+0:bind_cols() %>%
+0:apply(., 1, mean)
+0:pROC::roc(imbal_test$CLASS,
+0:ensemble_test_predictions,
+0:levels = c("ok", "fraud")) %>%
+0:pROC::auc()
+0:lapply(
+0:models,
+0:test_roc,
+0:data = imbal_test
+0:) %>%
+0:do.call("rbind", .) %>%
+0:as.data.frame() %>%
+0:setNames(object = ., nm = c("lowerCI", "ROC", "upperCI"))
+0:ensemble_test_predictions
+0:purrr::map(
+0:ensemble_retrain,
+0:predict,
+0:newdata = imbal_test,
+0:type = "class")
+0:purrr::map(
+0:ensemble_retrain,
+0:predict,
+0:newdata = imbal_test,
+0:type = "response")
+0:xx <- function(x) ifelse(x < 0.5, "ok", "fraud")
+0:purrr::map(
+0:ensemble_retrain,
+0:predict,
+0:newdata = imbal_test,
+0:type = "response") %>%
+0:purrr::map(., xx)
+0:xx <- function(x) ifelse(x < 0.5, "ok", "fraud") %>% as.factor()
+0:ensemble_test_predictions <- purrr::map(
+0:ensemble_retrain,
+0:predict,
+0:newdata = imbal_test,
+0:type = "response") %>%
+0:purrr::map(., xx)
+0:ensemble_test_predictions
+0:help(Mode)
+0:??Mode
+0:blogdown::serve_site()
+0:4
+1547942306617:blogdown::serve_site()
+1547942313623:install.packages("blogdown")
+1547942325293:blogdown::serve_site()
+1547942337483:install.packages("reticulate")
+1547942422679:blogdown::serve_site()

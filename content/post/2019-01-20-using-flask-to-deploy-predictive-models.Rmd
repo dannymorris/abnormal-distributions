@@ -1,0 +1,97 @@
+---
+title: Using Flask to deploy predictive models
+author: Danny Morris
+date: '2019-01-20'
+output: 
+  blogdown::html_page:
+    toc: true
+slug: using-flask-to-deploy-predictive-models
+categories:
+  - Python
+  - Machine Learning
+tags:
+  - API
+  - Python
+  - Flask
+editor_options: 
+  chunk_output_type: console
+---
+
+# Purpose
+
+Deploying predictive models is one of the toughest challenges that data scientists face. There currently exists an abundance of resources geared towards model development, but the opposite is true for model deployment.
+
+In this article, I document my experience deploying a machine learning model using Flask, a web development framework for Python. I'll train a model on my local machine, then deploy the model on my local machine ("localhost") as a REST API that can be called at will to make predictions on new data. Note that in true production setting I would not deploy the model to localhost but rather a dedicated server, whether it's on-premise or in the cloud (e.g. AWS).
+
+# My setup
+
+- Windows 10
+- Anaconda 2018.12 which includes conda
+
+# Create and activate conda environment
+
+Before I can build and deploy my Flask app, I'll create a conda environment to house the dependencies needed to run the app. A conda environment is simply an isolated directory that contains a specific collection of conda packages needed for the job. For this app, Python and Flask are the main dependencies though some machine learning packages will be installed as well.
+
+Open Anaconda Prompt and enter following commands to create and activate a new conda environment.
+
+```
+conda create -n flask-app
+conda activate flask-app
+```
+
+Activating the environment ensures that our dependencies are installed only into this conda environment.
+
+# Install dependencies
+
+While in Anaconda Prompt, make sure the conda environment is activated. Then, enter these commands to install the necessary dependencies to build and deploy the Flask app.
+
+```
+conda install python==3.6
+conda install flask scipy numpy pandas scikit-learn
+```
+
+I'm specifically installing Python 3.6 because I leared that [Zappa](https://github.com/Miserlou/Zappa) needs this version to deploy apps to AWS, which I'll be experimenting with at a later time.
+
+Run `conda list` to see a list of dependencies installed in the conda environment.
+
+# Very simple Flask app
+
+Now that the conda environment is created and activated and my dependencies are installed, I can start building the Flask app.
+
+Open a text editor (e.g. Notepad++, Spyder, etc.) and create a Python script called `app.py` containing the following Python code.
+
+```
+# app.py
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.route('/')
+def hello_world():
+    return 'Hello world!\n'
+
+if __name__ == '__main__':
+    app.run()
+```
+
+# Run the app
+
+Open Anaconda Prompt and make sure the conda environment is activated then navigate to the folder where `app.py` was saved. For example, if `app.py` was saved in `C:\Users\Owner\Documents\flask-project`, your command in Anaconda Prompt may look like this.
+
+```
+cd Documents/flask-project
+```
+
+Now that I've navigated to the directory where my `app.py` is stored, I can deploy the app using the following code
+
+```
+python app.py
+```
+
+If done correctly, the print out in Anaconda Prompt should look like this.
+
+![](/img/flask-run-app.png)
+
+# Test the app
+
+To test if the app is working as expected, open a web browser and navigate to `http://localhost:5000`. You should a message that reads "Hello world!" on the page.

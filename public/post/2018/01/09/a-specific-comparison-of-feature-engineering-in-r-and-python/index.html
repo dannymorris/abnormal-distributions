@@ -28,9 +28,11 @@
 </div>
 
 <main>
+
+
 <div id="TOC">
 <ul>
-<li><a href="#about">About</a></li>
+<li><a href="#purpose">Purpose</a></li>
 <li><a href="#original-data">Original data</a></li>
 <li><a href="#features-to-engineer">Features to engineer</a></li>
 <li><a href="#r">R</a></li>
@@ -38,68 +40,25 @@
 </ul>
 </div>
 
-<div id="about" class="section level2">
-<h2>About</h2>
-<p>Feature engineering is a central aspect of data science. It is often the case that data in its raw form is not immediately ready for discovery of insights, leading to the need for some degree of engineering.</p>
-<p>In this article, we’ll look at a dataset of sales transactions containing a minimal amount of detail in its raw form. With an end goal in mind, we’ll engineer some features using R, Python, and SQL to compare these three tools.</p>
+<div id="purpose" class="section level2">
+<h2>Purpose</h2>
+<p>Moving from raw data to data that is prime for analysis is called feature engineering and it is a fundamental aspect of data science. Experienced data scientists will agree that feature engineering is an essential skill.</p>
+<p>This article demonstrates the same engineering pipeline written in R and Python. The pipeline is not particularly complicated, though it resembles something that a data scientist would do. I’ll be using a dataset of sales transactions that need to be engineered in order to classify fraudulent and legitimate sales.</p>
 </div>
 <div id="original-data" class="section level2">
 <h2>Original data</h2>
-<table>
-<thead>
-<tr class="header">
-<th align="left">ID</th>
-<th align="left">Prod</th>
-<th align="right">Quant</th>
-<th align="right">Val</th>
-<th align="left">Insp</th>
-</tr>
-</thead>
-<tbody>
-<tr class="odd">
-<td align="left">v1</td>
-<td align="left">p1</td>
-<td align="right">182</td>
-<td align="right">1665</td>
-<td align="left">unkn</td>
-</tr>
-<tr class="even">
-<td align="left">v2</td>
-<td align="left">p1</td>
-<td align="right">3072</td>
-<td align="right">8780</td>
-<td align="left">unkn</td>
-</tr>
-<tr class="odd">
-<td align="left">v3</td>
-<td align="left">p1</td>
-<td align="right">20393</td>
-<td align="right">76990</td>
-<td align="left">unkn</td>
-</tr>
-<tr class="even">
-<td align="left">v4</td>
-<td align="left">p1</td>
-<td align="right">112</td>
-<td align="right">1100</td>
-<td align="left">unkn</td>
-</tr>
-<tr class="odd">
-<td align="left">v3</td>
-<td align="left">p1</td>
-<td align="right">6164</td>
-<td align="right">20260</td>
-<td align="left">unkn</td>
-</tr>
-<tr class="even">
-<td align="left">v5</td>
-<td align="left">p2</td>
-<td align="right">104</td>
-<td align="right">1155</td>
-<td align="left">unkn</td>
-</tr>
-</tbody>
-</table>
+<pre class="r"><code>library(DMwR) # install.packages(&quot;DMwR&quot;)
+
+data(sales, &quot;DMwR&quot;)
+
+head(sales)</code></pre>
+<pre><code>##   ID Prod Quant   Val Insp
+## 1 v1   p1   182  1665 unkn
+## 2 v2   p1  3072  8780 unkn
+## 3 v3   p1 20393 76990 unkn
+## 4 v4   p1   112  1100 unkn
+## 5 v3   p1  6164 20260 unkn
+## 6 v5   p2   104  1155 unkn</code></pre>
 <p>The raw data contains five variables:</p>
 <p>ID: salesperson identifier</p>
 <p>Prod: product identifier</p>
@@ -129,9 +88,8 @@
 <h2>R</h2>
 <p>The tidyverse ecosystem in R contains some outstanding packages for data manipulation. Most notably, the dplyr package is excellent for transformations and the tidyr package is excellent for reshaping. Both are included in the tidyverse and do not need to be installed or loaded separately. Our entire pipeline is completed using these two packages (actually, we also use the readr package for importing the csv).</p>
 <p>The tidyverse utilizes the <code>%&gt;%</code> symbol (known as the “pipe” symbol) for chaining together steps in an analysis pipeline. Here is the full feature engineering pipeline in R.</p>
-<pre class="r"><code>library(tidyverse)
-
-sales &lt;- readr::read_csv(&quot;sales.csv&quot;) %&gt;%
+<pre class="r"><code>library(tidyverse)</code></pre>
+<pre class="r"><code>sales &lt;- sales %&gt;%
   drop_na() %&gt;%
   filter(Insp %in% c(&quot;fraud&quot;, &quot;ok&quot;)) %&gt;%  
   group_by(Insp) %&gt;%
@@ -153,14 +111,14 @@ r_engineered &lt;- sales %&gt;%
 
 head(r_engineered)</code></pre>
 <pre><code>## # A tibble: 6 x 10
-##   ID    Prod   Quant   Val Insp      LPPQ LPPQ_2 LPPQ_3   LPPQ_4   LPPQ_5
-##   &lt;chr&gt; &lt;chr&gt;  &lt;int&gt; &lt;dbl&gt; &lt;chr&gt;    &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;
-## 1 v4576 p1397 259217  8215 fraud -1.50     5.85  0.0828 0.0159   0.0159  
-## 2 v455  p2754  12375 11015 fraud -0.0506   0.942 0.214  0.000366 0.000366
-## 3 v472  p805     986  1005 fraud  0.00829  0.831 0.0104 0.749    0       
-## 4 v5983 p1330    100 56745 fraud  2.75     3.36  0      0.00829  0       
-## 5 v5696 p167     700  1060 fraud  0.180    0.547 0      0        0       
-## 6 v1093 p1956  45694 66070 fraud  0.160    0.577 0      0.180    0</code></pre>
+##   ID    Prod  Quant    Val Insp   LPPQ   LPPQ_2    LPPQ_3   LPPQ_4   LPPQ_5
+##   &lt;fct&gt; &lt;fct&gt; &lt;int&gt;  &lt;dbl&gt; &lt;fct&gt; &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;
+## 1 v1171 p1914   100   1025 ok    1.01   4.14e-3   1.99e-6  8.92e-3  1.99e-6
+## 2 v1109 p1669   269   9710 ok    1.56   3.73e-1   6.67e-2  5.35e-5  0.     
+## 3 v3796 p3995   169   1475 ok    0.941  3.01e-5   0.       1.26e-1  0.     
+## 4 v1179 p1818  1188 103885 ok    1.94   9.91e-1   0.       6.91e-3  0.     
+## 5 v896  p3072   372   3980 ok    1.03   6.88e-3   0.       2.59e-3  0.     
+## 6 v654  p2278 10341 220565 ok    1.33   1.46e-1   0.       7.06e-3  0.</code></pre>
 </div>
 <div id="python" class="section level2">
 <h2>Python</h2>
@@ -169,51 +127,31 @@ head(r_engineered)</code></pre>
 <pre class="python"><code>import pandas as pd
 import numpy as np
 from sklearn.utils import resample </code></pre>
-<pre><code>## C:\Users\Owner\ANACON~1\envs\R-RETI~1\lib\site-packages\sklearn\externals\joblib\externals\cloudpickle\cloudpickle.py:47: DeprecationWarning: the imp module is deprecated in favour of importlib; see the module&#39;s documentation for alternative uses
-##   import imp</code></pre>
 <pre class="python"><code>sales = pd.read_csv(&#39;sales.csv&#39;)
-
 sales = sales.dropna()
-
 sales_ok = sales[sales.Insp == &#39;ok&#39;]
 sales_fraud = sales[sales.Insp == &#39;fraud&#39;]
-
 resample_ok = resample(sales_ok, replace = False, n_samples = 500)
 resample_fraud = resample(sales_fraud, replace = False, n_samples = 500) 
-
 sales = pd.concat([resample_ok, resample_fraud])
-
 sales[&#39;LPPQ&#39;] = np.log10(sales.Val/sales.Quant)
 sales[&#39;LPPQ_2&#39;] = sales.LPPQ - np.mean(sales.LPPQ)
-
 def get_group_mean(group_vars, col_name):
   group_df = sales.groupby(group_vars, as_index = False)[&#39;LPPQ&#39;]
   group_mean = group_df.mean()
   group_mean = group_mean.rename(index = str, columns = {&quot;LPPQ&quot;: col_name})
   return group_mean
-
 LPPQ_3 = get_group_mean(group_vars = [&#39;ID&#39;], col_name = &#39;LPPQ_3&#39;)
 LPPQ_4 = get_group_mean(group_vars = [&#39;Prod&#39;], col_name = &#39;LPPQ_4&#39;)
 LPPQ_5 = get_group_mean(group_vars = [&#39;Prod&#39;, &#39;ID&#39;], col_name = &#39;LPPQ_5&#39;)
-
 sales = sales.merge(LPPQ_3, how = &#39;inner&#39;, on = &#39;ID&#39;)
 sales = sales.merge(LPPQ_4, how = &#39;inner&#39;, on = &#39;Prod&#39;) 
 sales = sales.merge(LPPQ_5, how = &#39;inner&#39;, on = [&#39;ID&#39;, &#39;Prod&#39;])
-
 def sq_diff(x):
   return (x - sales.LPPQ)**2
   
 sales[[&#39;LPPQ_2&#39;,&#39;LPPQ_3&#39;, &#39;LPPQ_4&#39;, &#39;LPPQ_5&#39;]] = sales[[&#39;LPPQ_2&#39;,&#39;LPPQ_3&#39;, &#39;LPPQ_4&#39;, &#39;LPPQ_5&#39;]].apply(sq_diff)
-
 sales.head()</code></pre>
-<pre><code>##       ID  Prod     Quant    ...       LPPQ_3    LPPQ_4    LPPQ_5
-## 0   v363  p545  837988.0    ...     3.150488  2.254138  0.968069
-## 1   v363  p545  837988.0    ...     3.150488  2.254138  0.968069
-## 2   v363  p545     746.0    ...     1.384749  2.103476  3.872276
-## 3  v5014  p545     416.0    ...     0.000000  2.410010  0.000000
-## 4   v363  p559    1088.0    ...     1.418722  0.000020  0.000020
-## 
-## [5 rows x 10 columns]</code></pre>
 </div>
 
 </main>

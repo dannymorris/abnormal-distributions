@@ -1,0 +1,89 @@
+---
+title: Using Flask to deploy predictive models
+author: Danny Morris
+date: '2019-01-20'
+output: 
+  blogdown::html_page:
+    toc: true
+slug: using-flask-to-deploy-predictive-models
+categories:
+  - Python
+  - Machine Learning
+tags:
+  - API
+  - Python
+  - Flask
+editor_options: 
+  chunk_output_type: console
+---
+
+
+<div id="TOC">
+<ul>
+<li><a href="#purpose">Purpose</a></li>
+<li><a href="#my-setup">My setup</a></li>
+<li><a href="#create-and-activate-conda-environment">Create and activate conda environment</a></li>
+<li><a href="#install-dependencies">Install dependencies</a></li>
+<li><a href="#very-simple-flask-app">Very simple Flask app</a></li>
+<li><a href="#run-the-app">Run the app</a></li>
+<li><a href="#test-the-app">Test the app</a></li>
+</ul>
+</div>
+
+<div id="purpose" class="section level1">
+<h1>Purpose</h1>
+<p>Deploying predictive models is one of the toughest challenges that data scientists face. There currently exists an abundance of resources geared towards model development, but the opposite is true for model deployment.</p>
+<p>In this article, I document my experience deploying a machine learning model using Flask, a web development framework for Python. I’ll train a model on my local machine, then deploy the model on my local machine (“localhost”) as a REST API that can be called at will to make predictions on new data. Note that in true production setting I would not deploy the model to localhost but rather a dedicated server, whether it’s on-premise or in the cloud (e.g. AWS).</p>
+</div>
+<div id="my-setup" class="section level1">
+<h1>My setup</h1>
+<ul>
+<li>Windows 10</li>
+<li>Anaconda 2018.12 which includes conda</li>
+</ul>
+</div>
+<div id="create-and-activate-conda-environment" class="section level1">
+<h1>Create and activate conda environment</h1>
+<p>Before I can build and deploy my Flask app, I’ll create a conda environment to house the dependencies needed to run the app. A conda environment is simply an isolated directory that contains a specific collection of conda packages needed for the job. For this app, Python and Flask are the main dependencies though some machine learning packages will be installed as well.</p>
+<p>Open Anaconda Prompt and enter following commands to create and activate a new conda environment.</p>
+<pre><code>conda create -n flask-app
+conda activate flask-app</code></pre>
+<p>Activating the environment ensures that our dependencies are installed only into this conda environment.</p>
+</div>
+<div id="install-dependencies" class="section level1">
+<h1>Install dependencies</h1>
+<p>While in Anaconda Prompt, make sure the conda environment is activated. Then, enter these commands to install the necessary dependencies to build and deploy the Flask app.</p>
+<pre><code>conda install python==3.6
+conda install flask scipy numpy pandas scikit-learn</code></pre>
+<p>I’m specifically installing Python 3.6 because I leared that <a href="https://github.com/Miserlou/Zappa">Zappa</a> needs this version to deploy apps to AWS, which I’ll be experimenting with at a later time.</p>
+<p>Run <code>conda list</code> to see a list of dependencies installed in the conda environment.</p>
+</div>
+<div id="very-simple-flask-app" class="section level1">
+<h1>Very simple Flask app</h1>
+<p>Now that the conda environment is created and activated and my dependencies are installed, I can start building the Flask app.</p>
+<p>Open a text editor (e.g. Notepad++, Spyder, etc.) and create a Python script called <code>app.py</code> containing the following Python code.</p>
+<pre><code># app.py
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.route(&#39;/&#39;)
+def hello_world():
+    return &#39;Hello world!\n&#39;
+
+if __name__ == &#39;__main__&#39;:
+    app.run()</code></pre>
+</div>
+<div id="run-the-app" class="section level1">
+<h1>Run the app</h1>
+<p>Open Anaconda Prompt and make sure the conda environment is activated then navigate to the folder where <code>app.py</code> was saved. For example, if <code>app.py</code> was saved in <code>C:\Users\Owner\Documents\flask-project</code>, your command in Anaconda Prompt may look like this.</p>
+<pre><code>cd Documents/flask-project</code></pre>
+<p>Now that I’ve navigated to the directory where my <code>app.py</code> is stored, I can deploy the app using the following code</p>
+<pre><code>python app.py</code></pre>
+<p>If done correctly, the print out in Anaconda Prompt should look like this.</p>
+<p><img src="/img/flask-run-app.png" /></p>
+</div>
+<div id="test-the-app" class="section level1">
+<h1>Test the app</h1>
+<p>To test if the app is working as expected, open a web browser and navigate to <code>http://localhost:5000</code>. You should a message that reads “Hello world!” on the page.</p>
+</div>

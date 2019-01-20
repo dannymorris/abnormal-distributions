@@ -16,21 +16,20 @@ knitr::opts_chunk$set(
 )
 ```
 
-## About
+## Purpose
 
-Feature engineering is a central aspect of data science. It is often the case that data in its raw form is not immediately ready for discovery of insights, leading to the need for some degree of engineering.
+Moving from raw data to data that is prime for analysis is called feature engineering and it is a fundamental aspect of data science. Experienced data scientists will agree that feature engineering is an essential skill.
 
-In this article, we'll look at a dataset of sales transactions containing a minimal amount of detail in its raw form. With an end goal in mind, we'll engineer some features using R, Python, and SQL to compare these three tools.
+This article demonstrates the same engineering pipeline written in R and Python. The pipeline is not particularly complicated, though it resembles something that a data scientist would do. I'll be using a dataset of sales transactions that need to be engineered in order to classify fraudulent and legitimate sales.
 
 ## Original data
 
-```{r, echo = F, cache = F}
-library(dplyr)
-library(knitr)
+```{r}
+library(DMwR) # install.packages("DMwR")
 
-readr::read_csv("sales.csv") %>%
-  head() %>%
-  kable()
+data(sales, "DMwR")
+
+head(sales)
 ```
 
 The raw data contains five variables:
@@ -76,8 +75,10 @@ The tidyverse utilizes the `%>%` symbol (known as the "pipe" symbol) for chainin
 
 ```{r}
 library(tidyverse)
+```
 
-sales <- readr::read_csv("sales.csv") %>%
+```{r}
+sales <- sales %>%
   drop_na() %>%
   filter(Insp %in% c("fraud", "ok")) %>%  
   group_by(Insp) %>%
@@ -112,7 +113,9 @@ reticulate::use_condaenv("r-reticulate", required = TRUE)
 import pandas as pd
 import numpy as np
 from sklearn.utils import resample 
+```
 
+```{python}
 sales = pd.read_csv('sales.csv')
 
 sales = sales.dropna()

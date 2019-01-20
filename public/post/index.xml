@@ -6,10 +6,20 @@
     <description>Recent content in Posts on Abnormal Distributions</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Mon, 17 Dec 2018 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sun, 20 Jan 2019 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Using Flask to deploy predictive models</title>
+      <link>/post/2019/01/20/using-flask-to-deploy-predictive-models/</link>
+      <pubDate>Sun, 20 Jan 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/01/20/using-flask-to-deploy-predictive-models/</guid>
+      <description>PurposeMy setupCreate and activate conda environmentInstall dependenciesVery simple Flask appRun the appTest the appPurposeDeploying predictive models is one of the toughest challenges that data scientists face. There currently exists an abundance of resources geared towards model development, but the opposite is true for model deployment.
+In this article, I document my experience deploying a machine learning model using Flask, a web development framework for Python.</description>
+    </item>
     
     <item>
       <title>Comparing down-sampling to no sampling for classifying imbalanced data</title>
@@ -26,8 +36,8 @@
       <pubDate>Tue, 09 Jan 2018 00:00:00 +0000</pubDate>
       
       <guid>/post/2018/01/09/a-specific-comparison-of-feature-engineering-in-r-and-python/</guid>
-      <description>AboutOriginal dataFeatures to engineerRPythonAboutFeature engineering is a central aspect of data science. It is often the case that data in its raw form is not immediately ready for discovery of insights, leading to the need for some degree of engineering.
-In this article, we’ll look at a dataset of sales transactions containing a minimal amount of detail in its raw form. With an end goal in mind, we’ll engineer some features using R, Python, and SQL to compare these three tools.</description>
+      <description>PurposeOriginal dataFeatures to engineerRPythonPurposeMoving from raw data to data that is prime for analysis is called feature engineering and it is a fundamental aspect of data science. Experienced data scientists will agree that feature engineering is an essential skill.
+This article demonstrates the same engineering pipeline written in R and Python. The pipeline is not particularly complicated, though it resembles something that a data scientist would do.</description>
     </item>
     
     <item>
