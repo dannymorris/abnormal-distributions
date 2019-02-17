@@ -12,13 +12,12 @@
     
     
     <item>
-      <title>Using Flask to deploy predictive models</title>
+      <title>Basics of deploying Flask applications to localhost on Windows</title>
       <link>/post/2019/01/20/using-flask-to-deploy-predictive-models/</link>
       <pubDate>Sun, 20 Jan 2019 00:00:00 +0000</pubDate>
       
       <guid>/post/2019/01/20/using-flask-to-deploy-predictive-models/</guid>
-      <description>PurposeMy setupCreate and activate conda environmentInstall dependenciesVery simple Flask appRun the appTest the appPurposeDeploying predictive models is one of the toughest challenges that data scientists face. There currently exists an abundance of resources geared towards model development, but the opposite is true for model deployment.
-In this article, I document my experience deploying a machine learning model using Flask, a web development framework for Python.</description>
+      <description>PurposeEnvironmentCreate and activate conda environment in Anaconda PromptInstall dependenciesVery simple Flask appRun the appTest the appNext stepsPurposeDeploying production code is one of the toughest challenges that data scientists face. There seems to be significantly more content available on model development than model deployment. In this article, I document my experience building and deploying an web application written in Python using the Flask microframework.</description>
     </item>
     
     <item>

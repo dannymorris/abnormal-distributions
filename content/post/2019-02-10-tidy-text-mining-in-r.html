@@ -1,0 +1,521 @@
+---
+title: Tidy Text Mining in R
+author: Danny Morris
+date: '2019-02-10'
+output: 
+  blogdown::html_page:
+    toc: true
+slug: tidy-text-mining-in-r
+categories:
+  - R
+  - Data Mining
+tags:
+  - Text Mining
+  - R
+editor_options: 
+  chunk_output_type: console
+---
+
+
+<div id="TOC">
+<ul>
+<li><a href="#r-packages">R Packages</a></li>
+<li><a href="#data">Data</a></li>
+<li><a href="#tokenization">Tokenization</a><ul>
+<li><a href="#reuters-words">Reuters Words</a></li>
+<li><a href="#reuter-documents">Reuter Documents</a></li>
+</ul></li>
+<li><a href="#stemming">Stemming</a></li>
+<li><a href="#lemmatization">Lemmatization</a></li>
+<li><a href="#stopwords">Stopwords</a></li>
+<li><a href="#application-extracting-topics-from-reuters-documents">Application: Extracting Topics from Reuters Documents</a><ul>
+<li><a href="#extract-topics-tags">Extract &lt;TOPICS&gt; Tags</a></li>
+<li><a href="#document-topic-co-occurence-matrix">Document-Topic Co-Occurence Matrix</a></li>
+<li><a href="#documents-containing-topic-earn">Documents Containing Topic “earn”</a></li>
+<li><a href="#topics-co-occurring-with-earn">Topics Co-occurring with “earn”</a></li>
+<li><a href="#lemmatized-words-appearing-in-documents-containing-earn">Lemmatized Words Appearing in Documents Containing “earn”</a></li>
+</ul></li>
+<li><a href="#application-dictionary-based-sentiment-analysis">Application: Dictionary-based Sentiment Analysis</a><ul>
+<li><a href="#get-text-within-body-of-documents">Get Text Within Body of Documents</a></li>
+<li><a href="#tokenize-words">Tokenize Words</a></li>
+<li><a href="#word-sentiment-categorization">Word Sentiment Categorization</a></li>
+<li><a href="#body-sentiment-word-count-matrix">Body-Sentiment Word Count Matrix</a></li>
+</ul></li>
+<li><a href="#application-clustering-body-sentiment-word-count-matrix">Application: Clustering Body-Sentiment Word Count Matrix</a><ul>
+<li><a href="#small-random-sample">Small Random Sample</a></li>
+<li><a href="#document-distance">Document Distance</a></li>
+<li><a href="#complete-linkage-hierarchical-clustering">Complete-linkage Hierarchical Clustering</a></li>
+<li><a href="#cluster-exemplars">Cluster Exemplars</a></li>
+</ul></li>
+</ul>
+</div>
+
+<div id="r-packages" class="section level1">
+<h1>R Packages</h1>
+<pre class="r"><code># install.packages(...)
+
+library(tidytext)
+library(SnowballC)
+library(textstem)</code></pre>
+<pre><code>## Loading required package: koRpus.lang.en</code></pre>
+<pre><code>## Loading required package: koRpus</code></pre>
+<pre><code>## Loading required package: sylly</code></pre>
+<pre><code>## For information on available language packages for &#39;koRpus&#39;, run
+## 
+##   available.koRpus.lang()
+## 
+## and see ?install.koRpus.lang()</code></pre>
+<pre class="r"><code>library(tidyverse)</code></pre>
+<pre><code>## -- Attaching packages ------------ tidyverse 1.2.1 --</code></pre>
+<pre><code>## v ggplot2 3.1.0     v purrr   0.2.5
+## v tibble  2.0.1     v dplyr   0.7.8
+## v tidyr   0.8.2     v stringr 1.3.1
+## v readr   1.3.1     v forcats 0.3.0</code></pre>
+<pre><code>## -- Conflicts --------------- tidyverse_conflicts() --
+## x dplyr::filter()   masks stats::filter()
+## x dplyr::lag()      masks stats::lag()
+## x readr::tokenize() masks koRpus::tokenize()</code></pre>
+<pre class="r"><code>library(analogue)</code></pre>
+<pre><code>## Loading required package: vegan</code></pre>
+<pre><code>## Loading required package: permute</code></pre>
+<pre><code>## Loading required package: lattice</code></pre>
+<pre><code>## This is vegan 2.5-4</code></pre>
+<pre><code>## analogue version 0.17-1</code></pre>
+</div>
+<div id="data" class="section level1">
+<h1>Data</h1>
+<pre class="r"><code>reuters &lt;- readr::read_lines(&quot;reuters-train&quot;) %&gt;%
+  tibble(txt = .) </code></pre>
+<pre class="r"><code>reuters %&gt;% head()</code></pre>
+<pre><code>## # A tibble: 6 x 1
+##   txt                                                                      
+##   &lt;chr&gt;                                                                    
+## 1 &quot;&lt;REUTERS TOPICS=\&quot;YES\&quot; LEWISSPLIT=\&quot;TRAIN\&quot; CGISPLIT=\&quot;TRAINING-SET\&quot; ~
+## 2 &lt;DATE&gt;26-FEB-1987 15:01:01.79&lt;/DATE&gt;                                     
+## 3 &lt;TOPICS&gt;&lt;D&gt;cocoa&lt;/D&gt;&lt;/TOPICS&gt;                                            
+## 4 &lt;PLACES&gt;&lt;D&gt;el-salvador&lt;/D&gt;&lt;D&gt;usa&lt;/D&gt;&lt;D&gt;uruguay&lt;/D&gt;&lt;/PLACES&gt;              
+## 5 &lt;PEOPLE&gt;&lt;/PEOPLE&gt;                                                        
+## 6 &lt;ORGS&gt;&lt;/ORGS&gt;</code></pre>
+</div>
+<div id="tokenization" class="section level1">
+<h1>Tokenization</h1>
+<p>The <code>unnest_tokens()</code> function uses the <code>tokenizers</code> package to separate each line into words. The default tokenizing is for words, but other options include characters, ngrams, sentences, lines, paragraphs, or separation around a regex pattern.</p>
+<div id="reuters-words" class="section level2">
+<h2>Reuters Words</h2>
+<pre class="r"><code>word_tokens &lt;- reuters %&gt;%
+  unnest_tokens(word, txt) 
+
+word_tokens %&gt;% head()</code></pre>
+<pre><code>## # A tibble: 6 x 1
+##   word      
+##   &lt;chr&gt;     
+## 1 reuters   
+## 2 topics    
+## 3 yes       
+## 4 lewissplit
+## 5 train     
+## 6 cgisplit</code></pre>
+</div>
+<div id="reuter-documents" class="section level2">
+<h2>Reuter Documents</h2>
+<p>For the Reuters data, individual documents begin with the &lt;/REUTERS&gt; tag. Separating the text around this tag will result in one row per document, with each row containing the full document text.</p>
+<pre class="r"><code>document_tokens &lt;- reuters %&gt;%
+  unnest_tokens(output = article, 
+                input = txt, 
+                token = &quot;regex&quot;, 
+                pattern = &quot;&lt;/REUTERS&gt;&quot;)
+
+document_tokens %&gt;% head()</code></pre>
+<pre><code>## # A tibble: 6 x 1
+##   article                                                                  
+##   &lt;chr&gt;                                                                    
+## 1 &quot;&lt;reuters topics=\&quot;yes\&quot; lewissplit=\&quot;train\&quot; cgisplit=\&quot;training-set\&quot; ~
+## 2 &quot;\n&lt;reuters topics=\&quot;yes\&quot; lewissplit=\&quot;train\&quot; cgisplit=\&quot;training-set\~
+## 3 &quot;\n&lt;reuters topics=\&quot;yes\&quot; lewissplit=\&quot;train\&quot; cgisplit=\&quot;training-set\~
+## 4 &quot;\n&lt;reuters topics=\&quot;yes\&quot; lewissplit=\&quot;train\&quot; cgisplit=\&quot;training-set\~
+## 5 &quot;\n&lt;reuters topics=\&quot;yes\&quot; lewissplit=\&quot;train\&quot; cgisplit=\&quot;training-set\~
+## 6 &quot;\n&lt;reuters topics=\&quot;yes\&quot; lewissplit=\&quot;train\&quot; cgisplit=\&quot;training-set\~</code></pre>
+</div>
+</div>
+<div id="stemming" class="section level1">
+<h1>Stemming</h1>
+<p>Stemming algorithms work by cutting off the end or the beginning of the word, taking into account a list of common prefixes and suffixes that can be found in an inflected word. This indiscriminate cutting can be successful in some occasions, but not always. There are different algorithms that can be used in the stemming process, but the most common in English is Porter stemmer. The rules contained in this algorithm are divided in five different phases numbered from 1 to 5. The purpose of these rules is to reduce the words to the root.</p>
+<p>Use <code>wordStem()</code> function from the <code>SnowballC</code> package for stemming a vector of words.</p>
+<pre class="r"><code>SnowballC::wordStem(c(&quot;talking&quot;, &quot;ran&quot;))</code></pre>
+<pre><code>## [1] &quot;talk&quot; &quot;ran&quot;</code></pre>
+<pre class="r"><code>SnowballC::wordStem(&quot;He stopped talking loudly&quot;)</code></pre>
+<pre><code>## [1] &quot;He stopped talking loudli&quot;</code></pre>
+<pre class="r"><code>word_tokens %&gt;%
+  filter(word %in% c(&#39;reuters&#39;, &#39;companies&#39;, &#39;authorized&#39;)) %&gt;%
+  distinct() %&gt;%
+  mutate(word_stem = SnowballC::wordStem(word))</code></pre>
+<pre><code>## # A tibble: 3 x 2
+##   word       word_stem
+##   &lt;chr&gt;      &lt;chr&gt;    
+## 1 reuters    reuter   
+## 2 companies  compani  
+## 3 authorized author</code></pre>
+</div>
+<div id="lemmatization" class="section level1">
+<h1>Lemmatization</h1>
+<p>Lemmatization takes into consideration the morphological analysis of the words. To do so, it is necessary to have detailed dictionaries which the algorithm can look through to link the form back to its lemma. The key to this methodology is linguistics. To extract the proper lemma, it is necessary to look at the morphological analysis of each word.</p>
+<p>Use <code>lemmatize_words()</code> from the <code>textstem</code> package for lemmatizing a vector of individual words. Use <code>lemmatize_strings()</code> to lemmatize words within a string without extracting the words.</p>
+<pre class="r"><code>textstem::lemmatize_words(c(&quot;talking&quot;, &quot;ran&quot;))</code></pre>
+<pre><code>## [1] &quot;talk&quot; &quot;run&quot;</code></pre>
+<pre class="r"><code>textstem::lemmatize_strings(&quot;He stopped talking loudly&quot;)</code></pre>
+<pre><code>## [1] &quot;He stop talk loudly&quot;</code></pre>
+<pre class="r"><code>word_tokens %&gt;%
+  filter(word %in% c(&#39;reuters&#39;, &#39;companies&#39;, &#39;authorized&#39;)) %&gt;%
+  distinct() %&gt;%
+  mutate(word_lemma = textstem::lemmatize_words(word))</code></pre>
+<pre><code>## # A tibble: 3 x 2
+##   word       word_lemma
+##   &lt;chr&gt;      &lt;chr&gt;     
+## 1 reuters    reuters   
+## 2 companies  company   
+## 3 authorized authorize</code></pre>
+<p>Developing a stemmer is far simpler than building a lemmatizer, but the tradeoff is loss of quality. For lemmatization, deep linguistics knowledge is required to create the dictionaries that allow the algorithm to look for the proper form of the word. Once this is done, the noise will be reduced and the results provided on the information retrieval process will be more accurate.</p>
+</div>
+<div id="stopwords" class="section level1">
+<h1>Stopwords</h1>
+<p>Stopwords are commonly used words that provide little to no information about the text and are best ignored. “The”, “so” are examples.</p>
+<pre class="r"><code>word_tokens %&gt;%
+  inner_join(stop_words, by = &quot;word&quot;) %&gt;%
+  count(word) %&gt;%
+  arrange(desc(n))</code></pre>
+<pre><code>## # A tibble: 660 x 2
+##    word       n
+##    &lt;chr&gt;  &lt;int&gt;
+##  1 the   196413
+##  2 of    106221
+##  3 to    103692
+##  4 in     79146
+##  5 and    76635
+##  6 a      74727
+##  7 said   47594
+##  8 d      44786
+##  9 for    38232
+## 10 it     30801
+## # ... with 650 more rows</code></pre>
+</div>
+<div id="application-extracting-topics-from-reuters-documents" class="section level1">
+<h1>Application: Extracting Topics from Reuters Documents</h1>
+<p>Among other things, each Reuters document is defined by a list of topics. Topics are found within the “<TOPICS>” tags, and all topics appear on a single line within the text. Documents can have no topics, a single topic, or multiple topics.</p>
+<p>The goal of this application is to extract all topics from each document for analysis.</p>
+<div id="extract-topics-tags" class="section level2">
+<h2>Extract &lt;TOPICS&gt; Tags</h2>
+<pre class="r"><code>reuters_topics &lt;- reuters %&gt;%
+  filter(str_detect(txt, &quot;&lt;TOPICS&gt;&quot;)) %&gt;%
+  mutate(doc_id = row_number())
+
+reuters_topics %&gt;% head()</code></pre>
+<pre><code>## # A tibble: 6 x 2
+##   txt                                                                doc_id
+##   &lt;chr&gt;                                                               &lt;int&gt;
+## 1 &lt;TOPICS&gt;&lt;D&gt;cocoa&lt;/D&gt;&lt;/TOPICS&gt;                                           1
+## 2 &lt;TOPICS&gt;&lt;D&gt;grain&lt;/D&gt;&lt;D&gt;wheat&lt;/D&gt;&lt;D&gt;corn&lt;/D&gt;&lt;D&gt;barley&lt;/D&gt;&lt;D&gt;oat&lt;/D~      2
+## 3 &lt;TOPICS&gt;&lt;D&gt;veg-oil&lt;/D&gt;&lt;D&gt;linseed&lt;/D&gt;&lt;D&gt;lin-oil&lt;/D&gt;&lt;D&gt;soy-oil&lt;/D&gt;&lt;~      3
+## 4 &lt;TOPICS&gt;&lt;/TOPICS&gt;                                                       4
+## 5 &lt;TOPICS&gt;&lt;D&gt;earn&lt;/D&gt;&lt;/TOPICS&gt;                                            5
+## 6 &lt;TOPICS&gt;&lt;D&gt;acq&lt;/D&gt;&lt;/TOPICS&gt;                                             6</code></pre>
+</div>
+<div id="document-topic-co-occurence-matrix" class="section level2">
+<h2>Document-Topic Co-Occurence Matrix</h2>
+<pre class="r"><code>reuters_topics %&gt;%
+  mutate(txt = str_replace_all(txt, &quot;D|TOPICS|-&quot;, &quot;&quot;)) %&gt;%
+  unnest_tokens(word, txt) %&gt;%
+  mutate(topic_ind = 1) %&gt;%
+  distinct() %&gt;%
+  spread(word, topic_ind, fill = 0) </code></pre>
+<pre><code>## # A tibble: 7,775 x 116
+##    doc_id   acq  alum austdlr barley   bop   can carcass castoroil
+##     &lt;int&gt; &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;   &lt;dbl&gt;     &lt;dbl&gt;
+##  1      1     0     0       0      0     0     0       0         0
+##  2      2     0     0       0      1     0     0       0         0
+##  3      3     0     0       0      0     0     0       0         0
+##  4      5     0     0       0      0     0     0       0         0
+##  5      6     1     0       0      0     0     0       0         0
+##  6      7     0     0       0      0     0     0       0         0
+##  7      8     1     0       0      0     0     0       0         0
+##  8      9     0     0       0      0     0     0       0         0
+##  9     10     0     0       0      0     0     0       0         0
+## 10     11     0     0       0      0     0     0       0         0
+## # ... with 7,765 more rows, and 107 more variables: castorseed &lt;dbl&gt;,
+## #   citruspulp &lt;dbl&gt;, cocoa &lt;dbl&gt;, coconut &lt;dbl&gt;, coconutoil &lt;dbl&gt;,
+## #   coffee &lt;dbl&gt;, copper &lt;dbl&gt;, copracake &lt;dbl&gt;, corn &lt;dbl&gt;,
+## #   cornglutenfeed &lt;dbl&gt;, cornoil &lt;dbl&gt;, cotton &lt;dbl&gt;, cottonoil &lt;dbl&gt;,
+## #   cpi &lt;dbl&gt;, cpu &lt;dbl&gt;, crude &lt;dbl&gt;, cruzado &lt;dbl&gt;, dfl &lt;dbl&gt;,
+## #   dkr &lt;dbl&gt;, dlr &lt;dbl&gt;, dmk &lt;dbl&gt;, earn &lt;dbl&gt;, fishmeal &lt;dbl&gt;,
+## #   fuel &lt;dbl&gt;, gas &lt;dbl&gt;, gnp &lt;dbl&gt;, gold &lt;dbl&gt;, grain &lt;dbl&gt;,
+## #   groundnut &lt;dbl&gt;, groundnutoil &lt;dbl&gt;, heat &lt;dbl&gt;, hog &lt;dbl&gt;,
+## #   housing &lt;dbl&gt;, income &lt;dbl&gt;, instaldebt &lt;dbl&gt;, interest &lt;dbl&gt;,
+## #   inventories &lt;dbl&gt;, ipi &lt;dbl&gt;, ironsteel &lt;dbl&gt;, jet &lt;dbl&gt;, jobs &lt;dbl&gt;,
+## #   lcattle &lt;dbl&gt;, lead &lt;dbl&gt;, lei &lt;dbl&gt;, linmeal &lt;dbl&gt;, linoil &lt;dbl&gt;,
+## #   linseed &lt;dbl&gt;, lit &lt;dbl&gt;, livestock &lt;dbl&gt;, lumber &lt;dbl&gt;,
+## #   mealfeed &lt;dbl&gt;, moneyfx &lt;dbl&gt;, moneysupply &lt;dbl&gt;, naphtha &lt;dbl&gt;,
+## #   natgas &lt;dbl&gt;, nickel &lt;dbl&gt;, nkr &lt;dbl&gt;, nzdlr &lt;dbl&gt;, oat &lt;dbl&gt;,
+## #   oilseed &lt;dbl&gt;, orange &lt;dbl&gt;, palladium &lt;dbl&gt;, palmkernel &lt;dbl&gt;,
+## #   palmoil &lt;dbl&gt;, peseta &lt;dbl&gt;, petchem &lt;dbl&gt;, platinum &lt;dbl&gt;,
+## #   plywood &lt;dbl&gt;, porkbelly &lt;dbl&gt;, potato &lt;dbl&gt;, propane &lt;dbl&gt;,
+## #   rand &lt;dbl&gt;, rapemeal &lt;dbl&gt;, rapeoil &lt;dbl&gt;, rapeseed &lt;dbl&gt;,
+## #   redbean &lt;dbl&gt;, reserves &lt;dbl&gt;, retail &lt;dbl&gt;, rice &lt;dbl&gt;,
+## #   ringgit &lt;dbl&gt;, rubber &lt;dbl&gt;, rupiah &lt;dbl&gt;, rye &lt;dbl&gt;, saudriyal &lt;dbl&gt;,
+## #   ship &lt;dbl&gt;, silver &lt;dbl&gt;, skr &lt;dbl&gt;, sorghum &lt;dbl&gt;, soybean &lt;dbl&gt;,
+## #   soymeal &lt;dbl&gt;, soyoil &lt;dbl&gt;, stg &lt;dbl&gt;, strategicmetal &lt;dbl&gt;,
+## #   sugar &lt;dbl&gt;, sunmeal &lt;dbl&gt;, sunoil &lt;dbl&gt;, sunseed &lt;dbl&gt;,
+## #   tapioca &lt;dbl&gt;, tea &lt;dbl&gt;, tin &lt;dbl&gt;, ...</code></pre>
+<p>It appears about 2,000 documents have no topics.</p>
+</div>
+<div id="documents-containing-topic-earn" class="section level2">
+<h2>Documents Containing Topic “earn”</h2>
+<pre class="r"><code>earn_topics &lt;- reuters_topics %&gt;%
+  filter(str_detect(txt, &quot;earn&quot;)) 
+
+earn_docs &lt;- document_tokens %&gt;%
+  mutate(doc_id = row_number()) %&gt;%
+  semi_join(earn_topics, by = &quot;doc_id&quot;) 
+
+earn_docs</code></pre>
+<pre><code>## # A tibble: 2,877 x 2
+##    article                                                           doc_id
+##    &lt;chr&gt;                                                              &lt;int&gt;
+##  1 &quot;\n&lt;reuters topics=\&quot;yes\&quot; lewissplit=\&quot;train\&quot; cgisplit=\&quot;train~      5
+##  2 &quot;\n&lt;reuters topics=\&quot;yes\&quot; lewissplit=\&quot;train\&quot; cgisplit=\&quot;train~      7
+##  3 &quot;\n&lt;reuters topics=\&quot;yes\&quot; lewissplit=\&quot;train\&quot; cgisplit=\&quot;train~      8
+##  4 &quot;\n&lt;reuters topics=\&quot;yes\&quot; lewissplit=\&quot;train\&quot; cgisplit=\&quot;train~      9
+##  5 &quot;\n&lt;reuters topics=\&quot;yes\&quot; lewissplit=\&quot;train\&quot; cgisplit=\&quot;train~     10
+##  6 &quot;\n&lt;reuters topics=\&quot;yes\&quot; lewissplit=\&quot;train\&quot; cgisplit=\&quot;train~     11
+##  7 &quot;\n&lt;reuters topics=\&quot;yes\&quot; lewissplit=\&quot;train\&quot; cgisplit=\&quot;train~     15
+##  8 &quot;\n&lt;reuters topics=\&quot;yes\&quot; lewissplit=\&quot;train\&quot; cgisplit=\&quot;train~     16
+##  9 &quot;\n&lt;reuters topics=\&quot;yes\&quot; lewissplit=\&quot;train\&quot; cgisplit=\&quot;train~     18
+## 10 &quot;\n&lt;reuters topics=\&quot;yes\&quot; lewissplit=\&quot;train\&quot; cgisplit=\&quot;train~     22
+## # ... with 2,867 more rows</code></pre>
+</div>
+<div id="topics-co-occurring-with-earn" class="section level2">
+<h2>Topics Co-occurring with “earn”</h2>
+<pre class="r"><code>earn_topics %&gt;%
+  mutate(txt = str_replace_all(txt, &quot;D|TOPICS&quot;, &quot;&quot;)) %&gt;%
+  unnest_tokens(word, txt) %&gt;%
+  mutate(topic_ind = 1) %&gt;%
+  spread(word, topic_ind, fill = 0) %&gt;%
+  select(doc_id, earn, everything()) %&gt;%
+  head()</code></pre>
+<pre><code>## # A tibble: 6 x 15
+##   doc_id  earn   acq  alum  chem copper crude   gas  iron metal   nat   pet
+##    &lt;int&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+## 1      5     1     0     0     0      0     0     0     0     0     0     0
+## 2      7     1     0     0     0      0     0     0     0     0     0     0
+## 3      8     1     1     0     0      0     0     0     0     0     0     0
+## 4      9     1     0     0     0      0     0     0     0     0     0     0
+## 5     10     1     0     0     0      0     0     0     0     0     0     0
+## 6     11     1     0     0     0      0     0     0     0     0     0     0
+## # ... with 3 more variables: ship &lt;dbl&gt;, steel &lt;dbl&gt;, strategic &lt;dbl&gt;</code></pre>
+</div>
+<div id="lemmatized-words-appearing-in-documents-containing-earn" class="section level2">
+<h2>Lemmatized Words Appearing in Documents Containing “earn”</h2>
+<pre class="r"><code>earn_docs %&gt;%
+  unnest_tokens(word, article) %&gt;%
+  filter(!str_detect(word, &quot;[^[:alpha:]]&quot;)) %&gt;%
+  anti_join(stop_words, by = &quot;word&quot;) %&gt;%
+  mutate(lemma = textstem::lemmatize_words(word)) %&gt;%
+  count(lemma) %&gt;%
+  arrange(desc(n)) %&gt;%
+  head()</code></pre>
+<pre><code>## # A tibble: 6 x 2
+##   lemma        n
+##   &lt;chr&gt;    &lt;int&gt;
+## 1 topic     8631
+## 2 mln       7779
+## 3 company   6949
+## 4 unknown   5876
+## 5 exchange  5855
+## 6 date      5806</code></pre>
+</div>
+</div>
+<div id="application-dictionary-based-sentiment-analysis" class="section level1">
+<h1>Application: Dictionary-based Sentiment Analysis</h1>
+<pre class="r"><code>tidytext::sentiments</code></pre>
+<pre><code>## # A tibble: 27,314 x 4
+##    word        sentiment lexicon score
+##    &lt;chr&gt;       &lt;chr&gt;     &lt;chr&gt;   &lt;int&gt;
+##  1 abacus      trust     nrc        NA
+##  2 abandon     fear      nrc        NA
+##  3 abandon     negative  nrc        NA
+##  4 abandon     sadness   nrc        NA
+##  5 abandoned   anger     nrc        NA
+##  6 abandoned   fear      nrc        NA
+##  7 abandoned   negative  nrc        NA
+##  8 abandoned   sadness   nrc        NA
+##  9 abandonment anger     nrc        NA
+## 10 abandonment fear      nrc        NA
+## # ... with 27,304 more rows</code></pre>
+<p>The three general-purpose lexicons are</p>
+<p>AFINN - from Finn Årup Nielsen,
+bing - from Bing Liu and collaborators, and
+nrc - from Saif Mohammad and Peter Turney.</p>
+<p>All three of these lexicons are based on unigrams, i.e., single words. These lexicons contain many English words and the words are assigned scores for positive/negative sentiment, and also possibly emotions like joy, anger, sadness, and so forth. The nrc lexicon categorizes words in a binary fashion (“yes”/“no”) into categories of positive, negative, anger, anticipation, disgust, fear, joy, sadness, surprise, and trust. The bing lexicon categorizes words in a binary fashion into positive and negative categories. The AFINN lexicon assigns words with a score that runs between -5 and 5, with negative scores indicating negative sentiment and positive scores indicating positive sentiment. All of this information is tabulated in the sentiments dataset, and tidytext provides a function get_sentiments() to get specific sentiment lexicons without the columns that are not used in that lexicon.</p>
+<div id="get-text-within-body-of-documents" class="section level2">
+<h2>Get Text Within Body of Documents</h2>
+<p>Separate and extract text between &lt;BODY&gt; tags.</p>
+<pre class="r"><code>body_tokens &lt;- reuters %&gt;%
+  unnest_tokens(output = body, 
+                input = txt, 
+                token = &quot;regex&quot;, 
+                pattern = &quot;&lt;BODY&gt;&quot;)
+
+body_text &lt;- body_tokens %&gt;%
+  mutate(body_id = row_number()) %&gt;%
+  mutate(text = gsub(&quot;&lt;/body&gt;.*&quot;, &quot;&quot;, body)) %&gt;%
+  mutate(text = trimws(text)) %&gt;%
+  dplyr::slice(-1) %&gt;%
+  select(body_id, text) 
+
+body_text %&gt;% head()</code></pre>
+<pre><code>## # A tibble: 6 x 2
+##   body_id text                                                             
+##     &lt;int&gt; &lt;chr&gt;                                                            
+## 1       2 &quot;showers continued throughout the week in\nthe bahia cocoa zone,~
+## 2       3 &quot;the u.s. agriculture department\nreported the farmer-owned rese~
+## 3       4 &quot;argentine grain board figures show\ncrop registrations of grain~
+## 4       5 &quot;moody&#39;s investors service inc said it\nlowered the debt and pre~
+## 5       6 &quot;champion products inc said its\nboard of directors approved a t~
+## 6       7 &quot;computer terminal systems inc said\nit has completed the sale o~</code></pre>
+</div>
+<div id="tokenize-words" class="section level2">
+<h2>Tokenize Words</h2>
+<ul>
+<li>tokenize</li>
+<li>remove non-alphabetic characters</li>
+<li>remove stopwords</li>
+<li>lemmatize</li>
+</ul>
+<pre class="r"><code>body_words &lt;- body_text %&gt;%
+  unnest_tokens(word, text) %&gt;%
+  filter(!str_detect(word, &quot;[^[:alpha:]]&quot;)) %&gt;%
+  anti_join(stop_words, by = &quot;word&quot;) %&gt;%
+  mutate(word_lemma = textstem::lemmatize_words(word)) %&gt;%
+  select(-word) 
+
+body_words %&gt;% head()</code></pre>
+<pre><code>## # A tibble: 6 x 2
+##   body_id word_lemma
+##     &lt;int&gt; &lt;chr&gt;     
+## 1       2 shower    
+## 2       2 continue  
+## 3       2 week      
+## 4       2 bahia     
+## 5       2 cocoa     
+## 6       2 zone</code></pre>
+</div>
+<div id="word-sentiment-categorization" class="section level2">
+<h2>Word Sentiment Categorization</h2>
+<p>Word sentiments based on the “nrc” lexicon.</p>
+<pre class="r"><code>word_sentiment &lt;- body_words %&gt;%
+  left_join(get_sentiments(&quot;nrc&quot;), by = c(&quot;word_lemma&quot; = &quot;word&quot;))
+
+word_sentiment %&gt;% head()</code></pre>
+<pre><code>## # A tibble: 6 x 3
+##   body_id word_lemma sentiment   
+##     &lt;int&gt; &lt;chr&gt;      &lt;chr&gt;       
+## 1       2 shower     &lt;NA&gt;        
+## 2       2 continue   anticipation
+## 3       2 continue   positive    
+## 4       2 continue   trust       
+## 5       2 week       &lt;NA&gt;        
+## 6       2 bahia      &lt;NA&gt;</code></pre>
+</div>
+<div id="body-sentiment-word-count-matrix" class="section level2">
+<h2>Body-Sentiment Word Count Matrix</h2>
+<p>For each body (document), count the number of words associated with each sentiment from the nrc lexicon.</p>
+<pre class="r"><code>body_sentiment_counts &lt;- word_sentiment %&gt;%
+  filter(!is.na(sentiment)) %&gt;%
+  group_by(body_id) %&gt;%
+  count(sentiment) %&gt;%
+  arrange(body_id, desc(n)) %&gt;%
+  spread(sentiment, n, fill = 0) %&gt;%
+  ungroup()
+
+body_sentiment_counts %&gt;% head()</code></pre>
+<pre><code>## # A tibble: 6 x 11
+##   body_id anger anticipation disgust  fear   joy negative positive sadness
+##     &lt;int&gt; &lt;dbl&gt;        &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;   &lt;dbl&gt;
+## 1       2     1           14       0     4     4        6       16       5
+## 2       3     0            0       0     0     0        0        8       0
+## 3       4     0            2       0     0     0        7        2       0
+## 4       5     2            1       0     2     0        9        4       8
+## 5       6     1            6       0     0     5        2        8       1
+## 6       7     0           11       0     7     9        6       16       5
+## # ... with 2 more variables: surprise &lt;dbl&gt;, trust &lt;dbl&gt;</code></pre>
+<pre class="r"><code>convert_to_binary &lt;- function(x) {
+  ifelse(x != 0, 1, 0)
+}
+
+body_sentiment_binary &lt;- body_sentiment_counts %&gt;%
+  mutate_at(vars(-body_id), funs(convert_to_binary))</code></pre>
+</div>
+</div>
+<div id="application-clustering-body-sentiment-word-count-matrix" class="section level1">
+<h1>Application: Clustering Body-Sentiment Word Count Matrix</h1>
+<div id="small-random-sample" class="section level2">
+<h2>Small Random Sample</h2>
+<pre class="r"><code>sample_documents &lt;- body_sentiment_binary %&gt;%
+  sample_n(1000) %&gt;%
+  select(-body_id)</code></pre>
+</div>
+<div id="document-distance" class="section level2">
+<h2>Document Distance</h2>
+<pre class="r"><code>doc_distances &lt;- sample_documents %&gt;%
+  analogue::distance(method = &quot;chi.square&quot;) %&gt;%
+  as.dist()</code></pre>
+</div>
+<div id="complete-linkage-hierarchical-clustering" class="section level2">
+<h2>Complete-linkage Hierarchical Clustering</h2>
+<pre class="r"><code>complete_hcl &lt;- hclust(doc_distances, method = &quot;complete&quot;)
+
+plot(complete_hcl)</code></pre>
+<p><img src="/post/2019-02-10-tidy-text-mining-in-r_files/figure-html/unnamed-chunk-24-1.png" width="672" /></p>
+<p>There appears to be some meaningful structure to the data.</p>
+</div>
+<div id="cluster-exemplars" class="section level2">
+<h2>Cluster Exemplars</h2>
+<pre class="r"><code>n_clusters &lt;- 6
+
+labeled_documents &lt;- sample_documents %&gt;%
+  mutate(clus_id = cutree(complete_hcl, n_clusters))
+
+to_pct &lt;- function(x) {
+  sum(x) / length(x)
+}
+
+labeled_documents %&gt;%
+  group_by(clus_id) %&gt;%
+  summarise_all(
+    funs(to_pct)
+  ) %&gt;%
+  gather(sentiment, score, -clus_id) %&gt;%
+  ggplot(aes(x = sentiment, y = score)) +
+  facet_wrap(~clus_id) +
+  geom_col() +
+  geom_hline(aes(yintercept = 0.5)) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 90)
+  )</code></pre>
+<p><img src="/post/2019-02-10-tidy-text-mining-in-r_files/figure-html/unnamed-chunk-25-1.png" width="672" /></p>
+<pre class="r"><code>labeled_documents %&gt;%
+  group_by(clus_id) %&gt;%
+  summarise_all(
+    funs(median)
+  ) </code></pre>
+<pre><code>## # A tibble: 6 x 11
+##   clus_id anger anticipation disgust  fear   joy negative positive sadness
+##     &lt;int&gt; &lt;dbl&gt;        &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;   &lt;dbl&gt;
+## 1       1     1            1       1     1     1        1        1       1
+## 2       2     0            1       0     0     1        1        1       0
+## 3       3     1            0       0     1     0        1        1       1
+## 4       4     1            1       0     1     1        0        1       0
+## 5       5     0            1       0     1     1        1        1       1
+## 6       6     0            0       0     0     0        0        1       0
+## # ... with 2 more variables: surprise &lt;dbl&gt;, trust &lt;dbl&gt;</code></pre>
+</div>
+</div>

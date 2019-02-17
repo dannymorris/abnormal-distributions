@@ -6,19 +6,45 @@
     <description>Recent content in Posts on Abnormal Distributions</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sun, 20 Jan 2019 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sun, 17 Feb 2019 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
-      <title>Using Flask to deploy predictive models</title>
+      <title>Bag of Words Text Classification in R</title>
+      <link>/post/2019/02/17/text-classification-using-text2vec/</link>
+      <pubDate>Sun, 17 Feb 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/02/17/text-classification-using-text2vec/</guid>
+      <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
+    </item>
+    
+    <item>
+      <title>test highlights</title>
+      <link>/post/2019/02/17/test-highlights/</link>
+      <pubDate>Sun, 17 Feb 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/02/17/test-highlights/</guid>
+      <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
+    </item>
+    
+    <item>
+      <title>Tidy Text Mining in R</title>
+      <link>/post/2019/02/10/tidy-text-mining-in-r/</link>
+      <pubDate>Sun, 10 Feb 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/02/10/tidy-text-mining-in-r/</guid>
+      <description>R PackagesDataTokenizationReuters WordsReuter DocumentsStemmingLemmatizationStopwordsApplication: Extracting Topics from Reuters DocumentsExtract &amp;lt;TOPICS&amp;gt; TagsDocument-Topic Co-Occurence MatrixDocuments Containing Topic “earn”Topics Co-occurring with “earn”Lemmatized Words Appearing in Documents Containing “earn”Application: Dictionary-based Sentiment AnalysisGet Text Within Body of DocumentsTokenize WordsWord Sentiment CategorizationBody-Sentiment Word Count MatrixApplication: Clustering Body-Sentiment Word Count MatrixSmall Random SampleDocument DistanceComplete-linkage Hierarchical ClusteringCluster ExemplarsR Packages# install.</description>
+    </item>
+    
+    <item>
+      <title>Basics of deploying Flask applications to localhost on Windows</title>
       <link>/post/2019/01/20/using-flask-to-deploy-predictive-models/</link>
       <pubDate>Sun, 20 Jan 2019 00:00:00 +0000</pubDate>
       
       <guid>/post/2019/01/20/using-flask-to-deploy-predictive-models/</guid>
-      <description>PurposeMy setupCreate and activate conda environmentInstall dependenciesVery simple Flask appRun the appTest the appPurposeDeploying predictive models is one of the toughest challenges that data scientists face. There currently exists an abundance of resources geared towards model development, but the opposite is true for model deployment.
-In this article, I document my experience deploying a machine learning model using Flask, a web development framework for Python.</description>
+      <description>PurposeEnvironmentCreate and activate conda environment in Anaconda PromptInstall dependenciesVery simple Flask appRun the appTest the appNext stepsPurposeDeploying production code is one of the toughest challenges that data scientists face. There seems to be significantly more content available on model development than model deployment. In this article, I document my experience building and deploying an web application written in Python using the Flask microframework.</description>
     </item>
     
     <item>
