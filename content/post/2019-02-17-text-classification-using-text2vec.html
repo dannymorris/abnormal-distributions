@@ -113,47 +113,13 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(text2vec)     <span class="co"># NLP tools</span>
 <span class="kw">library</span>(tidytext)     <span class="co"># tidy text mining</span>
 
-<span class="kw">library</span>(glmnet)       <span class="co"># logistic regression training</span></code></pre>
-<pre><code>## Loading required package: Matrix</code></pre>
-<pre><code>## Loading required package: foreach</code></pre>
-<pre><code>## Loaded glmnet 2.0-16</code></pre>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(xgboost)      <span class="co"># XGBoost implementation</span>
+<span class="kw">library</span>(glmnet)       <span class="co"># logistic regression training</span>
+<span class="kw">library</span>(xgboost)      <span class="co"># XGBoost implementation</span>
 
 
-<span class="kw">library</span>(tidyverse)    <span class="co"># general purpose data manipulation</span></code></pre>
-<pre><code>## -- Attaching packages ------------ tidyverse 1.2.1 --</code></pre>
-<pre><code>## v ggplot2 3.1.0     v purrr   0.2.5
-## v tibble  2.0.1     v dplyr   0.7.8
-## v tidyr   0.8.2     v stringr 1.3.1
-## v readr   1.3.1     v forcats 0.3.0</code></pre>
-<pre><code>## -- Conflicts --------------- tidyverse_conflicts() --
-## x purrr::accumulate() masks foreach::accumulate()
-## x tidyr::expand()     masks Matrix::expand()
-## x dplyr::filter()     masks stats::filter()
-## x dplyr::lag()        masks stats::lag()
-## x dplyr::slice()      masks xgboost::slice()
-## x purrr::when()       masks foreach::when()</code></pre>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(textstem)     <span class="co"># word lemmatization</span></code></pre>
-<pre><code>## Loading required package: koRpus.lang.en</code></pre>
-<pre><code>## Loading required package: koRpus</code></pre>
-<pre><code>## Loading required package: sylly</code></pre>
-<pre><code>## For information on available language packages for &#39;koRpus&#39;, run
-## 
-##   available.koRpus.lang()
-## 
-## and see ?install.koRpus.lang()</code></pre>
-<pre><code>## 
-## Attaching package: &#39;koRpus&#39;</code></pre>
-<pre><code>## The following object is masked from &#39;package:readr&#39;:
-## 
-##     tokenize</code></pre>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(caret)        <span class="co"># model evaluation</span></code></pre>
-<pre><code>## Loading required package: lattice</code></pre>
-<pre><code>## 
-## Attaching package: &#39;caret&#39;</code></pre>
-<pre><code>## The following object is masked from &#39;package:purrr&#39;:
-## 
-##     lift</code></pre>
+<span class="kw">library</span>(tidyverse)    <span class="co"># general purpose data manipulation</span>
+<span class="kw">library</span>(textstem)     <span class="co"># word lemmatization</span>
+<span class="kw">library</span>(caret)        <span class="co"># model evaluation</span></code></pre>
 </div>
 <div id="load-data" class="section level1">
 <h1>Load Data</h1>
@@ -410,9 +376,8 @@ vectorizer &lt;-<span class="st"> </span>text2vec<span class="op">::</span><span
 <p>First we vectorize each training document to generate features and convert the data structure to a sparse matrix.</p>
 <pre class="sourceCode r"><code class="sourceCode r">dtm_train &lt;-<span class="st"> </span>text2vec<span class="op">::</span><span class="kw">create_dtm</span>(iter_train, vectorizer)</code></pre>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">head</span>(dtm_train)</code></pre>
-<pre><code>## 6 x 19014 sparse Matrix of class &quot;dgCMatrix&quot;</code></pre>
-<pre><code>##    [[ suppressing 31 column names &#39;dlrsd&#39;, &#39;bionomic&#39;, &#39;prosecute&#39; ... ]]</code></pre>
-<pre><code>##                                                                       
+<pre><code>## 6 x 19014 sparse Matrix of class &quot;dgCMatrix&quot;
+##                                                                       
 ## 1 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . ......
 ## 2 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . ......
 ## 3 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . ......
@@ -445,16 +410,6 @@ glmnet_classifier &lt;-<span class="st"> </span>glmnet<span class="op">::</span>
   <span class="dt">thresh =</span> <span class="fl">1e-3</span>,
   <span class="co"># again lower number of iterations for faster training</span>
   <span class="dt">maxit =</span> <span class="fl">1e3</span>)</code></pre>
-<pre><code>## Warning: from glmnet Fortran code (error code -80); Convergence for 80th
-## lambda value not reached after maxit=1000 iterations; solutions for larger
-## lambdas returned</code></pre>
-<pre><code>## Warning: from glmnet Fortran code (error code -78); Convergence for 78th
-## lambda value not reached after maxit=1000 iterations; solutions for larger
-## lambdas returned
-
-## Warning: from glmnet Fortran code (error code -78); Convergence for 78th
-## lambda value not reached after maxit=1000 iterations; solutions for larger
-## lambdas returned</code></pre>
 <p>To measure the performance of the classifier, we can look at the AUROC.</p>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">paste</span>(<span class="st">&quot;Maximum AUROC from training:&quot;</span>, 
       <span class="kw">max</span>(glmnet_classifier<span class="op">$</span>cvm) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">round</span>(., <span class="dv">4</span>))</code></pre>
@@ -480,7 +435,7 @@ test_auc &lt;-<span class="st"> </span>glmnet<span class="op">:::</span><span cl
                          <span class="dt">prob =</span> probs)
 
 <span class="kw">paste</span>(<span class="st">&quot;AUROC for testing set:&quot;</span>, <span class="kw">round</span>(test_auc, <span class="dv">4</span>))</code></pre>
-<pre><code>## [1] &quot;AUROC for testing set: 0.9941&quot;</code></pre>
+<pre><code>## [1] &quot;AUROC for testing set: 0.9948&quot;</code></pre>
 </div>
 <div id="class-labels" class="section level2">
 <h2>Class Labels</h2>
@@ -496,26 +451,26 @@ caret<span class="op">::</span><span class="kw">confusionMatrix</span>(<span cla
 ## 
 ##           Reference
 ## Prediction    0    1
-##          0 1942   78
-##          1   23  966
-##                                           
-##                Accuracy : 0.9664          
-##                  95% CI : (0.9594, 0.9726)
-##     No Information Rate : 0.653           
-##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
-##                                           
-##                   Kappa : 0.925           
-##  Mcnemar&#39;s Test P-Value : 7.735e-08       
-##                                           
-##               Precision : 0.9767          
-##                  Recall : 0.9253          
-##                      F1 : 0.9503          
-##              Prevalence : 0.3470          
-##          Detection Rate : 0.3210          
-##    Detection Prevalence : 0.3287          
-##       Balanced Accuracy : 0.9568          
-##                                           
-##        &#39;Positive&#39; Class : 1               
+##          0 1940   58
+##          1   25  986
+##                                          
+##                Accuracy : 0.9724         
+##                  95% CI : (0.9659, 0.978)
+##     No Information Rate : 0.653          
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16      
+##                                          
+##                   Kappa : 0.9387         
+##  Mcnemar&#39;s Test P-Value : 0.000444       
+##                                          
+##               Precision : 0.9753         
+##                  Recall : 0.9444         
+##                      F1 : 0.9596         
+##              Prevalence : 0.3470         
+##          Detection Rate : 0.3277         
+##    Detection Prevalence : 0.3360         
+##       Balanced Accuracy : 0.9659         
+##                                          
+##        &#39;Positive&#39; Class : 1              
 ## </code></pre>
 <p>Class label predictions yieled an accuracy of 0.97, a precision value of 0.976 and recall value of 0.935.</p>
 </div>
@@ -566,7 +521,7 @@ pruned_vocab &lt;-<span class="st"> </span>text2vec<span class="op">::</span><sp
 pruned_vectorizer &lt;-<span class="st"> </span><span class="kw">vocab_vectorizer</span>(pruned_vocab)
 
 <span class="kw">eval_classifier</span>(pruned_vectorizer)<span class="op">$</span>auc</code></pre>
-<pre><code>## [1] 0.9952112</code></pre>
+<pre><code>## [1] 0.9960433</code></pre>
 </div>
 <div id="n-grams" class="section level1">
 <h1>N-grams</h1>
@@ -575,20 +530,14 @@ bigrams &lt;-<span class="st"> </span><span class="kw">create_vocabulary</span>(
 bigram_vectorizer &lt;-<span class="st"> </span><span class="kw">vocab_vectorizer</span>(bigrams)
 
 <span class="kw">eval_classifier</span>(bigram_vectorizer)<span class="op">$</span>auc</code></pre>
-<pre><code>## Warning: from glmnet Fortran code (error code -87); Convergence for 87th
-## lambda value not reached after maxit=1000 iterations; solutions for larger
-## lambdas returned</code></pre>
-<pre><code>## Warning: from glmnet Fortran code (error code -89); Convergence for 89th
-## lambda value not reached after maxit=1000 iterations; solutions for larger
-## lambdas returned</code></pre>
-<pre><code>## [1] 0.9955144</code></pre>
+<pre><code>## [1] 0.9953674</code></pre>
 </div>
 <div id="feature-hashing" class="section level1">
 <h1>Feature Hashing</h1>
 <pre class="sourceCode r"><code class="sourceCode r">h_vectorizer =<span class="st"> </span><span class="kw">hash_vectorizer</span>(<span class="dt">hash_size =</span> <span class="dv">2</span> <span class="op">^</span><span class="st"> </span><span class="dv">14</span>, <span class="dt">ngram =</span> <span class="kw">c</span>(1L, 2L))
 
 <span class="kw">eval_classifier</span>(h_vectorizer)<span class="op">$</span>auc</code></pre>
-<pre><code>## [1] 0.9954476</code></pre>
+<pre><code>## [1] 0.9959292</code></pre>
 </div>
 <div id="tf-idf" class="section level1">
 <h1>TF-IDF</h1>
@@ -620,13 +569,13 @@ glmnet_classifier =<span class="st"> </span><span class="kw">cv.glmnet</span>(
 
 <span class="kw">paste</span>(<span class="st">&quot;Maximum AUROC from training:&quot;</span>, 
       <span class="kw">max</span>(glmnet_classifier<span class="op">$</span>cvm) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">round</span>(., <span class="dv">4</span>))</code></pre>
-<pre><code>## [1] &quot;Maximum AUROC from training: 0.9941&quot;</code></pre>
+<pre><code>## [1] &quot;Maximum AUROC from training: 0.9946&quot;</code></pre>
 <pre class="sourceCode r"><code class="sourceCode r">probs &lt;-<span class="st"> </span><span class="kw">predict</span>(glmnet_classifier, dtm_test_tfidf, <span class="dt">type =</span> <span class="st">&#39;response&#39;</span>)[,<span class="dv">1</span>]
 
 labeled_documents<span class="op">$</span>reuters_test<span class="op">$</span>earn_ind <span class="op">%&gt;%</span>
 <span class="st">  </span><span class="kw">as.integer</span>() <span class="op">%&gt;%</span>
 <span class="st">  </span>glmnet<span class="op">::</span><span class="kw">auc</span>(., <span class="dt">prob =</span> probs)</code></pre>
-<pre><code>## [1] 0.9974716</code></pre>
+<pre><code>## [1] 0.9971713</code></pre>
 </div>
 <div id="xgboost" class="section level1">
 <h1>XGBoost</h1>
@@ -743,7 +692,7 @@ labeled_documents<span class="op">$</span>reuters_test<span class="op">$</span>e
 <span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> iter, <span class="dt">y =</span> train_error)) <span class="op">+</span>
 <span class="st">  </span><span class="kw">geom_line</span>() <span class="op">+</span>
 <span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;XGBoost Training Error&quot;</span>)</code></pre>
-<p><img src="/post/2019-02-17-text-classification-using-text2vec_files/figure-html/unnamed-chunk-24-1.png" width="672" /></p>
+<p><img src="/post/2019-02-17-text-classification-using-text2vec_files/figure-html/unnamed-chunk-25-1.png" width="672" /></p>
 <pre class="sourceCode r"><code class="sourceCode r">xgb_probs &lt;-<span class="st"> </span><span class="kw">predict</span>(xgb, dtm_test_tfidf, <span class="dt">type =</span> <span class="st">&#39;response&#39;</span>)
 
 labeled_documents<span class="op">$</span>reuters_test<span class="op">$</span>earn_ind <span class="op">%&gt;%</span>

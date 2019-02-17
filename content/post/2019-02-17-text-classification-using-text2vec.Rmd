@@ -19,6 +19,10 @@ editor_options:
   chunk_output_type: console
 ---
 
+```{r, include=F}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
 In this article, I'll demonstrate how to perform binary classification of text documents in R. I'll touch on topics such as text extraction and cleansing, tokenization, feature vectorization, document-term matrices, vocabulary pruning, n-grams, feature hashing, TF-IDF, and training/testing penalized logistic regression and XGBoost.
 
 The main text mining packages to demonstrate are [tidytext](https://www.tidytextmining.com/) for general text mining and processing and [text2vec](http://text2vec.org/) for sparse document-term matrices and feature vectorization. The penalized logistic regression classifer comes from teh [glmnet](https://web.stanford.edu/~hastie/glmnet/glmnet_alpha.html) pacakage and the XGBoost implementation comes from [xgboost](https://xgboost.readthedocs.io/en/latest/R-package/xgboostPresentation.html) package.

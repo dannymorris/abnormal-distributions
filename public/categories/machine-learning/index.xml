@@ -1,23 +1,32 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Machine learning on Abnormal Distributions</title>
+    <title>Machine Learning on Abnormal Distributions</title>
     <link>/categories/machine-learning/</link>
-    <description>Recent content in Machine learning on Abnormal Distributions</description>
+    <description>Recent content in Machine Learning on Abnormal Distributions</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Mon, 17 Dec 2018 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sun, 17 Feb 2019 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/categories/machine-learning/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
-      <title>Comparing down-sampling to no sampling for classifying imbalanced data</title>
-      <link>/post/2018/12/17/comparing-down-sampling-to-no-sampling-for-classifying-imbalanced-data/</link>
-      <pubDate>Mon, 17 Dec 2018 00:00:00 +0000</pubDate>
+      <title>Bag of Words Text Classification in R</title>
+      <link>/post/2019/02/17/text-classification-using-text2vec/</link>
+      <pubDate>Sun, 17 Feb 2019 00:00:00 +0000</pubDate>
       
-      <guid>/post/2018/12/17/comparing-down-sampling-to-no-sampling-for-classifying-imbalanced-data/</guid>
-      <description>R packagesDataTrain/test splitDown-sample training dataTraining parametersTraining on down-sampled training dataTraining on full training dataComparing ROC of models on validation setsComparing ROC of models on test setSession infoIn this article, we’ll explore the In the context of binary classification, data is said to be imbalanced when one of the classes is vastly under-represented. The popular Kaggle credit card fraud dataset will be used.</description>
+      <guid>/post/2019/02/17/text-classification-using-text2vec/</guid>
+      <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
+    </item>
+    
+    <item>
+      <title>Basics of deploying Flask applications to localhost on Windows</title>
+      <link>/post/2019/01/20/using-flask-to-deploy-predictive-models/</link>
+      <pubDate>Sun, 20 Jan 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/01/20/using-flask-to-deploy-predictive-models/</guid>
+      <description>PurposeEnvironmentCreate and activate conda environment in Anaconda PromptInstall dependenciesVery simple Flask appRun the appTest the appNext stepsPurposeDeploying production code is one of the toughest challenges that data scientists face. There seems to be significantly more content available on model development than model deployment. In this article, I document my experience building and deploying an web application written in Python using the Flask microframework.</description>
     </item>
     
   </channel>
