@@ -5,10 +5,12 @@ date: '2019-02-10'
 output: 
   blogdown::html_page:
     toc: true
+    highlight: pygments
 slug: tidy-text-mining-in-r
 categories:
   - R
   - Data Mining
+  - Text Mining
 tags:
   - Text Mining
   - R
