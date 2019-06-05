@@ -35,23 +35,18 @@ library(rsample)   # train/test split
 library(pROC)      # for ROC
 ```
 
-```{r}
-# connect to SQL Server database
-local_db <- rsqltools::sql_server_connect(
-  server = "DESKTOP-07BKETP",
-  database = "abn_distro"
-)
-```
 
 ```{r}
 # read from SQL Server and do light preprocessing
-sales_tbl <- DBI::dbReadTable(
-  conn = local_db,
-  name = "SALES_ENGINEERED"
-) %>%
-  as_tibble() %>%
-  filter(CLASS %in% c("ok", "fraud")) %>%
-  mutate(CLASS = factor(CLASS, levels = c("ok", "fraud")))
+b_cancer <- url("http://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/breast-cancer-wisconsin.data") %>%
+  readr::read_csv(col_names = F) %>%
+  dplyr::mutate(malignant = ifelse(X11 == 4, "1", "0")) %>%
+  dplyr::mutate(malignant = factor(malignant, levels = c("1", "0"))) %>%
+  dplyr::mutate_at(vars(X2:X10), list(~as.integer)) %>%
+  dplyr::filter(complete.cases(.)) %>%
+  dplyr::select(-X1, -X11) 
+
+
 ```
 
 ```{r}

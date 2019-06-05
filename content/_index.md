@@ -6,4 +6,18 @@ title: Home
 
 # Abnormal Distributions
 
-This is a personal website created by Danny Morris using [blogdown](https://bookdown.org/yihui/blogdown/) for the purpose of documenting some of the open source tools and techniques I use for data science. In my work, I use a combination of open source and commercial tools though I prefer open source due to accessibility and cost. I enjoy doing a little bit of everything including data engineering, exploratory analysis, machine learning, and presentation/documenation. R has been my primary tool for several years, but I've been delving into tools such as Python and Docker. My hope is that others and my future self will benefit from this documentation. 
+This is a personal website created by Danny Morris using [blogdown](https://bookdown.org/yihui/blogdown/). I have two goals for this website:
+
+1. To document some of the more interesting tools and techniques that I have learned in my career as a Data Scientist.
+
+2. To develop connections with others who share a similar passion for data analysis. Hopefully the content on this site will be useful to others. 
+
+Please feel free to connect with me!
+
+[Github](https://github.com/dannymorris) 
+
+[LinkedIn](https://www.linkedin.com/in/drmorris87/) 
+
+[Email](mailto:drmorris87@outlook.com)
+
+# Recent Posts

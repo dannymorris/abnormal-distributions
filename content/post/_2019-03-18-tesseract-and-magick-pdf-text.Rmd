@@ -1,0 +1,53 @@
+---
+title: Using Magick and Tesseract in R to Extract PDF Text
+author: Danny Morris
+date: '2019-03-18'
+slug: tesseract-and-magick-pdf-text
+output: 
+  blogdown::html_page:
+    toc: true
+categories:
+  - R
+  - Text Mining
+tags:
+  - R
+  - Text Mining
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+knitr::opts_chunk$set(eval = F)
+```
+
+# R Libraries
+
+```{r}
+library(tesseract)
+library(magick)
+library(tidyverse)
+```
+
+# Data
+
+## Original PDF
+
+```{r}
+file_path <- "static/img/shipping-label.pj"
+
+shipping_label <- image_read_pdf(file_path)
+```
+
+```{r}
+cropped <- image_crop(shipping_label, "1900x250+1+1000")
+```
+
+```{r}
+eng <- tesseract("eng")
+
+tesseract::ocr(cropped, engine = eng) %>%
+  str_split("\n") %>%
+  unlist() %>%
+  str_c(collapse = " ") %>%
+  str_remove_all(regex("[^[:alnum:]]"))
+```

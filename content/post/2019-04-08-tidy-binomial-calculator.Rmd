@@ -1,0 +1,62 @@
+---
+title: Tidy Binomial Calculator Using the probs Package
+author: Danny Morris
+date: '2019-04-08'
+slug: tidy-binomial-calculator
+output: 
+  blogdown::html_page:
+    toc: true
+categories:
+  - Statistics
+  - R
+tags:
+  - Statistics
+  - R
+editor_options: 
+  chunk_output_type: console
+---
+
+This short post introduces a simple R package called `probs` that I created for tidy binomial probability calculations. In the future, `probs` will include similar functions for calculating probability assuming different probability distributions.
+
+# Install 
+
+The `probs` package lives on GitHub.
+
+```{r, eval = F}
+library(devtools)
+
+devtools::install_github("dannymorris/probs")
+```
+
+# Simulated Data
+
+Recently, I needed to communicate to a larger audience the probability of detecting a particular event. Specifically, a pre-existing process was in place that required humans to sift through a sample of 100 PDF documents out of 40,000 documents. The intent of this process was determine whether or not the entire batch of documents was faulty or passable. 
+
+Based on previous data, there was reason to believe that a batch of 40,000 documents *may* contain 50 faulty documents. So the humans would manually inspect a sample of 100 documents, hoping to find at least 1 faulty document.
+
+I created the `probs` package to quickly determine the probability of detecting 1 or more faulty documents in a sample of 100, given that the batch of 40,000 documents may contain 50 faulty documents.
+
+```{r}
+# probability of detecting a single faulty document in a batch of 40,000 documents, assuming there are 50 faulty documents in total.
+prob_faulty <- 50/40000
+
+paste("The probability that any randomly selected document is faulty is", prob_faulty)
+```
+
+In other words, the probability of detecting a single faulty document in this case is .00125.
+
+The question is now **what is the probability that no faulty documents will be found in a sample of 100 documents, assuming there are 50 faulty documents in a batch of 40,000?**
+
+```{r}
+library(probs)
+
+probs::cumul_binom_prob(
+  n_success = 0,
+  prob_success = prob_faulty,
+  sample_size = 100
+)
+```
+
+The printout from the function explains that .88 is the probability that someone would find 0 faulty documents in a sample of 100. In other words, the humans are wasting their time if they are expecting to discover even a single faulty document.
+
+

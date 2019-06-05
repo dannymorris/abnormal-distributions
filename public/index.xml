@@ -6,10 +6,43 @@
     <description>Recent content in Home on Abnormal Distributions</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sun, 17 Feb 2019 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 04 Jun 2019 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Resume</title>
+      <link>/resume/</link>
+      <pubDate>Tue, 04 Jun 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/resume/</guid>
+      <description>ConnectSummaryTechnicalCore ValuesExperienceEducationConnectdrmorris87@outlook.com
+LinkedIn
+GitHub
+SummaryI am an applied data scientist with a passion for developing innovative tools and analyses using advanced analytical techniques to help solve complex business problems. Since 2016, I’ve worked in the health insurance industry performing analyses on healthcare claims and (more recently) Marketing and Sales campaigns. I offer a rare blend of technical and communication skills, which helps to maximize my analyses and the potential impact.</description>
+    </item>
+    
+    <item>
+      <title>Tidy Binomial Calculator Using the probs Package</title>
+      <link>/post/2019/04/08/tidy-binomial-calculator/</link>
+      <pubDate>Mon, 08 Apr 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/04/08/tidy-binomial-calculator/</guid>
+      <description>InstallSimulated DataThis short post introduces a simple R package called probs that I created for tidy binomial probability calculations. In the future, probs will include similar functions for calculating probability assuming different probability distributions.
+InstallThe probs package lives on GitHub.
+library(devtools)devtools::install_github(&amp;quot;dannymorris/probs&amp;quot;)Simulated DataRecently, I needed to communicate to a larger audience the probability of detecting a particular event. Specifically, a pre-existing process was in place that required humans to sift through a sample of 100 PDF documents out of 40,000 documents.</description>
+    </item>
+    
+    <item>
+      <title>Detecting, Extracting, and Comparing Address Labels</title>
+      <link>/post/2019/03/20/detecting-extracting-and-comparing-address-labels/</link>
+      <pubDate>Wed, 20 Mar 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/03/20/detecting-extracting-and-comparing-address-labels/</guid>
+      <description>ApplicationsObject DetectionOptical Character RecognitionString MatchingChallengesR PackagesBusinesses send and receive mail from customers regularly. Mailing address labels are vital to the success of mailings. Incomplete or inaccurate labels stemming from poor data source quality can negatively impact customer relationships, brand perception, and internal performance metrics. Good quality data is key, though it is sometimes difficult to achieve.
+This document describes some methodologies for processing and analyzing address labels using techniques from computer science and artificial intelligence that scale to large data sets.</description>
+    </item>
     
     <item>
       <title>Bag of Words Text Classification in R</title>
@@ -64,6 +97,15 @@ This article demonstrates the same engineering pipeline written in R and Python.
       
       <guid>/post/2018/01/09/getting-started-with-python-in-r-markdown-using-the-reticulate-package/</guid>
       <description>AboutInstall and load reticulateUsing conda environmentsInstalling Python librariesWriting Python code in R MarkdownAboutOne of my current goals is to gain basic familiarity with Python as a data science language. I’ve spent some time recently working with Pandas, seaborn, and sci-kit learn. I’ve had a pleasant experience working in the Spyder IDE. Still, nothing beats R Markdown for creating highly polished, reproducible documents and analyses.</description>
+    </item>
+    
+    <item>
+      <title>About Me</title>
+      <link>/about/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      
+      <guid>/about/</guid>
+      <description>Hello! Currently, I am a Data Scientist for HealthNow NY, a health insurance company in upstate New York serving nearly 500,000 customers. My main job is to provide analytical support to the Marketing team, which by association also involves Sales and Communications. My focus is on helping them understand their data, measuring campaign success, and automating complex and time-consuming processes. I do a lot of data mining, statistical analysis, and predictive modeling in my pursuit to develop intelligent business solutions.</description>
     </item>
     
   </channel>

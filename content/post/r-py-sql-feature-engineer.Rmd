@@ -27,7 +27,7 @@ This article demonstrates the same engineering pipeline written in R and Python.
 ```{r}
 library(DMwR) # install.packages("DMwR")
 
-data(sales, "DMwR")
+data(sales, package = "DMwR")
 
 head(sales)
 ```

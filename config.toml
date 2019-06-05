@@ -16,9 +16,18 @@ footnotereturnlinkcontents = "↩"
     url = "/"
     weight = 1
 [[menu.main]]
+    name = "About"
+    url = "/about/"
+    weight = 2
+[[menu.main]]
+    name = "Resume"
+    url = "/resume/"
+    weight = 3
+[[menu.main]]
     name = "Articles"
     url = "/categories/"
-    weight = 2
+    weight = 4
+
 
 [params]
     description = "A website built through Hugo and blogdown."

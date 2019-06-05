@@ -15,6 +15,10 @@
       
       <li><a href="/">Home</a></li>
       
+      <li><a href="/about/">About</a></li>
+      
+      <li><a href="/resume/">Resume</a></li>
+      
       <li><a href="/categories/">Articles</a></li>
       
     </ul>
@@ -49,7 +53,7 @@
 <h2>Original data</h2>
 <pre class="r"><code>library(DMwR) # install.packages(&quot;DMwR&quot;)
 
-data(sales, &quot;DMwR&quot;)
+data(sales, package = &quot;DMwR&quot;)
 
 head(sales)</code></pre>
 <pre><code>##   ID Prod Quant   Val Insp
@@ -111,14 +115,14 @@ r_engineered &lt;- sales %&gt;%
 
 head(r_engineered)</code></pre>
 <pre><code>## # A tibble: 6 x 10
-##   ID    Prod  Quant    Val Insp   LPPQ   LPPQ_2    LPPQ_3   LPPQ_4   LPPQ_5
-##   &lt;fct&gt; &lt;fct&gt; &lt;int&gt;  &lt;dbl&gt; &lt;fct&gt; &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;    &lt;dbl&gt;    &lt;dbl&gt;
-## 1 v1171 p1914   100   1025 ok    1.01   4.14e-3   1.99e-6  8.92e-3  1.99e-6
-## 2 v1109 p1669   269   9710 ok    1.56   3.73e-1   6.67e-2  5.35e-5  0.     
-## 3 v3796 p3995   169   1475 ok    0.941  3.01e-5   0.       1.26e-1  0.     
-## 4 v1179 p1818  1188 103885 ok    1.94   9.91e-1   0.       6.91e-3  0.     
-## 5 v896  p3072   372   3980 ok    1.03   6.88e-3   0.       2.59e-3  0.     
-## 6 v654  p2278 10341 220565 ok    1.33   1.46e-1   0.       7.06e-3  0.</code></pre>
+##   ID    Prod  Quant   Val Insp   LPPQ  LPPQ_2 LPPQ_3     LPPQ_4 LPPQ_5
+##   &lt;fct&gt; &lt;fct&gt; &lt;int&gt; &lt;dbl&gt; &lt;fct&gt; &lt;dbl&gt;   &lt;dbl&gt;  &lt;dbl&gt;      &lt;dbl&gt;  &lt;dbl&gt;
+## 1 v1368 p1215   102  1170 ok    1.06  0.00746  0     0.00280         0
+## 2 v251  p920  16100 27255 ok    0.229 0.554    0     0               0
+## 3 v701  p3649   527 56525 ok    2.03  1.12     0.263 0.926           0
+## 4 v22   p1125   202  2220 ok    1.04  0.00460  0     0.00945         0
+## 5 v1109 p1910   173  2090 ok    1.08  0.0119   0     0.0331          0
+## 6 v252  p994    113  1160 ok    1.01  0.00146  0.164 0.00000353      0</code></pre>
 </div>
 <div id="python" class="section level2">
 <h2>Python</h2>
@@ -128,30 +132,48 @@ head(r_engineered)</code></pre>
 import numpy as np
 from sklearn.utils import resample </code></pre>
 <pre class="python"><code>sales = pd.read_csv(&#39;sales.csv&#39;)
+
 sales = sales.dropna()
+
 sales_ok = sales[sales.Insp == &#39;ok&#39;]
 sales_fraud = sales[sales.Insp == &#39;fraud&#39;]
+
 resample_ok = resample(sales_ok, replace = False, n_samples = 500)
 resample_fraud = resample(sales_fraud, replace = False, n_samples = 500) 
+
 sales = pd.concat([resample_ok, resample_fraud])
+
 sales[&#39;LPPQ&#39;] = np.log10(sales.Val/sales.Quant)
 sales[&#39;LPPQ_2&#39;] = sales.LPPQ - np.mean(sales.LPPQ)
+
 def get_group_mean(group_vars, col_name):
   group_df = sales.groupby(group_vars, as_index = False)[&#39;LPPQ&#39;]
   group_mean = group_df.mean()
   group_mean = group_mean.rename(index = str, columns = {&quot;LPPQ&quot;: col_name})
   return group_mean
+
 LPPQ_3 = get_group_mean(group_vars = [&#39;ID&#39;], col_name = &#39;LPPQ_3&#39;)
 LPPQ_4 = get_group_mean(group_vars = [&#39;Prod&#39;], col_name = &#39;LPPQ_4&#39;)
 LPPQ_5 = get_group_mean(group_vars = [&#39;Prod&#39;, &#39;ID&#39;], col_name = &#39;LPPQ_5&#39;)
+
 sales = sales.merge(LPPQ_3, how = &#39;inner&#39;, on = &#39;ID&#39;)
 sales = sales.merge(LPPQ_4, how = &#39;inner&#39;, on = &#39;Prod&#39;) 
 sales = sales.merge(LPPQ_5, how = &#39;inner&#39;, on = [&#39;ID&#39;, &#39;Prod&#39;])
+
 def sq_diff(x):
   return (x - sales.LPPQ)**2
   
 sales[[&#39;LPPQ_2&#39;,&#39;LPPQ_3&#39;, &#39;LPPQ_4&#39;, &#39;LPPQ_5&#39;]] = sales[[&#39;LPPQ_2&#39;,&#39;LPPQ_3&#39;, &#39;LPPQ_4&#39;, &#39;LPPQ_5&#39;]].apply(sq_diff)
+
 sales.head()</code></pre>
+<pre><code>##       ID   Prod    Quant       Val  ...    LPPQ_2    LPPQ_3    LPPQ_4  LPPQ_5
+## 0  v1146  p1398    126.0    1020.0  ...  0.904722  0.006759  0.054679     0.0
+## 1   v672  p1398    111.0    1085.0  ...  0.904722  0.041993  0.023091     0.0
+## 2  v5717  p1398  16985.0  155805.0  ...  0.904722  0.000000  0.032238     0.0
+## 3  v1152  p1398    155.0    1075.0  ...  0.904722  0.000000  0.090593     0.0
+## 4  v4667  p1398  40860.0  137010.0  ...  0.904722  0.000000  0.380208     0.0
+## 
+## [5 rows x 10 columns]</code></pre>
 </div>
 
 </main>

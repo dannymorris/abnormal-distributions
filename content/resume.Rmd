@@ -1,0 +1,86 @@
+---
+title: Resume
+author: Danny Morris
+date: "2019-06-04"
+output: 
+  blogdown::html_page:
+    toc: true
+---
+
+## Connect
+
+[drmorris87@outlook.com](mailto:davidhampgonsalves@gmail.com)
+
+[LinkedIn](https://www.linkedin.com/in/drmorris87/) 
+
+[GitHub](https://github.com/dannymorris)
+
+## Summary
+
+I am an applied **data scientist** with a passion for developing innovative tools and analyses using advanced analytical techniques to help solve complex business problems. Since 2016, I've worked in the health insurance industry performing analyses on healthcare claims and (more recently) Marketing and Sales campaigns. I offer a rare **blend of technical and communication skills**, which helps to maximize my analyses and the potential impact. My solutions typically involve data mining, visualizations and dashboards, and predictive models.
+
+I love working with the **R programming** language and frameworks like the [tidyverse](https://www.tidyverse.org/), [caret](http://topepo.github.io/caret/index.html), [htmlwidgets](https://www.htmlwidgets.org/), [text2vec](http://text2vec.org/), and [rmarkdown](https://rmarkdown.rstudio.com/). At work and in my spare time, I **enjoy developing R packages** when I learn new techniques that can be consolidated into a series of functions. I consider myself a functional programmer who uses a series of pure functions to chain together an analysis. You can find some of my open source projects on [my GitHub](https://github.com/dannymorris), including my [outsiders](https://dannymorris.github.io/outsiders/articles/outsiders.html) package which implements a selection of outlier detection techniques in R.
+
+I have some experience with Python, namely for computer vision applications using OpenCV and Tesseract. I am interested in continuing to learn more Python for machine learning, seeing as the top cloud computing companies (e.g. AWS) offer more support for Python than R. Other tools I use frequently include SQL, Alterx, Git, and Jira.
+
+Finally, I enjoy teaching and mentoring. For the last few years, I've developed and led several trainings on R programming, applied statistics, and predictive modeling. This year, I am formally mentoring an intern for 10 weeks. He and I are working on some text mining methods.
+
+## Technical 
+
+- **Tools and languages:** R, SQL, Alteryx, Python, AWS, Git, Jira, Docker, Tableau
+
+- **Areas of interest:** Data mining, predictive modeling, artificial intelligence, R software development, data science education, writing and presenting, learning Python
+
+## Core Values
+
+- **Simple yet deep solutions** are preferable to complex solutions
+
+- Data science is not about the tools and algorithms. It's about **creative problem solving** and **helping people**.
+
+- Data scientists can't know every tool and technique. The best ones are able to **learn quickly** and adapt solutions to their problems.
+
+## Experience
+
+**HealthNow New York, Inc.**	(Buffalo, NY)
+
+*Data Scientist II*, January 2019 - Present
+
+- Creator of simtext, a custom record linkage solution written in R that calculates the similarity between two strings of text and classifies the pair as a true match or mismatch. The main statistical algorithms are Cosine similarity (for string matching) and XGBoost (for final classification). The system has several applications, including duplicate detection and automatic verification of information. Currently, simtext is used as a command line application, but future plans are to implement simtext as an Alteryx workflow with a lightweight UI for self-service utilization.
+
+- Creator of isotext, an information retrieval system that utilizes predictive modeling to extract customer contact information from eletronic PDF documents. The system was built on creative feature engineering and multi-class classification using XGBoost. The functions for feature engineering are exposed via an R package, and the classifier is deployed to SQL Server Machine Learning Services for batch predictions. The classifier performs at 99.8% accuracy after 10-fold cross-validation, effectively eliminating the need for humans to spend hours searching for the information.
+
+**HealthNow New York, Inc.**	(Buffalo, NY)
+
+*Analytics Consultant II - Marketing*, 2017 - 2018
+
+- Used GitLab and Artifactory to develop and publish several R pacakges, including an R interface to the AWS Comprehend API for sentiment analysis on member survey data.
+
+- Developed a custom R interface to Google Cloud Vision API to extract and load customer information from scanned business reply cards to eliminate manual data collection.
+
+- Developed a popular, interactive sales forecasting dashboard using Holt-Winters' method and Plotly, published to an internal web server and deployed daily with GitLab CI/CD.
+
+- Co-created and presented a series of trainings and presentations focused on applied statistical analysis for analysts at all levels. My courses carried a 92% recommendation rate, with specific attention called to my clear and thorough communication style.
+
+**HealthNow New York, Inc.**	(Buffalo, NY)
+
+*Clinical Analyst II*,	2016 – 2017
+
+*Clinical Analyst I*,	2016
+
+- Developed a novel algorithm using an ensemble of forecasting techniques with hierarchical clustering to predict future Medicare Star benchmarks within 2% error. Performance metrics exceeded previous solution by 40%. Contributed significantly to meeting corporate goals and earning an additional $30 million in revenue. Patent pending (inventor). 
+
+**South Carolina Policy Council**	(Columbia, SC)
+
+*Research Assistant (internship)*	2014
+
+- Developed scripts to automatically search government databases and websites for documents containing interesting news on public servants. Top project was an analysis of the Governor’s travel documents, in which I identified suspicious travel patterns and undocumented expenses by converting unstructured text documents to tidy tables suitable for exploratory analysis. 
+
+## Education
+
+**BA Sociology**, 2015,
+	University of South Carolina (Columbia, SC)
+
+**Programming for Data Science (certificate)**, March 2019,
+  Institute for Statistics Education	(online)
+
+- 10 courses in machine learning, text mining, deep learning, anomaly detection, and predictive modeling.

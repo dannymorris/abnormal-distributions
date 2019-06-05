@@ -6,10 +6,31 @@
     <description>Recent content in Posts on Abnormal Distributions</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sun, 17 Feb 2019 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Mon, 08 Apr 2019 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Tidy Binomial Calculator Using the probs Package</title>
+      <link>/post/2019/04/08/tidy-binomial-calculator/</link>
+      <pubDate>Mon, 08 Apr 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/04/08/tidy-binomial-calculator/</guid>
+      <description>InstallSimulated DataThis short post introduces a simple R package called probs that I created for tidy binomial probability calculations. In the future, probs will include similar functions for calculating probability assuming different probability distributions.
+InstallThe probs package lives on GitHub.
+library(devtools)devtools::install_github(&amp;quot;dannymorris/probs&amp;quot;)Simulated DataRecently, I needed to communicate to a larger audience the probability of detecting a particular event. Specifically, a pre-existing process was in place that required humans to sift through a sample of 100 PDF documents out of 40,000 documents.</description>
+    </item>
+    
+    <item>
+      <title>Detecting, Extracting, and Comparing Address Labels</title>
+      <link>/post/2019/03/20/detecting-extracting-and-comparing-address-labels/</link>
+      <pubDate>Wed, 20 Mar 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/03/20/detecting-extracting-and-comparing-address-labels/</guid>
+      <description>ApplicationsObject DetectionOptical Character RecognitionString MatchingChallengesR PackagesBusinesses send and receive mail from customers regularly. Mailing address labels are vital to the success of mailings. Incomplete or inaccurate labels stemming from poor data source quality can negatively impact customer relationships, brand perception, and internal performance metrics. Good quality data is key, though it is sometimes difficult to achieve.
+This document describes some methodologies for processing and analyzing address labels using techniques from computer science and artificial intelligence that scale to large data sets.</description>
+    </item>
     
     <item>
       <title>Bag of Words Text Classification in R</title>

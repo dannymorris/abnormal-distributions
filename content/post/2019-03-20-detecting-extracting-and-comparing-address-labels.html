@@ -1,0 +1,84 @@
+---
+title: Detecting, Extracting, and Comparing Address Labels
+author: Danny Morris
+date: '2019-03-20'
+slug: detecting-extracting-and-comparing-address-labels
+categories:
+  - Text Mining
+  - Object Detection
+  - Deep Learning
+tags:
+  - Text Ming
+  - Object Detection
+  - Deep Learning
+output: 
+  blogdown::html_page:
+    toc: true  
+--- 
+
+
+<div id="TOC">
+<ul>
+<li><a href="#applications">Applications</a></li>
+<li><a href="#object-detection">Object Detection</a></li>
+<li><a href="#optical-character-recognition">Optical Character Recognition</a></li>
+<li><a href="#string-matching">String Matching</a></li>
+<li><a href="#challenges">Challenges</a></li>
+<li><a href="#r-packages">R Packages</a></li>
+</ul>
+</div>
+
+<p>Businesses send and receive mail from customers regularly. Mailing address labels are vital to the success of mailings. Incomplete or inaccurate labels stemming from poor data source quality can negatively impact customer relationships, brand perception, and internal performance metrics. Good quality data is key, though it is sometimes difficult to achieve.</p>
+<p>This document describes some methodologies for processing and analyzing address labels using techniques from computer science and artificial intelligence that scale to large data sets. These methodologies aim to stabilize and improve data accuracy with as much efficiency as possible. This means giving the computer the ability to perform tasks in a way that mimics, and standardizes, human behavior.</p>
+<p>we</p>
+<ul>
+<li>Object Detection</li>
+<li>Optical Character Recognition</li>
+<li>String Matching (a.k.a Record Linkage)</li>
+</ul>
+<p>These techniques can be used together in a sequence, or they can be used as standalone techniques.</p>
+<div id="applications" class="section level1">
+<h1>Applications</h1>
+<p><strong>Scenario 1</strong>: From a collection of images of mail, locate the address label, extract the text, and search for similar records in a separate database</p>
+</div>
+<div id="object-detection" class="section level1">
+<h1>Object Detection</h1>
+<p>Given an image of mail, the first objective is to detect the address label and read the content using computational methods. Object detection is one way to do this. The basic idea is to train a neural network to recognize the space occupied by the address label using visual cues about the object (address label). Using the image, the network picks up on patters in the way address labels appear to the human eye. Typically, address labels have 3 different lines (name, street address, city/state/zip), and because the total amount of text is small, the address label visually sticks out as a small rectangular object that can vary in it’s position on the mail. Given data to learn from, the object detector can be trained to detect the location and surrounding border of the address label.</p>
+</div>
+<div id="optical-character-recognition" class="section level1">
+<h1>Optical Character Recognition</h1>
+<p>Detecting the object is not the same as reading it’s contents. While object detection is used to capture the space in the image which contains the address label, optical character recognition (OCR) is used to make the contents of the address label machine readable in the form or text.</p>
+</div>
+<div id="string-matching" class="section level1">
+<h1>String Matching</h1>
+<p>Once the text is extracted from the address label, it can be compared to records in a separate database. For example, comparing address labels to a database of customers is an efficient and consistent technique for performing data quality checks. For address labels, the Jaro-Winkler edit distance</p>
+</div>
+<div id="challenges" class="section level1">
+<h1>Challenges</h1>
+<ul>
+<li>Highly similar yet distinct address labels</li>
+</ul>
+<p><img src="/img/mail-addr.png" /></p>
+<pre class="r"><code>knitr::opts_chunk$set(eval = F)</code></pre>
+</div>
+<div id="r-packages" class="section level1">
+<h1>R Packages</h1>
+<pre class="r"><code>library(tesseract)
+library(magick)
+library(tidyverse)</code></pre>
+<pre class="r"><code>origial_file &lt;- &quot;img-orgin/shipping-label.pdf&quot;
+file = &quot;img-crop/shipping-label-crop.png&quot;
+
+shipping_label &lt;- image_read_pdf(&quot;img-orgin/pdf-test.pdf&quot;)
+cropped &lt;- image_crop(shipping_label, &quot;1900x250+1+1000&quot;)
+
+eng &lt;- tesseract(&quot;eng&quot;)
+
+split_lines &lt;- tesseract::ocr(cropped, engine = eng) %&gt;%
+  str_split(&quot;\n&quot;) %&gt;%
+  unlist()
+
+empty_values &lt;- split_lines[nchar(split_lines) != 0] %&gt;%
+  str_c(collapse = &quot; &quot;) %&gt;%
+  str_remove_all(regex(&quot;[^[:alnum:]]&quot;))</code></pre>
+</div>
