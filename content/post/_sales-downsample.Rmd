@@ -18,49 +18,34 @@ The specific goal of this article is demonstrate the process of training, valida
 - performance is typically uncompromised
 
 ```{r, include = F}
-knitr::opts_chunk$set(
-  echo = T, message = F, warning = F
-)
+knitr::opts_chunk$set(echo = T, message = F, warning = F)
 ```
 
 ## R packages
 
 ```{r}
 library(tidyverse) # data manipulation and %>% operator
-library(DBI)       # SQL Server interaction
 library(caret)     # machine learning
 library(rsample)   # train/test split
-library(pROC)      # ROC score
+library(DMwR)      # dataset
+library(DT)        # DataTables
 ```
 
 ## Data
 
 ```{r}
-# connect to SQL Server database
-local_db <- rsqltools::sql_server_connect(
-  server = "DESKTOP-07BKETP",
-  database = "abn_distro"
-)
-```
+# read sales data from DMwR package
+data("sales", package = "DMwR")
 
-```{r}
-# read from SQL Server and do light preprocessing
-sales_tbl <- DBI::dbReadTable(
-  conn = local_db,
-  name = "SALES_ENGINEERED"
-) %>%
+sales_tbl <- sales %>%
   as_tibble() %>%
-  filter(CLASS %in% c("ok", "fraud")) %>%
-  mutate(CLASS = factor(CLASS, levels = c("ok", "fraud")))
-```
+  drop_na() %>%
+  filter(Insp %in% c("ok", "fraud")) %>%
+  mutate(Insp = factor(Insp, levels = c("ok", "fraud")))
 
-```{r}
-# disconnect database connection
-DBI::dbDisconnect(local_db)
-```
-
-```{r}
-table(sales_tbl$CLASS)
+sales_tbl %>%
+  head() %>%
+  datatable(caption = "A preview of the data")
 ```
 
 ## Train/test split
@@ -79,21 +64,21 @@ set.seed(9560)
 train_test_split <- rsample::initial_split(
   data = sales_tbl, 
   prop = 0.8,
-  strata = "CLASS"
+  strata = "Insp"
 )
 
 imbal_train <- rsample::training(train_test_split)
 imbal_test <- rsample::testing(train_test_split)
 ```
 
-## Down-sample training data
+## Down-sampled training data
 
 ```{r}
 set.seed(9560)
 
 down_train <- caret::downSample(
-  x = imbal_train %>% select(-CLASS),
-  y = imbal_train$CLASS
+  x = imbal_train %>% select(-Insp),
+  y = imbal_train$Insp
 )
 
 table(down_train$Class)
@@ -109,7 +94,7 @@ train_control <- caret::trainControl(
   number = 5,
   repeats = 5,
   classProbs = TRUE,
-  summaryFunction = twoClassSummary
+  summaryFunction = multiClassSummary
 )
 ```
 
@@ -121,10 +106,12 @@ set.seed(5627)
 downsample_model <- caret::train(
   form = Class ~ ., 
   data = down_train, 
-  method = "glm",
+  method = "ranger",
   metric = "AUC",
   trControl = train_control
 )
+
+confusionMatrix(downsample_model)
 ```
 
 ## Training on full training data

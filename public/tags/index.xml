@@ -21,6 +21,24 @@
     </item>
     
     <item>
+      <title>Classification</title>
+      <link>/tags/classification/</link>
+      <pubDate>Tue, 25 Jun 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/classification/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Data Visualization</title>
+      <link>/tags/data-visualization/</link>
+      <pubDate>Sat, 15 Jun 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/data-visualization/</guid>
+      <description></description>
+    </item>
+    
+    <item>
       <title>Deep Learning</title>
       <link>/tags/deep-learning/</link>
       <pubDate>Wed, 20 Mar 2019 00:00:00 +0000</pubDate>
@@ -41,7 +59,7 @@
     <item>
       <title>Machine Learning</title>
       <link>/tags/machine-learning/</link>
-      <pubDate>Sun, 17 Feb 2019 00:00:00 +0000</pubDate>
+      <pubDate>Tue, 25 Jun 2019 00:00:00 +0000</pubDate>
       
       <guid>/tags/machine-learning/</guid>
       <description></description>
@@ -57,9 +75,18 @@
     </item>
     
     <item>
+      <title>Plotly</title>
+      <link>/tags/plotly/</link>
+      <pubDate>Sat, 15 Jun 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/plotly/</guid>
+      <description></description>
+    </item>
+    
+    <item>
       <title>Python</title>
       <link>/tags/python/</link>
-      <pubDate>Sun, 20 Jan 2019 00:00:00 +0000</pubDate>
+      <pubDate>Tue, 25 Jun 2019 00:00:00 +0000</pubDate>
       
       <guid>/tags/python/</guid>
       <description></description>
@@ -68,9 +95,27 @@
     <item>
       <title>R</title>
       <link>/tags/r/</link>
-      <pubDate>Mon, 08 Apr 2019 00:00:00 +0000</pubDate>
+      <pubDate>Sun, 23 Jun 2019 00:00:00 +0000</pubDate>
       
       <guid>/tags/r/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>SQL</title>
+      <link>/tags/sql/</link>
+      <pubDate>Sun, 23 Jun 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/sql/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>SQL Server</title>
+      <link>/tags/sql-server/</link>
+      <pubDate>Sun, 23 Jun 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/sql-server/</guid>
       <description></description>
     </item>
     

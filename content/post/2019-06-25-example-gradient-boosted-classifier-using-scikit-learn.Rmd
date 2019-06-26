@@ -1,0 +1,169 @@
+---
+title: Example Gradient Boosted Classifier Using Scikit Learn
+author: Danny Morris
+date: '2019-06-25'
+slug: example-gradient-boosted-classifier-using-scikit-learn
+categories:
+  - Python
+  - Classification
+  - Machine learning
+tags:
+  - Python
+  - Classification
+  - Machine Learning
+output: 
+  blogdown::html_page:
+    toc: true
+    highlight: pygments
+editor_options: 
+  chunk_output_type: console
+---
+
+# Conda Environment
+
+```{r}
+library(reticulate)
+
+use_condaenv("r-reticulate", required = TRUE)
+```
+
+# Python Pacakges
+
+```{python}
+import pandas as pd
+import numpy as np
+from sklearn import preprocessing
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.metrics import classification_report, confusion_matrix, roc_curve, auc
+import pickle
+```
+
+# Data
+
+The data comes from the online source UCI Machine Learning repository.
+
+```{python}
+breast_cancer = pd.read_csv("http://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/breast-cancer-wisconsin.data")
+```
+
+Supply column names.
+
+```{python}
+breast_cancer.columns = ['ID', 'X1', 'X2', 'X3', 'X4', 'X5', 'X6', 'X7',
+                         'X8', 'X9', 'malignant']
+```
+
+Drop columns and remove rows with missing values.
+
+```{python}
+breast_cancer = breast_cancer.drop(columns = ["ID", "X6"])
+
+breast_cancer = breast_cancer.dropna()
+```
+
+# Features and Labels
+
+```{python}
+X = breast_cancer.drop(columns = "malignant")
+y = breast_cancer[["malignant"]]
+```
+
+# Encode Labels
+
+Our labels are currently one of [2, 4]. The label encoder maps them to [0, 1].
+
+```{python}
+label_enc = preprocessing.LabelEncoder()
+
+label_enc.fit(y)
+
+y_enc = label_enc.transform(y) 
+
+pd.value_counts(y_enc)
+```
+
+# Train/Test Splits
+
+```{python}
+X_train, X_test, y_train, y_test = train_test_split(
+  X, y_enc, test_size=0.33, random_state=42)
+```
+
+# Min/Max Scaler
+
+```{python}
+scaler = MinMaxScaler()
+
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+```
+
+# Training and Evaluation
+
+```{python}
+learning_rates = [0.05, 0.1, 0.25, 0.5, 0.75, 1]
+```
+
+Fit a model for each learing rate and compare overall accuarcy.
+
+```{python}
+for learning_rate in learning_rates:
+
+    gb = GradientBoostingClassifier(
+      n_estimators=20, 
+      learning_rate = learning_rate, 
+      max_features=2, 
+      max_depth = 2, 
+      random_state = 0)
+      
+    gb.fit(X_train, y_train)
+    
+    print("Learning rate: ", learning_rate)
+    print("Accuracy (training): {0:.3f}".format(gb.score(X_train, y_train)))
+    print("Accuracy (validation): {0:.3f}".format(gb.score(X_test, y_test)))
+    print()
+```
+
+Select best learning rate, retrain, and collect more training statistics.
+
+```{python}
+gb = GradientBoostingClassifier(
+  n_estimators=20, 
+  learning_rate = 0.5, 
+  max_features=2, 
+  max_depth = 2, 
+  random_state = 0)
+
+gb.fit(X_train, y_train)
+
+predictions = gb.predict(X_test)
+
+print("Confusion Matrix:")
+print(confusion_matrix(y_test, predictions))
+print()
+print("Classification Report")
+print(classification_report(y_test, predictions))
+```
+
+AUC.
+
+```{python}
+# ROC curve and Area-Under-Curve (AUC)
+
+y_scores_gb = gb.decision_function(X_test)
+fpr_gb, tpr_gb, _ = roc_curve(y_test, y_scores_gb)
+roc_auc_gb = auc(fpr_gb, tpr_gb)
+
+print("Area under ROC curve = {:0.2f}".format(roc_auc_gb))
+```
+
+# Save Model
+
+```{python}
+saved_model = pickle.dumps(gb)
+
+loaded_model = pickle.loads(saved_model)
+```
+

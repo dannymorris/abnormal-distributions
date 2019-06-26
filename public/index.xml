@@ -6,10 +6,46 @@
     <description>Recent content in Home on Abnormal Distributions</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Tue, 04 Jun 2019 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 25 Jun 2019 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Example Gradient Boosted Classifier Using Scikit Learn</title>
+      <link>/post/2019/06/25/example-gradient-boosted-classifier-using-scikit-learn/</link>
+      <pubDate>Tue, 25 Jun 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/06/25/example-gradient-boosted-classifier-using-scikit-learn/</guid>
+      <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
+    </item>
+    
+    <item>
+      <title>MLS Local Execution</title>
+      <link>/post/2019/06/23/mls-local-execution/</link>
+      <pubDate>Sun, 23 Jun 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/06/23/mls-local-execution/</guid>
+      <description>sessionInfo()## R version 3.5.2 (2018-12-20)## Platform: x86_64-w64-mingw32/x64 (64-bit)## Running under: Windows 10 x64 (build 18362)## ## Matrix products: default## ## locale:## [1] LC_COLLATE=English_United States.1252 ## [2] LC_CTYPE=English_United States.1252 ## [3] LC_MONETARY=English_United States.1252## [4] LC_NUMERIC=C ## [5] LC_TIME=English_United States.1252 ## ## attached base packages:## [1] stats graphics grDevices utils datasets methods base ## ## loaded via a namespace (and not attached):## [1] compiler_3.</description>
+    </item>
+    
+    <item>
+      <title>Test</title>
+      <link>/post/2019/06/16/test/</link>
+      <pubDate>Sun, 16 Jun 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/06/16/test/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Basic Plots using Plotly in R</title>
+      <link>/post/2019/06/15/basic-plotly/</link>
+      <pubDate>Sat, 15 Jun 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/06/15/basic-plotly/</guid>
+      <description>PackagesPackageslibrary(tidyverse)## -- Attaching packages ------------------- tidyverse 1.2.1 --## v ggplot2 3.1.0 v purrr 0.3.1 ## v tibble 2.1.1 v dplyr 0.8.0.1## v tidyr 0.8.3 v stringr 1.4.0 ## v readr 1.3.1 v forcats 0.4.0## Warning: package &amp;#39;tibble&amp;#39; was built under R version 3.5.3## -- Conflicts ---------------------- tidyverse_conflicts() --## x dplyr::filter() masks stats::filter()## x dplyr::lag() masks stats::lag()library(gapminder)## Warning: package &amp;#39;gapminder&amp;#39; was built under R version 3.</description>
+    </item>
     
     <item>
       <title>Resume</title>
@@ -105,7 +141,8 @@ This article demonstrates the same engineering pipeline written in R and Python.
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
       
       <guid>/about/</guid>
-      <description>Hello! Currently, I am a Data Scientist for HealthNow NY, a health insurance company in upstate New York serving nearly 500,000 customers. My main job is to provide analytical support to the Marketing team, which by association also involves Sales and Communications. My focus is on helping them understand their data, measuring campaign success, and automating complex and time-consuming processes. I do a lot of data mining, statistical analysis, and predictive modeling in my pursuit to develop intelligent business solutions.</description>
+      <description>I work for HealthNow NY, a health insurance company in upstate New York serving nearly 500,000 members. Broadly speaking, I have two main areas of focus. I provide advanced analytical support to the Marketing team and its partners, and I serve in a leadership role in infusing data science into the organization.
+My mission is to help individuals and teams obtain deeper insights from their data. I work mostly with exploratory data mining and predictive modeling.</description>
     </item>
     
   </channel>

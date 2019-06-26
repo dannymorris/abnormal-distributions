@@ -1,0 +1,23 @@
+---
+title: MLS Local Execution
+author: Danny Morris
+date: '2019-06-23'
+slug: mls-local-execution
+categories:
+  - R
+  - Machine learning
+  - SQL
+  - SQL Server
+tags:
+  - R
+  - Machine Learning
+  - SQL
+  - SQL Server
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+sessionInfo()
+```
+
