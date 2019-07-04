@@ -6,6 +6,7 @@ categories: ['Python']
 output: 
   blogdown::html_page:
     toc: true
+    highlight: pygments
 editor_options: 
   chunk_output_type: console
 ---

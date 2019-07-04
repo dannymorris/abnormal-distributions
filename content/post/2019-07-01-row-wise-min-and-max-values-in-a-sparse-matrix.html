@@ -1,0 +1,74 @@
+---
+title: Row-wise Max Values in a Sparse Matrix Using RcppArmadillo
+author: Danny Morris
+date: '2019-07-01'
+output: 
+  blogdown::html_page:
+    toc: true
+    highlight: pygments
+slug: row-wise-min-and-max-values-in-a-sparse-matrix
+categories:
+  - R
+tags:
+  - Rcpp
+  - R
+editor_options: 
+  chunk_output_type: console
+---
+
+
+<div id="TOC">
+<ul>
+<li><a href="#using-inline-functions">Using Inline Functions</a></li>
+<li><a href="#using-sourcecpp">Using <code>sourceCpp</code></a></li>
+</ul>
+</div>
+
+<pre><code>library(Matrix)
+library(Rcpp)
+library(magrittr)</code></pre>
+<pre><code>i &lt;- c(1,3:8) 
+j &lt;- c(2,9,6:10)
+x &lt;- 7 * (1:7)
+
+sparse_dgc_matrix &lt;- sparseMatrix(i, j, x = x) </code></pre>
+<div id="using-inline-functions" class="section level1">
+<h1>Using Inline Functions</h1>
+<pre><code>rowwise_max &lt;- Rcpp::cppFunction(
+  &quot;arma::sp_mat sp_row_max(arma::sp_mat X) {
+   return arma::max(X, 1);
+  }&quot;, depends= &quot;RcppArmadillo&quot;
+)
+
+rowwise_max_idx &lt;- Rcpp::cppFunction(
+  &quot;arma::urowvec sp_row_max_id(arma::sp_mat X) {
+   return arma::index_max(X, 0);
+  }&quot;, depends= &quot;RcppArmadillo&quot;
+)</code></pre>
+<pre><code>rowwise_max(sparse_dgc_matrix) %&gt;%
+  as.vector()
+
+Matrix::t(sparse_dgc_matrix) %&gt;%
+  rowwise_max_idx() %&gt;%
+  as.vector()</code></pre>
+</div>
+<div id="using-sourcecpp" class="section level1">
+<h1>Using <code>sourceCpp</code></h1>
+<p><code>rowwise_max.cpp</code></p>
+<pre><code># include &lt;RcppArmadillo.h&gt;
+// [[Rcpp::depends(RcppArmadillo)]]
+
+using namespace Rcpp;
+using namespace arma;
+
+// [[Rcpp::export]]
+arma::urowvec rowwise_max(arma::sp_mat X) {
+  return arma::index_max(X, 0);
+}
+
+// [[Rcpp::export]]
+arma::sp_mat rowwise_max_idx(arma::sp_mat X) {
+  return arma::max(X, 1);
+}</code></pre>
+<pre><code>Rcpp::sourceCpp(&quot;rowwise_max.cpp&quot;)</code></pre>
+</div>

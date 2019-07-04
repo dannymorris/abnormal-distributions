@@ -30,24 +30,6 @@
     </item>
     
     <item>
-      <title>Data Visualization</title>
-      <link>/tags/data-visualization/</link>
-      <pubDate>Sat, 15 Jun 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/data-visualization/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>Deep Learning</title>
-      <link>/tags/deep-learning/</link>
-      <pubDate>Wed, 20 Mar 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/deep-learning/</guid>
-      <description></description>
-    </item>
-    
-    <item>
       <title>Flask</title>
       <link>/tags/flask/</link>
       <pubDate>Sun, 20 Jan 2019 00:00:00 +0000</pubDate>
@@ -66,24 +48,6 @@
     </item>
     
     <item>
-      <title>Object Detection</title>
-      <link>/tags/object-detection/</link>
-      <pubDate>Wed, 20 Mar 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/object-detection/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>Plotly</title>
-      <link>/tags/plotly/</link>
-      <pubDate>Sat, 15 Jun 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/plotly/</guid>
-      <description></description>
-    </item>
-    
-    <item>
       <title>Python</title>
       <link>/tags/python/</link>
       <pubDate>Tue, 25 Jun 2019 00:00:00 +0000</pubDate>
@@ -95,27 +59,27 @@
     <item>
       <title>R</title>
       <link>/tags/r/</link>
-      <pubDate>Sun, 23 Jun 2019 00:00:00 +0000</pubDate>
+      <pubDate>Mon, 01 Jul 2019 00:00:00 +0000</pubDate>
       
       <guid>/tags/r/</guid>
       <description></description>
     </item>
     
     <item>
-      <title>SQL</title>
-      <link>/tags/sql/</link>
-      <pubDate>Sun, 23 Jun 2019 00:00:00 +0000</pubDate>
+      <title>Rcpp</title>
+      <link>/tags/rcpp/</link>
+      <pubDate>Mon, 01 Jul 2019 00:00:00 +0000</pubDate>
       
-      <guid>/tags/sql/</guid>
+      <guid>/tags/rcpp/</guid>
       <description></description>
     </item>
     
     <item>
-      <title>SQL Server</title>
-      <link>/tags/sql-server/</link>
-      <pubDate>Sun, 23 Jun 2019 00:00:00 +0000</pubDate>
+      <title>Software Development</title>
+      <link>/tags/software-development/</link>
+      <pubDate>Wed, 03 Jul 2019 00:00:00 +0000</pubDate>
       
-      <guid>/tags/sql-server/</guid>
+      <guid>/tags/software-development/</guid>
       <description></description>
     </item>
     
@@ -125,15 +89,6 @@
       <pubDate>Mon, 08 Apr 2019 00:00:00 +0000</pubDate>
       
       <guid>/tags/statistics/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>Text Ming</title>
-      <link>/tags/text-ming/</link>
-      <pubDate>Wed, 20 Mar 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/tags/text-ming/</guid>
       <description></description>
     </item>
     

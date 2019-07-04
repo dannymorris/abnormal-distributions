@@ -1,0 +1,181 @@
+---
+title: "An Efficient Ensemble Approach for Supervised Classification with Imbalanced Classes"
+author: "Danny Morris"
+date: "2018-11-20"
+categories: ['Machine Learning', 'R', 'Classification']
+output: 
+  blogdown::html_page:
+    toc: true
+    highlight: pygments
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include = F}
+knitr::opts_chunk$set(
+  echo = T, message = F, warning = F
+)
+```
+
+# Overview
+
+This article demonstrates an approach for supervised learning using an ensemble of classifiers applied to imbalanced data. At the core of the ensemble technique is *data-centric subsampling.* The basic steps include:
+
+1. Designate 80% of the original data for training and 20% for testing. These percentages can be modified as needed.
+
+2. Decide on *S* number of subsamples. Between 10 and 25 is recommended by [Charu Aggarwal](http://charuaggarwal.net/) in his book [Outlier Analysis](https://www.amazon.com/Outlier-Analysis-Charu-C-Aggarwal/dp/3319475770/ref=pd_cp_14_1?pd_rd_w=8M3qy&pf_rd_p=ef4dc990-a9ca-4945-ae0b-f8d549198ed6&pf_rd_r=3TGSZZ1H5HYKMT0G80Q8&pd_rd_r=f1e3c156-9e78-11e9-801d-cdc96cae2e7b&pd_rd_wg=DXbV0&pd_rd_i=3319475770&psc=1&refRID=3TGSZZ1H5HYKMT0G80Q8).
+
+3. Using functional programming, extract *S* subsamples from the training data. Within each subsample, the entire positive class is retained and the negative class is down-sampled to match the size of the positive class.
+
+4. Fit *S* models, one to each subsample.
+
+5. Apply each of the *S* models to the testing dat to generate *S sets* of predictions.
+
+6. Combine the *S sets* of predictions into a single vector of predictions using majority vote.
+
+# R packages
+
+```{r}
+library(tidyverse) # for data manipulation and %>% operator
+library(rsample)   # train/test split
+library(ranger)    # random forest classifier
+library(DMwR)      # "sales" dataset
+```
+
+# Data
+
+```{r}
+data("sales", package = "DMwR")
+
+sales <- sales %>%
+  tidyr::drop_na() %>%
+  dplyr::filter(Insp %in% c("ok", "fraud")) %>%  
+  dplyr::mutate(Insp = factor(Insp, levels = c("ok", "fraud"))) 
+```
+
+# Feature Engineering
+
+```{r}
+# square difference between two values x and y
+square_diff <- function(x, y) (x - y)^2
+
+# engineer features
+sales_features <- sales %>%
+  dplyr::mutate(LPPQ = log10(Val / Quant)) %>%
+  dplyr::mutate(LPPQ_2 = square_diff(LPPQ, mean(LPPQ))) %>%
+  dplyr::group_by(ID) %>%
+  dplyr::mutate(LPPQ_3 = square_diff(LPPQ, mean(LPPQ))) %>%
+  dplyr::group_by(Prod) %>%
+  dplyr::mutate(LPPQ_4 = square_diff(LPPQ, mean(LPPQ))) %>%
+  dplyr::group_by(ID, Prod) %>%
+  dplyr::mutate(LPPQ_5 = square_diff(LPPQ, mean(LPPQ))) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(Insp, Quant, Val, LPPQ:LPPQ_5)
+```
+
+```{r}
+sales_features %>%
+  head() %>%
+  DT::datatable() %>%
+  DT::formatRound(columns = c("LPPQ", "LPPQ_2", "LPPQ_3", "LPPQ_4", "LPPQ_5"),
+                  digits = 3)
+```
+
+# Global Train/Test Split
+
+```{r}
+split_pct <- 0.8
+
+set.seed(9560)
+
+split_idx <- rsample::initial_split(
+  data = sales_features, 
+  prop = split_pct,
+  strata = "Insp"
+)
+```
+
+```{r}
+train <- rsample::training(split_idx)
+test <- rsample::testing(split_idx)
+```
+
+# Subsampling
+
+### Give specifications for the subsampling procedure.
+
+```{r}
+# determine the number of rows to which the negative class is down-sampled
+# by default, set to the number of positive cases
+downsample_level <- train %>%
+  dplyr::filter(Insp == "fraud") %>%
+  nrow()
+
+# number of subsamples N
+n_subsamples <- 10
+
+# sequence of integers from 1:N
+# used for iterations
+subsample_idx <- seq(1, n_subsamples, 1)
+
+subsample_idx
+```
+
+### Generate subsamples
+
+```{r}
+subsamples <- purrr::map(subsample_idx, function(idx) {
+  train %>%
+    dplyr::group_by(Insp) %>%
+    sample_n(size = downsample_level) %>%
+    ungroup()
+}) 
+```
+
+# Training 
+
+### Fit individual model to each subsample
+
+```{r}
+models <- map(subsamples, function(idx) {
+  ranger_model <- ranger::ranger(
+    formula = as.factor(Insp) ~ .,
+    data = idx
+  )
+})
+```
+
+# Testing
+
+### Apply individual models to predict testing set
+
+```{r}
+model_votes <- map(models, function(idx) {
+  predict(idx, data = test)$predictions
+})
+```
+
+### Combine predictions via majority vote
+
+```{r}
+# a function to compute the mode of a discrete vector
+majority_vote <- function(x) {
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))]
+}
+
+final_votes <- bind_cols(model_votes) %>%
+  apply(., 1, majority_vote)
+```
+
+### Evaluate performance
+
+```{r}
+caret::confusionMatrix(factor(final_votes, levels = c("ok", "fraud")),
+                       test$Insp,
+                       positive = "fraud")
+```
+
+
+
+

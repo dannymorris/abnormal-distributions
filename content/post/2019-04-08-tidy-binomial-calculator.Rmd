@@ -16,7 +16,7 @@ editor_options:
   chunk_output_type: console
 ---
 
-This short post introduces a simple R package called `probs` that I created for tidy binomial probability calculations. In the future, `probs` will include similar functions for calculating probability assuming different probability distributions.
+This short post introduces a simple R package called `probs` that I created for tidy binomial probability calculations. 
 
 # Install 
 

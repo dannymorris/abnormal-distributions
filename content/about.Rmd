@@ -1,0 +1,35 @@
+---
+title: About Me
+author: Danny Morris
+output: 
+  blogdown::html_page:
+    toc: true
+    highlight: pygments
+editor_options: 
+  chunk_output_type: console
+---
+
+## Overview
+
+I am a Data Scientist II at HealthNow NY in Buffalo, NY. My main interests include data mining, R programming, and problem solving using advanced analytical techniques from machine learning and applied statistics. I also enjoy developing software (e.g. R packages and Shiny web apps), exploring technologies and trends (e.g. AWS and Rcpp), and presenting data analysis in written, verbal, and visual form to large audiences. I've worked on a wide range of projects and provided extended support for teams in marketing, sales, digital, and operations. What really motivates me is the idea of helping others solve their most difficult problems utilizing my expertise in data science.
+
+## Toolkit
+
+Over the last 5 years, I've developed expertise in the R programming language. In my day to day, I use R for [database connections](https://db.rstudio.com/getting-started/connect-to-database/), [HTTP requests](https://cran.r-project.org/web/packages/httr/vignettes/quickstart.html), [general purpose programming](https://www.tidyverse.org/), [machine learning](https://topepo.github.io/caret/), [text mining](http://text2vec.org/), [data visualization](https://www.htmlwidgets.org/), [reproducible research](https://rmarkdown.rstudio.com/), [web app development](https://shiny.rstudio.com/), and [package authoring](http://r-pkgs.had.co.nz/).
+
+In addition to R and the R ecosystem, I regularly utilize SQL Server, Git, GitLab, AWS, and Jira. Lesser used tools include Python, Alteryx, and Tableau.
+
+## Breadth Versus Depth
+
+One of the main drivers behind my career success has been my **breadth-first approach**. You could think of me as a "generalist." Throughout my career, my focus has been on solving a wide range of problems for a wide range of audiences. For this reason, I forced myself to become skillful in many domains related to **data analysis**, **statistics**, **machine learning**, **data visualization**, **programming**, **software development**, **presenting**, and **project management**. Being skillful in many areas has helped me become a very fast learner. 
+
+Though I am more of a generalist, I naturally developed more expertise in some areas than others. R programming is one of those areas, as well as text mining, anomaly detection, and supervised classification.
+
+## Career Vision
+
+Moving forward in my career, my focus is on gaining experience with production deployment strategies, application development, and high-performance computing. These skills, combined with my expertise in data analysis, will help me grow as a leader in the field of data science. 
+
+
+
+
+
