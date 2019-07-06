@@ -1,25 +1,22 @@
 ---
-title: "An Efficient Ensemble Approach for Supervised Classification with Imbalanced Classes"
-author: "Danny Morris"
-date: "2018-11-20"
-categories: ['Machine Learning', 'R', 'Classification']
+title: An Efficient Ensemble Approach for Supervised Classification with Imbalanced Classes
+author: Danny Morris
+date: 2019-07-01
 output: 
   blogdown::html_page:
     toc: true
     highlight: pygments
+slug: rare-class-ensemble
+categories:
+  - R
+  - Classification
+tags:
+  - R
+  - Classification
 editor_options: 
   chunk_output_type: console
 ---
 
-<script src="/rmarkdown-libs/htmlwidgets/htmlwidgets.js"></script>
-<script src="/rmarkdown-libs/jquery/jquery.min.js"></script>
-<link href="/rmarkdown-libs/datatables-css/datatables-crosstalk.css" rel="stylesheet" />
-<script src="/rmarkdown-libs/datatables-binding/datatables.js"></script>
-<link href="/rmarkdown-libs/dt-core/css/jquery.dataTables.min.css" rel="stylesheet" />
-<link href="/rmarkdown-libs/dt-core/css/jquery.dataTables.extra.css" rel="stylesheet" />
-<script src="/rmarkdown-libs/dt-core/js/jquery.dataTables.min.js"></script>
-<link href="/rmarkdown-libs/crosstalk/css/crosstalk.css" rel="stylesheet" />
-<script src="/rmarkdown-libs/crosstalk/js/crosstalk.min.js"></script>
 <style type="text/css">
 a.sourceLine { display: inline-block; line-height: 1.25; }
 a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
@@ -89,7 +86,6 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li><a href="#overview">Overview</a></li>
 <li><a href="#r-packages">R packages</a></li>
 <li><a href="#data">Data</a></li>
-<li><a href="#feature-engineering">Feature Engineering</a></li>
 <li><a href="#global-traintest-split">Global Train/Test Split</a></li>
 <li><a href="#subsampling">Subsampling</a><ul>
 <li><a href="#give-specifications-for-the-subsampling-procedure.">Give specifications for the subsampling procedure.</a></li>
@@ -103,6 +99,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li><a href="#combine-predictions-via-majority-vote">Combine predictions via majority vote</a></li>
 <li><a href="#evaluate-performance">Evaluate performance</a></li>
 </ul></li>
+<li><a href="#why-this-approach">Why This Approach?</a></li>
 </ul>
 </div>
 
@@ -122,42 +119,28 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <h1>R packages</h1>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(tidyverse) <span class="co"># for data manipulation and %&gt;% operator</span>
 <span class="kw">library</span>(rsample)   <span class="co"># train/test split</span>
-<span class="kw">library</span>(ranger)    <span class="co"># random forest classifier</span>
-<span class="kw">library</span>(DMwR)      <span class="co"># &quot;sales&quot; dataset</span></code></pre>
+<span class="kw">library</span>(ranger)    <span class="co"># random forest</span></code></pre>
 </div>
 <div id="data" class="section level1">
 <h1>Data</h1>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">data</span>(<span class="st">&quot;sales&quot;</span>, <span class="dt">package =</span> <span class="st">&quot;DMwR&quot;</span>)
+<p>A CSV file of the raw data can be found <a href="https://www.kaggle.com/mlg-ulb/creditcardfraud/version/3">here</a>.</p>
+<pre class="sourceCode r"><code class="sourceCode r">credit_card &lt;-<span class="st"> </span><span class="kw">read_csv</span>(<span class="st">&quot;creditcard.csv&quot;</span>) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">select</span>(<span class="op">-</span>Time) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Class =</span> <span class="kw">as.character</span>(Class))</code></pre>
+<p>A smaller sample is taken to reduce computational burden.</p>
+<pre class="sourceCode r"><code class="sourceCode r">sample_majority &lt;-<span class="st"> </span>credit_card <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">filter</span>(Class <span class="op">==</span><span class="st"> &quot;0&quot;</span>) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">sample_n</span>(<span class="dv">30000</span>)
 
-sales &lt;-<span class="st"> </span>sales <span class="op">%&gt;%</span>
-<span class="st">  </span>tidyr<span class="op">::</span><span class="kw">drop_na</span>() <span class="op">%&gt;%</span>
-<span class="st">  </span>dplyr<span class="op">::</span><span class="kw">filter</span>(Insp <span class="op">%in%</span><span class="st"> </span><span class="kw">c</span>(<span class="st">&quot;ok&quot;</span>, <span class="st">&quot;fraud&quot;</span>)) <span class="op">%&gt;%</span><span class="st">  </span>
-<span class="st">  </span>dplyr<span class="op">::</span><span class="kw">mutate</span>(<span class="dt">Insp =</span> <span class="kw">factor</span>(Insp, <span class="dt">levels =</span> <span class="kw">c</span>(<span class="st">&quot;ok&quot;</span>, <span class="st">&quot;fraud&quot;</span>))) </code></pre>
-</div>
-<div id="feature-engineering" class="section level1">
-<h1>Feature Engineering</h1>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># square difference between two values x and y</span>
-square_diff &lt;-<span class="st"> </span><span class="cf">function</span>(x, y) (x <span class="op">-</span><span class="st"> </span>y)<span class="op">^</span><span class="dv">2</span>
-
-<span class="co"># engineer features</span>
-sales_features &lt;-<span class="st"> </span>sales <span class="op">%&gt;%</span>
-<span class="st">  </span>dplyr<span class="op">::</span><span class="kw">mutate</span>(<span class="dt">LPPQ =</span> <span class="kw">log10</span>(Val <span class="op">/</span><span class="st"> </span>Quant)) <span class="op">%&gt;%</span>
-<span class="st">  </span>dplyr<span class="op">::</span><span class="kw">mutate</span>(<span class="dt">LPPQ_2 =</span> <span class="kw">square_diff</span>(LPPQ, <span class="kw">mean</span>(LPPQ))) <span class="op">%&gt;%</span>
-<span class="st">  </span>dplyr<span class="op">::</span><span class="kw">group_by</span>(ID) <span class="op">%&gt;%</span>
-<span class="st">  </span>dplyr<span class="op">::</span><span class="kw">mutate</span>(<span class="dt">LPPQ_3 =</span> <span class="kw">square_diff</span>(LPPQ, <span class="kw">mean</span>(LPPQ))) <span class="op">%&gt;%</span>
-<span class="st">  </span>dplyr<span class="op">::</span><span class="kw">group_by</span>(Prod) <span class="op">%&gt;%</span>
-<span class="st">  </span>dplyr<span class="op">::</span><span class="kw">mutate</span>(<span class="dt">LPPQ_4 =</span> <span class="kw">square_diff</span>(LPPQ, <span class="kw">mean</span>(LPPQ))) <span class="op">%&gt;%</span>
-<span class="st">  </span>dplyr<span class="op">::</span><span class="kw">group_by</span>(ID, Prod) <span class="op">%&gt;%</span>
-<span class="st">  </span>dplyr<span class="op">::</span><span class="kw">mutate</span>(<span class="dt">LPPQ_5 =</span> <span class="kw">square_diff</span>(LPPQ, <span class="kw">mean</span>(LPPQ))) <span class="op">%&gt;%</span>
-<span class="st">  </span>dplyr<span class="op">::</span><span class="kw">ungroup</span>() <span class="op">%&gt;%</span>
-<span class="st">  </span>dplyr<span class="op">::</span><span class="kw">select</span>(Insp, Quant, Val, LPPQ<span class="op">:</span>LPPQ_<span class="dv">5</span>)</code></pre>
-<pre class="sourceCode r"><code class="sourceCode r">sales_features <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">head</span>() <span class="op">%&gt;%</span>
-<span class="st">  </span>DT<span class="op">::</span><span class="kw">datatable</span>() <span class="op">%&gt;%</span>
-<span class="st">  </span>DT<span class="op">::</span><span class="kw">formatRound</span>(<span class="dt">columns =</span> <span class="kw">c</span>(<span class="st">&quot;LPPQ&quot;</span>, <span class="st">&quot;LPPQ_2&quot;</span>, <span class="st">&quot;LPPQ_3&quot;</span>, <span class="st">&quot;LPPQ_4&quot;</span>, <span class="st">&quot;LPPQ_5&quot;</span>),
-                  <span class="dt">digits =</span> <span class="dv">3</span>)</code></pre>
-<div id="htmlwidget-1" style="width:100%;height:auto;" class="datatables html-widget"></div>
-<script type="application/json" data-for="htmlwidget-1">{"x":{"filter":"none","data":[["1","2","3","4","5","6"],["ok","ok","ok","ok","ok","ok"],[51097,260,51282,46903,475,433],[310780,1925,278770,281485,2600,3395],[0.784057659706163,0.869457385873702,0.735281080737834,0.778254634911439,0.738279738345951,0.894351882263155],[0.0809262112526227,0.0396310945534957,0.111056832340524,0.084261521092977,0.10906720756589,0.0303390568883547],[0.00783182518833251,0.00529842576274517,0.0188442001843958,0.0602265104762983,4.8022261986868e-005,0.346422548374114],[0.00123932382400751,0.0145452663298013,0.000184214048575856,0.000864419187061162,0.017064962292554,0.000647153625724032],[0.0329603265227037,0.00477861419505438,0.0530502365893178,0.00083314191760153,0.000467100597859848,0]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>Insp<\/th>\n      <th>Quant<\/th>\n      <th>Val<\/th>\n      <th>LPPQ<\/th>\n      <th>LPPQ_2<\/th>\n      <th>LPPQ_3<\/th>\n      <th>LPPQ_4<\/th>\n      <th>LPPQ_5<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"columnDefs":[{"className":"dt-right","targets":[2,3,4,5,6,7,8]},{"orderable":false,"targets":0}],"order":[],"autoWidth":false,"orderClasses":false,"rowCallback":"function(row, data) {\nDTWidget.formatRound(this, row, data, 4, 3, 3, ',', '.');\nDTWidget.formatRound(this, row, data, 5, 3, 3, ',', '.');\nDTWidget.formatRound(this, row, data, 6, 3, 3, ',', '.');\nDTWidget.formatRound(this, row, data, 7, 3, 3, ',', '.');\nDTWidget.formatRound(this, row, data, 8, 3, 3, ',', '.');\n}"}},"evals":["options.rowCallback"],"jsHooks":[]}</script>
+sample_df &lt;-<span class="st"> </span><span class="kw">bind_rows</span>(
+  sample_majority,
+  credit_card <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(Class <span class="op">==</span><span class="st"> &quot;1&quot;</span>)
+)</code></pre>
+<p>Class distribution.</p>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">table</span>(sample_df<span class="op">$</span>Class)</code></pre>
+<pre><code>## 
+##     0     1 
+## 30000   492</code></pre>
 </div>
 <div id="global-traintest-split" class="section level1">
 <h1>Global Train/Test Split</h1>
@@ -166,9 +149,9 @@ sales_features &lt;-<span class="st"> </span>sales <span class="op">%&gt;%</span
 <span class="kw">set.seed</span>(<span class="dv">9560</span>)
 
 split_idx &lt;-<span class="st"> </span>rsample<span class="op">::</span><span class="kw">initial_split</span>(
-  <span class="dt">data =</span> sales_features, 
+  <span class="dt">data =</span> sample_df, 
   <span class="dt">prop =</span> split_pct,
-  <span class="dt">strata =</span> <span class="st">&quot;Insp&quot;</span>
+  <span class="dt">strata =</span> <span class="st">&quot;Class&quot;</span>
 )</code></pre>
 <pre class="sourceCode r"><code class="sourceCode r">train &lt;-<span class="st"> </span>rsample<span class="op">::</span><span class="kw">training</span>(split_idx)
 test &lt;-<span class="st"> </span>rsample<span class="op">::</span><span class="kw">testing</span>(split_idx)</code></pre>
@@ -180,24 +163,24 @@ test &lt;-<span class="st"> </span>rsample<span class="op">::</span><span class=
 <pre class="sourceCode r"><code class="sourceCode r"><span class="co"># determine the number of rows to which the negative class is down-sampled</span>
 <span class="co"># by default, set to the number of positive cases</span>
 downsample_level &lt;-<span class="st"> </span>train <span class="op">%&gt;%</span>
-<span class="st">  </span>dplyr<span class="op">::</span><span class="kw">filter</span>(Insp <span class="op">==</span><span class="st"> &quot;fraud&quot;</span>) <span class="op">%&gt;%</span>
+<span class="st">  </span>dplyr<span class="op">::</span><span class="kw">filter</span>(Class <span class="op">==</span><span class="st"> &quot;1&quot;</span>) <span class="op">%&gt;%</span>
 <span class="st">  </span><span class="kw">nrow</span>()
 
 <span class="co"># number of subsamples N</span>
-n_subsamples &lt;-<span class="st"> </span><span class="dv">10</span>
+n_subsamples &lt;-<span class="st"> </span><span class="dv">25</span>
 
 <span class="co"># sequence of integers from 1:N</span>
 <span class="co"># used for iterations</span>
 subsample_idx &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv">1</span>, n_subsamples, <span class="dv">1</span>)
 
-subsample_idx</code></pre>
-<pre><code>##  [1]  1  2  3  4  5  6  7  8  9 10</code></pre>
+<span class="kw">cat</span>(<span class="st">&quot;Subsamples index:&quot;</span>, subsample_idx)</code></pre>
+<pre><code>## Subsamples index: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25</code></pre>
 </div>
 <div id="generate-subsamples" class="section level3">
 <h3>Generate subsamples</h3>
 <pre class="sourceCode r"><code class="sourceCode r">subsamples &lt;-<span class="st"> </span>purrr<span class="op">::</span><span class="kw">map</span>(subsample_idx, <span class="cf">function</span>(idx) {
   train <span class="op">%&gt;%</span>
-<span class="st">    </span>dplyr<span class="op">::</span><span class="kw">group_by</span>(Insp) <span class="op">%&gt;%</span>
+<span class="st">    </span>dplyr<span class="op">::</span><span class="kw">group_by</span>(Class) <span class="op">%&gt;%</span>
 <span class="st">    </span><span class="kw">sample_n</span>(<span class="dt">size =</span> downsample_level) <span class="op">%&gt;%</span>
 <span class="st">    </span><span class="kw">ungroup</span>()
 }) </code></pre>
@@ -209,8 +192,8 @@ subsample_idx</code></pre>
 <h3>Fit individual model to each subsample</h3>
 <pre class="sourceCode r"><code class="sourceCode r">models &lt;-<span class="st"> </span><span class="kw">map</span>(subsamples, <span class="cf">function</span>(idx) {
   ranger_model &lt;-<span class="st"> </span>ranger<span class="op">::</span><span class="kw">ranger</span>(
-    <span class="dt">formula =</span> <span class="kw">as.factor</span>(Insp) <span class="op">~</span><span class="st"> </span>.,
-    <span class="dt">data =</span> idx
+    <span class="dt">formula =</span> <span class="kw">as.factor</span>(Class) <span class="op">~</span><span class="st"> </span>.,
+    <span class="dt">data =</span> idx,
   )
 })</code></pre>
 </div>
@@ -236,34 +219,48 @@ final_votes &lt;-<span class="st"> </span><span class="kw">bind_cols</span>(mode
 </div>
 <div id="evaluate-performance" class="section level3">
 <h3>Evaluate performance</h3>
-<pre class="sourceCode r"><code class="sourceCode r">caret<span class="op">::</span><span class="kw">confusionMatrix</span>(<span class="kw">factor</span>(final_votes, <span class="dt">levels =</span> <span class="kw">c</span>(<span class="st">&quot;ok&quot;</span>, <span class="st">&quot;fraud&quot;</span>)),
-                       test<span class="op">$</span>Insp,
-                       <span class="dt">positive =</span> <span class="st">&quot;fraud&quot;</span>)</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">caret<span class="op">::</span><span class="kw">confusionMatrix</span>(<span class="kw">factor</span>(final_votes, <span class="dt">levels =</span> <span class="kw">c</span>(<span class="st">&quot;0&quot;</span>, <span class="st">&quot;1&quot;</span>)),
+                       <span class="kw">factor</span>(test<span class="op">$</span>Class, <span class="dt">levels =</span> <span class="kw">c</span>(<span class="st">&quot;0&quot;</span>, <span class="st">&quot;1&quot;</span>)),
+                       <span class="dt">positive =</span> <span class="st">&quot;1&quot;</span>)</code></pre>
 <pre><code>## Confusion Matrix and Statistics
 ## 
 ##           Reference
-## Prediction   ok fraud
-##      ok    2648    16
-##      fraud  228   217
-##                                           
-##                Accuracy : 0.9215          
-##                  95% CI : (0.9115, 0.9307)
-##     No Information Rate : 0.9251          
-##     P-Value [Acc &gt; NIR] : 0.7844          
-##                                           
-##                   Kappa : 0.6009          
-##  Mcnemar&#39;s Test P-Value : &lt;2e-16          
-##                                           
-##             Sensitivity : 0.93133         
-##             Specificity : 0.92072         
-##          Pos Pred Value : 0.48764         
-##          Neg Pred Value : 0.99399         
-##              Prevalence : 0.07494         
-##          Detection Rate : 0.06980         
-##    Detection Prevalence : 0.14313         
-##       Balanced Accuracy : 0.92603         
-##                                           
-##        &#39;Positive&#39; Class : fraud           
+## Prediction    0    1
+##          0 5867    7
+##          1  144   80
+##                                         
+##                Accuracy : 0.9752        
+##                  95% CI : (0.971, 0.979)
+##     No Information Rate : 0.9857        
+##     P-Value [Acc &gt; NIR] : 1             
+##                                         
+##                   Kappa : 0.5043        
+##  Mcnemar&#39;s Test P-Value : &lt;2e-16        
+##                                         
+##             Sensitivity : 0.91954       
+##             Specificity : 0.97604       
+##          Pos Pred Value : 0.35714       
+##          Neg Pred Value : 0.99881       
+##              Prevalence : 0.01427       
+##          Detection Rate : 0.01312       
+##    Detection Prevalence : 0.03673       
+##       Balanced Accuracy : 0.94779       
+##                                         
+##        &#39;Positive&#39; Class : 1             
 ## </code></pre>
 </div>
+</div>
+<div id="why-this-approach" class="section level1">
+<h1>Why This Approach?</h1>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">map_dbl</span>(model_votes, <span class="cf">function</span>(model) {
+  caret<span class="op">::</span><span class="kw">sensitivity</span>(model, 
+                         <span class="kw">factor</span>(test<span class="op">$</span>Class, <span class="dt">levels =</span> <span class="kw">c</span>(<span class="st">&quot;0&quot;</span>, <span class="st">&quot;1&quot;</span>)), 
+                         <span class="dt">positive =</span> <span class="st">&quot;1&quot;</span>)
+}) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">enframe</span>(<span class="dt">name =</span> <span class="st">&quot;Subsample&quot;</span>, <span class="dt">value =</span> <span class="st">&quot;Sensitivity&quot;</span>) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Sensitivity)) <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_density</span>() <span class="op">+</span>
+<span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Distribution of Sensitivty Across 25 Subsamples&quot;</span>,
+       <span class="dt">subtitle =</span> <span class="st">&quot;Sensitivity scores vary by subsample. The ensemble approach reduces variation.&quot;</span>)</code></pre>
+<p><img src="/post/2019-07-01-rare-class-ensemble_files/figure-html/unnamed-chunk-14-1.png" width="672" /></p>
 </div>

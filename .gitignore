@@ -2,5 +2,6 @@
 .Rhistory
 .RData
 .Ruserdata
+content/posts/creditcard.csv
 blogdown
 public

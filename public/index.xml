@@ -6,10 +6,19 @@
     <description>Recent content in Home on Abnormal Distributions</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Wed, 03 Jul 2019 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sat, 06 Jul 2019 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Deploying a Shiny App with Shiny Server on an AWS EC2 Instance</title>
+      <link>/post/2019/07/06/deploying-a-shiny-app-with-shiny-server-on-an-aws-ec2-instance/</link>
+      <pubDate>Sat, 06 Jul 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/07/06/deploying-a-shiny-app-with-shiny-server-on-an-aws-ec2-instance/</guid>
+      <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
+    </item>
     
     <item>
       <title>A Note on EDA versus Software Development</title>
@@ -18,6 +27,15 @@
       
       <guid>/post/2019/07/03/a-note-on-eda-versus-software-development/</guid>
       <description>This summer, I have had the pleasure of mentoring Elan Anderson, an intern who joined through my company&amp;rsquo;s highly-sought summer internship program. He and I are building SimText, an app that performs record linkage using statistial text mining. The core algorithm, which is available as an R package, utilizes the text2vec framework for efficient text vectorization, base R for general purpose programming, and some C++ via Rcpp for efficient manipulation of sparse matrices.</description>
+    </item>
+    
+    <item>
+      <title>An Efficient Ensemble Approach for Supervised Classification with Imbalanced Classes</title>
+      <link>/post/2019/07/01/rare-class-ensemble/</link>
+      <pubDate>Mon, 01 Jul 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/07/01/rare-class-ensemble/</guid>
+      <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
     </item>
     
     <item>
@@ -86,15 +104,6 @@ library(devtools)devtools::install_github(&amp;quot;dannymorris/probs&amp;quot;
       
       <guid>/post/2019/01/20/using-flask-to-deploy-predictive-models/</guid>
       <description>PurposeEnvironmentCreate and activate conda environment in Anaconda PromptInstall dependenciesVery simple Flask appRun the appTest the appNext stepsPurposeDeploying production code is one of the toughest challenges that data scientists face. There seems to be significantly more content available on model development than model deployment. In this article, I document my experience building and deploying an web application written in Python using the Flask microframework.</description>
-    </item>
-    
-    <item>
-      <title>An Efficient Ensemble Approach for Supervised Classification with Imbalanced Classes</title>
-      <link>/post/2018/11/20/an-efficient-ensemble-approach-for-supervised-classification-with-imbalanced-classes/</link>
-      <pubDate>Tue, 20 Nov 2018 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2018/11/20/an-efficient-ensemble-approach-for-supervised-classification-with-imbalanced-classes/</guid>
-      <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
     </item>
     
     <item>

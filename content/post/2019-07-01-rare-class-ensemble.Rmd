@@ -1,12 +1,18 @@
 ---
-title: "An Efficient Ensemble Approach for Supervised Classification with Imbalanced Classes"
-author: "Danny Morris"
-date: "2018-11-20"
-categories: ['Machine Learning', 'R', 'Classification']
+title: An Efficient Ensemble Approach for Supervised Classification with Imbalanced Classes
+author: Danny Morris
+date: 2019-07-01
 output: 
   blogdown::html_page:
     toc: true
     highlight: pygments
+slug: rare-class-ensemble
+categories:
+  - R
+  - Classification
+tags:
+  - R
+  - Classification
 editor_options: 
   chunk_output_type: console
 ---
@@ -38,47 +44,36 @@ This article demonstrates an approach for supervised learning using an ensemble 
 ```{r}
 library(tidyverse) # for data manipulation and %>% operator
 library(rsample)   # train/test split
-library(ranger)    # random forest classifier
-library(DMwR)      # "sales" dataset
+library(ranger)    # random forest
 ```
 
 # Data
 
-```{r}
-data("sales", package = "DMwR")
+A CSV file of the raw data can be found [here](https://www.kaggle.com/mlg-ulb/creditcardfraud/version/3).
 
-sales <- sales %>%
-  tidyr::drop_na() %>%
-  dplyr::filter(Insp %in% c("ok", "fraud")) %>%  
-  dplyr::mutate(Insp = factor(Insp, levels = c("ok", "fraud"))) 
+```{r}
+credit_card <- read_csv("creditcard.csv") %>%
+  select(-Time) %>%
+  mutate(Class = as.character(Class))
 ```
 
-# Feature Engineering
+A smaller sample is taken to reduce computational burden.
 
 ```{r}
-# square difference between two values x and y
-square_diff <- function(x, y) (x - y)^2
+sample_majority <- credit_card %>%
+  filter(Class == "0") %>%
+  sample_n(30000)
 
-# engineer features
-sales_features <- sales %>%
-  dplyr::mutate(LPPQ = log10(Val / Quant)) %>%
-  dplyr::mutate(LPPQ_2 = square_diff(LPPQ, mean(LPPQ))) %>%
-  dplyr::group_by(ID) %>%
-  dplyr::mutate(LPPQ_3 = square_diff(LPPQ, mean(LPPQ))) %>%
-  dplyr::group_by(Prod) %>%
-  dplyr::mutate(LPPQ_4 = square_diff(LPPQ, mean(LPPQ))) %>%
-  dplyr::group_by(ID, Prod) %>%
-  dplyr::mutate(LPPQ_5 = square_diff(LPPQ, mean(LPPQ))) %>%
-  dplyr::ungroup() %>%
-  dplyr::select(Insp, Quant, Val, LPPQ:LPPQ_5)
+sample_df <- bind_rows(
+  sample_majority,
+  credit_card %>% filter(Class == "1")
+)
 ```
 
+Class distribution.
+
 ```{r}
-sales_features %>%
-  head() %>%
-  DT::datatable() %>%
-  DT::formatRound(columns = c("LPPQ", "LPPQ_2", "LPPQ_3", "LPPQ_4", "LPPQ_5"),
-                  digits = 3)
+table(sample_df$Class)
 ```
 
 # Global Train/Test Split
@@ -89,9 +84,9 @@ split_pct <- 0.8
 set.seed(9560)
 
 split_idx <- rsample::initial_split(
-  data = sales_features, 
+  data = sample_df, 
   prop = split_pct,
-  strata = "Insp"
+  strata = "Class"
 )
 ```
 
@@ -108,17 +103,17 @@ test <- rsample::testing(split_idx)
 # determine the number of rows to which the negative class is down-sampled
 # by default, set to the number of positive cases
 downsample_level <- train %>%
-  dplyr::filter(Insp == "fraud") %>%
+  dplyr::filter(Class == "1") %>%
   nrow()
 
 # number of subsamples N
-n_subsamples <- 10
+n_subsamples <- 25
 
 # sequence of integers from 1:N
 # used for iterations
 subsample_idx <- seq(1, n_subsamples, 1)
 
-subsample_idx
+cat("Subsamples index:", subsample_idx)
 ```
 
 ### Generate subsamples
@@ -126,7 +121,7 @@ subsample_idx
 ```{r}
 subsamples <- purrr::map(subsample_idx, function(idx) {
   train %>%
-    dplyr::group_by(Insp) %>%
+    dplyr::group_by(Class) %>%
     sample_n(size = downsample_level) %>%
     ungroup()
 }) 
@@ -139,8 +134,8 @@ subsamples <- purrr::map(subsample_idx, function(idx) {
 ```{r}
 models <- map(subsamples, function(idx) {
   ranger_model <- ranger::ranger(
-    formula = as.factor(Insp) ~ .,
-    data = idx
+    formula = as.factor(Class) ~ .,
+    data = idx,
   )
 })
 ```
@@ -171,11 +166,22 @@ final_votes <- bind_cols(model_votes) %>%
 ### Evaluate performance
 
 ```{r}
-caret::confusionMatrix(factor(final_votes, levels = c("ok", "fraud")),
-                       test$Insp,
-                       positive = "fraud")
+caret::confusionMatrix(factor(final_votes, levels = c("0", "1")),
+                       factor(test$Class, levels = c("0", "1")),
+                       positive = "1")
 ```
 
+# Why This Approach?
 
-
-
+```{r}
+map_dbl(model_votes, function(model) {
+  caret::sensitivity(model, 
+                         factor(test$Class, levels = c("0", "1")), 
+                         positive = "1")
+}) %>%
+  enframe(name = "Subsample", value = "Sensitivity") %>%
+  ggplot(aes(x = Sensitivity)) +
+  geom_density() +
+  labs(title = "Distribution of Sensitivty Across 25 Subsamples",
+       subtitle = "Sensitivity scores vary by subsample. The ensemble approach reduces variation.")
+```
