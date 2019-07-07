@@ -1,0 +1,97 @@
+---
+title: My Data Science Tools and Techniques
+author: Danny Morris
+date: '2019-07-06'
+output: 
+  blogdown::html_page:
+    toc: true
+    highlight: pygments
+slug: fast-clustering-methods
+categories:
+  - R
+  - Clustering
+tags:
+  - R
+  - Clustering
+editor_options: 
+  chunk_output_type: console
+---
+
+This document briefly describes the tools and techniques I am currently using for data science. The percentages reflect the amount of time spent with each tool under each heading.
+
+# Tools
+
+### Programming Languages
+
+- R - 80%
+
+- Python - 10%
+
+- SQL - 5%
+
+- Command line tools (Git, Linux, Docker, Powershell, Conda) - 5%
+
+
+### Development Environments
+
+- RStudio Desktop - 60%
+
+- RStudio Server (AWS EC2) - 30%
+
+- JupyterLab - 10%
+
+
+### Data Storage and Retrieval
+
+- SQL Server - 50%
+
+- API - 30%
+
+- Local File System - 10%
+
+- S3 - 10%
+
+### Data Visualization
+
+- Plotly - 50%
+
+- ggplot2 - 30%
+
+- DataTables - 10%
+
+- Leaflet - 5%
+
+- Dygraphs - 5%
+
+### Reports, Dashboards, and Applications
+
+- R Markdown - 50%
+
+- Shiny - 20%
+
+- Jupyter Notebook - 20%
+
+- Tableau - 10%
+
+### Development Tools
+
+- GitLab - 45%
+
+- Jira - 45%
+
+- Confluence - 5%
+
+- Artifactory - 5%
+
+
+# Techniques
+
+- Text mining, including document similarity, feature engineering with regular expressions, and classification. Significant use out of the [text2vec package](http://text2vec.org/) due to it's speed and intuitive API. Computing document similarities between sparase matrices using matrix manipulation with [RcppArmadillo](http://dirk.eddelbuettel.com/code/rcpp.armadillo.html) has proven useful for fuzzy matching customer records across two large databases.
+
+- Time Series Forecasting, most recently using [Facebook Prophet](https://facebook.github.io/prophet/) due to it's speed, intuitive API, and flexibility. Prophet was trained on time series data with "business seasonality", in which the seasonality effects typically correspond to weekly, monthly, and yearly patterns, holidays, and recurring special events. Using a functional programming style, "business seasonality" can be modeled once and applied to multiple business metrics for efficient forecasting.
+
+- Anomaly/outlier detection in various applications. Linear models, distance-based methods, and extreme-value analysis are common unsupervised techniques.
+
+- Robust, non-parametric statistics, including median, absolute deviations, and quantiles
+
+

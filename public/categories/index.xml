@@ -12,6 +12,15 @@
     
     
     <item>
+      <title>API</title>
+      <link>/categories/api/</link>
+      <pubDate>Sat, 06 Jul 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/categories/api/</guid>
+      <description></description>
+    </item>
+    
+    <item>
       <title>AWS</title>
       <link>/categories/aws/</link>
       <pubDate>Sat, 06 Jul 2019 00:00:00 +0000</pubDate>
@@ -26,6 +35,15 @@
       <pubDate>Mon, 01 Jul 2019 00:00:00 +0000</pubDate>
       
       <guid>/categories/classification/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Clustering</title>
+      <link>/categories/clustering/</link>
+      <pubDate>Sat, 06 Jul 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/categories/clustering/</guid>
       <description></description>
     </item>
     

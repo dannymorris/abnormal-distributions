@@ -12,12 +12,34 @@
     
     
     <item>
+      <title>Deploying a Plumber API on AWS EC2 Instance</title>
+      <link>/post/2019/07/06/deploying-a-plumber-api-on-aws-ec2-instance/</link>
+      <pubDate>Sat, 06 Jul 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/07/06/deploying-a-plumber-api-on-aws-ec2-instance/</guid>
+      <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
+    </item>
+    
+    <item>
       <title>Deploying a Shiny App with Shiny Server on an AWS EC2 Instance</title>
       <link>/post/2019/07/06/deploying-a-shiny-app-with-shiny-server-on-an-aws-ec2-instance/</link>
       <pubDate>Sat, 06 Jul 2019 00:00:00 +0000</pubDate>
       
       <guid>/post/2019/07/06/deploying-a-shiny-app-with-shiny-server-on-an-aws-ec2-instance/</guid>
       <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
+    </item>
+    
+    <item>
+      <title>My Data Science Tools and Techniques</title>
+      <link>/post/2019/07/06/fast-clustering-methods/</link>
+      <pubDate>Sat, 06 Jul 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/07/06/fast-clustering-methods/</guid>
+      <description>ToolsProgramming LanguagesDevelopment EnvironmentsData Storage and RetrievalData VisualizationReports, Dashboards, and ApplicationsDevelopment ToolsTechniquesThis document briefly describes the tools and techniques I am currently using for data science. The percentages reflect the amount of time spent with each tool under each heading.
+ToolsProgramming LanguagesR - 80%
+Python - 10%
+SQL - 5%
+Command line tools (Git, Linux, Docker, Powershell, Conda) - 5%</description>
     </item>
     
     <item>
@@ -30,7 +52,7 @@
     </item>
     
     <item>
-      <title>An Efficient Ensemble Approach for Supervised Classification with Imbalanced Classes</title>
+      <title>A Data-Centric Ensemble Approach for Supervised Classification with Imbalanced Classes</title>
       <link>/post/2019/07/01/rare-class-ensemble/</link>
       <pubDate>Mon, 01 Jul 2019 00:00:00 +0000</pubDate>
       

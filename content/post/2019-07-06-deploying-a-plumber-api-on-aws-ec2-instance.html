@@ -1,0 +1,158 @@
+---
+title: Deploying a Plumber API on AWS EC2 Instance
+author: Danny Morris
+date: '2019-07-06'
+output: 
+  blogdown::html_page:
+    toc: true
+    highlight: pygments
+slug: deploying-a-plumber-api-on-aws-ec2-instance
+categories:
+  - R
+  - API
+  - AWS
+tags:
+  - R
+  - AWS
+  - API
+editor_options: 
+  chunk_output_type: console
+---
+
+<style type="text/css">
+a.sourceLine { display: inline-block; line-height: 1.25; }
+a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
+a.sourceLine:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+a.sourceLine { text-indent: -1em; padding-left: 1em; }
+}
+pre.numberSource a.sourceLine
+  { position: relative; left: -4em; }
+pre.numberSource a.sourceLine::before
+  { content: attr(title);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; pointer-events: all; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  }
+@media screen {
+a.sourceLine::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+
+<style>
+pre {
+  background-color: #f9f9f9;
+}
+</style>
+<ol style="list-style-type: decimal">
+<li><p>Launch an EC2 instance using <a href="http://www.louisaslett.com/RStudio_AMI/">this AMI</a></p></li>
+<li><p>Connect to RStudio Sever on AWS EC2 Instance. See <a href="/post/2019/07/06/deploying-a-shiny-app-with-shiny-server-on-an-aws-ec2-instance/">this post</a></p></li>
+<li><p>In RStudio Server, create a folder called <code>plumber-apis</code> (or something similar)</p></li>
+<li><p>Create two .R files <code>sample-plumber.R</code> and <code>launch-sample-plumber.R</code></p></li>
+</ol>
+<p><img src="/img/sample-plumber-files.PNG" /></p>
+<div id="sample-plumber.r" class="section level4">
+<h4><code>sample-plumber.R</code></h4>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># plumber.R</span>
+
+<span class="co">#* Echo back the input</span>
+<span class="co">#* @param msg The message to echo</span>
+<span class="co">#* @get /echo</span>
+<span class="cf">function</span>(<span class="dt">msg=</span><span class="st">&quot;&quot;</span>){
+  <span class="kw">list</span>(<span class="dt">msg =</span> <span class="kw">paste0</span>(<span class="st">&quot;The message is: &#39;&quot;</span>, msg, <span class="st">&quot;&#39;&quot;</span>))
+}
+
+<span class="co">#* Plot a histogram</span>
+<span class="co">#* @png</span>
+<span class="co">#* @get /plot</span>
+<span class="cf">function</span>(){
+  rand &lt;-<span class="st"> </span><span class="kw">rnorm</span>(<span class="dv">100</span>)
+  <span class="kw">hist</span>(rand)
+}
+
+<span class="co">#* Return the sum of two numbers</span>
+<span class="co">#* @param a The first number to add</span>
+<span class="co">#* @param b The second number to add</span>
+<span class="co">#* @post /sum</span>
+<span class="cf">function</span>(a, b){
+  <span class="kw">as.numeric</span>(a) <span class="op">+</span><span class="st"> </span><span class="kw">as.numeric</span>(b)
+}</code></pre>
+</div>
+<div id="launch-sample-plumber.r" class="section level4">
+<h4><code>launch-sample-plumber.R</code></h4>
+<ol start="5" style="list-style-type: decimal">
+<li>SSH into the EC2 instance using Git Bash and install the <code>plumber</code> package. See <a href="/post/2019/07/06/deploying-a-shiny-app-with-shiny-server-on-an-aws-ec2-instance/">this post</a></li>
+</ol>
+<pre><code># launch R session
+R -
+
+# install plumber
+install.packages(&quot;plumber&quot;)</code></pre>
+<ol start="6" style="list-style-type: decimal">
+<li>Exit R and <code>cd</code> into RStudio Server home</li>
+</ol>
+<pre><code>cd /home/rstudio/plumber-apps/
+
+# In RStudio Server, run getwd() to find the home directory</code></pre>
+<ol start="7" style="list-style-type: decimal">
+<li>Run the <code>launch-sample-plumber.R</code> script to expose the API</li>
+</ol>
+<pre><code>R CMD BATCH launch-sample-plumber.R</code></pre>
+<ol start="8" style="list-style-type: decimal">
+<li>Invoke the API’s POST method from anywhere</li>
+</ol>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># From a Rstudio desktop client...</span>
+
+<span class="kw">library</span>(httr)
+
+request &lt;-<span class="st"> </span><span class="kw">POST</span>(<span class="st">&quot;http://ec2-18-224-95-116.us-east-2.compute.amazonaws.com:8000/sum?b=1&amp;a=3&quot;</span>)
+
+<span class="kw">content</span>(request, <span class="st">&quot;parsed&quot;</span>)</code></pre>
+<pre><code>## [[1]]
+## [1] 4</code></pre>
+</div>

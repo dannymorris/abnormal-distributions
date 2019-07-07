@@ -1,5 +1,5 @@
 ---
-title: An Efficient Ensemble Approach for Supervised Classification with Imbalanced Classes
+title: A Data-Centric Ensemble Approach for Supervised Classification with Imbalanced Classes
 author: Danny Morris
 date: 2019-07-01
 output: 
