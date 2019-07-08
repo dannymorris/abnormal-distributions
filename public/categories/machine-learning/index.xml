@@ -21,13 +21,4 @@
     </item>
     
   </channel>
-</rss>itle>
-      <link>/post/2019/01/20/using-flask-to-deploy-predictive-models/</link>
-      <pubDate>Sun, 20 Jan 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2019/01/20/using-flask-to-deploy-predictive-models/</guid>
-      <description>PurposeEnvironmentCreate and activate conda environment in Anaconda PromptInstall dependenciesVery simple Flask appRun the appTest the appNext stepsPurposeDeploying production code is one of the toughest challenges that data scientists face. There seems to be significantly more content available on model development than model deployment. In this article, I document my experience building and deploying an web application written in Python using the Flask microframework.</description>
-    </item>
-    
-  </channel>
 </rss>
