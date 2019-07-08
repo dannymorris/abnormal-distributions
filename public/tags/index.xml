@@ -48,6 +48,15 @@
     </item>
     
     <item>
+      <title>Computer Vision</title>
+      <link>/tags/computer-vision/</link>
+      <pubDate>Sun, 07 Jul 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/computer-vision/</guid>
+      <description></description>
+    </item>
+    
+    <item>
       <title>Flask</title>
       <link>/tags/flask/</link>
       <pubDate>Sun, 20 Jan 2019 00:00:00 +0000</pubDate>
@@ -68,7 +77,7 @@
     <item>
       <title>Python</title>
       <link>/tags/python/</link>
-      <pubDate>Tue, 25 Jun 2019 00:00:00 +0000</pubDate>
+      <pubDate>Sun, 07 Jul 2019 00:00:00 +0000</pubDate>
       
       <guid>/tags/python/</guid>
       <description></description>

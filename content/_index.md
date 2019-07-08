@@ -2,7 +2,7 @@
 title: Home
 ---
 
-<img src="/img/family-pic-bills-game.jpg" style="max-width:25%;min-width:40px;border-radius:100px;float:right;"/>
+<img src="/img/family-pic-bills-game.jpg" style="max-width:25%;border-radius:50%;float:right;"/>
 
 # Abnormal Distributions
 

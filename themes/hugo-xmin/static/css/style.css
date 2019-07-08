@@ -33,6 +33,7 @@ code { background: #f9f9f9; }
 pre code { background: none; }
 pre.sourceCode {
     background: #f9f9f9;
+    margin-top: 2% !important;
 }
 
 /* misc elements */
