@@ -11,13 +11,23 @@ editor_options:
 
 ## Overview
 
-I am a Data Scientist II at HealthNow NY in Buffalo, NY. My main interests include data mining, R programming, and problem solving using advanced analytical techniques from machine learning and applied statistics. I also enjoy developing software (e.g. R packages and Shiny web apps), exploring technologies and trends (e.g. AWS and Rcpp), and presenting data analysis in written, verbal, and visual form to large audiences. I've worked on a wide range of projects and provided extended support for teams in marketing, sales, digital, and operations. What really motivates me is the idea of helping others solve their most difficult problems utilizing my expertise in data science.
+I am a Data Scientist II at HealthNow NY in Buffalo, NY. My main interests include data mining, R programming, and problem solving using advanced analytical techniques from machine learning and applied statistics. I also enjoy developing software (e.g. R packages and Shiny web apps), exploring technologies and trends (e.g. AWS and Rcpp), and presenting data analysis in written, verbal, and visual form to large audiences. I've worked on a wide range of projects and provided extended support for teams in marketing, operations, sales, and healthcare. What really motivates me is the idea of identifying and solving big problems using my expertise in data science.
+
+## Career Overview
+
+I began my career in 2015 doing investigative research for a [small political news outlet](https://scpolicycouncil.org/) in Columbia, SC. I mainly wrote R scripts to pull data from the web, perform statistical analyses, store data, and present findings. There was noone at the organization who could help me do what I was doing, so I worked hard and learned a lot fast.
+
+I then took a job as a Clinical Analyst in 2016. I worked on various investigative projects, applying data analysis to (relatively) large insurance claims data. I did mostly outlier analysis for fraudulent behavior detection, and variations of A/B tests to measure impact. It was then when I learned about SQL, R programming with big data, Git, and professional communication.
+
+In 2017, I took the next step and accepted a position as an Analytics Consultant primarily supporting teams in marketing and sales. My work this time was more strategic, solutions-driven, and demanding. My main goal was to provide them with insights into their data. I was applying forecasting, cluster analysis, association rules, and awesome JavaScript visualization libraries. I also became quite proficient with Windows and Linux command lines because I was deploying static and dynamic content to web servers for consumption.   
+
+In 2019, I became a Data Scientist. Since then, I've found myself doing quite a bit of text mining, software development, and classification modeling. I've been very interested recently in development technologies, web applications, high(er) performance computing, and time series forecasting. 
 
 ## Toolkit
 
 Over the last 5 years, I've developed expertise in the R programming language. In my day to day, I use R for [database connections](https://db.rstudio.com/getting-started/connect-to-database/), [HTTP requests](https://cran.r-project.org/web/packages/httr/vignettes/quickstart.html), [general purpose programming](https://www.tidyverse.org/), [machine learning](https://topepo.github.io/caret/), [text mining](http://text2vec.org/), [data visualization](https://www.htmlwidgets.org/), [reproducible research](https://rmarkdown.rstudio.com/), [web app development](https://shiny.rstudio.com/), and [package authoring](http://r-pkgs.had.co.nz/).
 
-In addition to R and the R ecosystem, I regularly utilize SQL Server, Git, GitLab, AWS, and Jira. Lesser used tools include Python, Alteryx, and Tableau.
+In addition to R and the R ecosystem, I regularly utilize Git, GitLab, SQL Server, SQLite, and Jira. Occasionally I use Python, Alteryx, and Tableau.
 
 ## Breadth Versus Depth
 
@@ -27,7 +37,7 @@ Though I am more of a generalist, I naturally developed more expertise in some a
 
 ## Career Vision
 
-Moving forward in my career, my focus is on gaining experience with production deployment strategies, application development, and high-performance computing. These skills, combined with my expertise in data analysis, will help me grow as a leader in the field of data science. 
+Moving forward in my career, my focus is on gaining experience with production deployment strategies, application development for analytics, and high-performance computing. These skills, combined with my expertise in data analysis, will help me grow as a leader in the field of data science. 
 
 
 
