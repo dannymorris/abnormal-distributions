@@ -2,32 +2,53 @@
 library(Matrix)
 library(Rcpp)
 library(RcppEigen)
+library(doParallel)
+library(itertools)
+library(tidyverse)
 
-mat <- matrix(rep(0, 15), ncol = 3)
+num_of_cores <- detectCores()
+cl <- makePSOCKcluster(num_of_cores)
+registerDoParallel(cl)
 
-mat[1, 1] <- 4L
-mat[2, 2] <- 7L
-mat[2, 2] <- 5L
-mat[3, 3] <- 8L
-mat[3, 2] <- 16L
-mat[3, 1] <- 1L
+#######################
+# Create Spark Matrix #
+#######################
 
-sparse_mat <- as(mat, "dgCMatrix")
+# sample similarity matrix
+sparse_mat <- rsparsematrix(15000, 15000, .01)
+sparse_mat2 <- cbind(sparse_mat, sparse_mat, sparse_mat, sparse_mat, sparse_mat)
+sparse_mat2 <- rbind(sparse_mat, sparse_mat, sparse_mat, sparse_mat, sparse_mat)
 
-mat_loop2(sparse_mat, 1)
-
-lapply(sparse_mat, print)
-
-apply(sparse_mat, 2, mat_loop2)
-
-d <- diff(sparse_mat@p)
-colInd <- rep.int(1:ncol(sparse_mat), d)
-ss <- split(sparse_mat@x, colInd)
-sapply(ss, stl_sort)
-
-// [[Rcpp::export]]
-NumericVector stl_sort(NumericVector x) {
-  NumericVector y = clone(x);
-  std::sort(y.begin(), y.end());
-  return y;
+f <- function(sp_mat, by_cols, threshold) {
+  by_cols <- "nm"
+  spMat_dgT <- as(sp_mat, "dgTMatrix")
+  
+  idx <- spMat_dgT@x <= threshold
+  
+  spMat_dgT@i <- spMat_dgT@i[!idx]
+  spMat_dgT@j <- spMat_dgT@j[!idx]
+  spMat_dgT@x <- spMat_dgT@x[!idx]
+  
+  df <- tibble::tibble(nm = sample(letters, nrow(sparse_mat), replace = T)) %>%
+    mutate(row_id = row_number())
+  
+  df_copy <- df
+  colnames(df_copy) <- c("original_nm", "original_row_idx")
+  
+  # mutate df
+  df[spMat_dgT@j + 1, by_cols] <- df[spMat_dgT@i+1, by_cols]
+  df[spMat_dgT@j + 1, 'row_id'] <- df[spMat_dgT@i + 1, 'row_id']
+  
+  colnames(df) <- c("new_nm", "new_row_idx")
+  
+  out <- bind_cols(df_copy, df)
+  
+  return(out)
+  
 }
+
+test <- f(sparse_mat, "nm", 3)
+system.time(f(sparse_mat, "nm", 3))
+
+test %>% 
+  filter(original_row_idx != new_row_idx)
