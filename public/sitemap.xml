@@ -3,6 +3,16 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>/post/2019/08/11/my-wedding-song/</loc>
+    <lastmod>2019-08-11T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/post/2019/07/15/http-post-request-using-node-js/</loc>
+    <lastmod>2019-07-15T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>/post/2019/07/07/detecting-image-differences-using-python-and-opencv/</loc>
     <lastmod>2019-07-07T00:00:00+00:00</lastmod>
   </url>
@@ -79,13 +89,13 @@
   
   <url>
     <loc>/tags/api/</loc>
-    <lastmod>2019-07-06T00:00:00+00:00</lastmod>
+    <lastmod>2019-07-15T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/categories/api/</loc>
-    <lastmod>2019-07-06T00:00:00+00:00</lastmod>
+    <lastmod>2019-07-15T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -107,7 +117,7 @@
   
   <url>
     <loc>/categories/</loc>
-    <lastmod>2019-07-06T00:00:00+00:00</lastmod>
+    <lastmod>2019-07-15T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -160,8 +170,32 @@
   </url>
   
   <url>
+    <loc>/tags/http/</loc>
+    <lastmod>2019-07-15T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/categories/http/</loc>
+    <lastmod>2019-07-15T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
     <loc>/</loc>
-    <lastmod>2019-07-07T00:00:00+00:00</lastmod>
+    <lastmod>2019-08-11T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/tags/javascript/</loc>
+    <lastmod>2019-07-15T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/categories/javascript/</loc>
+    <lastmod>2019-07-15T00:00:00+00:00</lastmod>
+    <priority>0</priority>
   </url>
   
   <url>
@@ -183,8 +217,20 @@
   </url>
   
   <url>
+    <loc>/categories/miscellaneous/</loc>
+    <lastmod>2019-08-11T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/music/</loc>
+    <lastmod>2019-08-11T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
     <loc>/post/</loc>
-    <lastmod>2019-07-07T00:00:00+00:00</lastmod>
+    <lastmod>2019-08-11T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -256,7 +302,7 @@
   
   <url>
     <loc>/tags/</loc>
-    <lastmod>2019-07-06T00:00:00+00:00</lastmod>
+    <lastmod>2019-07-15T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   

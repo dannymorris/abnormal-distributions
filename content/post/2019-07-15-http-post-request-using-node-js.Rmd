@@ -1,0 +1,67 @@
+---
+title: HTTP Post Requests Using R, Python, and Node.js
+author: Danny Morris
+date: '2019-07-15'
+slug: http-post-request-using-node-js
+categories:
+  - API
+  - HTTP
+  - JavaScript
+tags:
+  - API
+  - HTTP
+  - JavaScript
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(knitr)
+```
+
+```{node, eval = F}
+const https = require('http')
+
+const data = JSON.stringify({
+  doc_set_1: 'hello'
+})
+
+const options = {
+  hostname: 'ec2-instance-dns.com',
+  port: '8000',
+  path: '/textsim',
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Content-Length': data.length
+  }
+}
+
+const req = https.request(options, (res) => {
+  console.log(`statusCode: ${res.statusCode}`)
+  
+  res.on(
+    'data', (d) => {
+      process.stdout.write(d)
+    }
+  )
+})
+
+req.on('error', (error) => {
+  console.error(error)
+})
+
+req.write(data)
+req.end()
+
+```
+
+# R
+
+```{r, eval = F}
+resp <- httr::POST(
+  url = "http://ec2-instance-dns:8000/predict",
+  body = iris[, 1:4]
+)
+```
+

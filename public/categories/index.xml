@@ -6,7 +6,7 @@
     <description>Recent content in Categories on Abnormal Distributions</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 06 Jul 2019 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Mon, 15 Jul 2019 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/categories/index.xml" rel="self" type="application/rss+xml" />
     
@@ -14,7 +14,7 @@
     <item>
       <title>API</title>
       <link>/categories/api/</link>
-      <pubDate>Sat, 06 Jul 2019 00:00:00 +0000</pubDate>
+      <pubDate>Mon, 15 Jul 2019 00:00:00 +0000</pubDate>
       
       <guid>/categories/api/</guid>
       <description></description>
@@ -66,6 +66,24 @@
     </item>
     
     <item>
+      <title>HTTP</title>
+      <link>/categories/http/</link>
+      <pubDate>Mon, 15 Jul 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/categories/http/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>JavaScript</title>
+      <link>/categories/javascript/</link>
+      <pubDate>Mon, 15 Jul 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/categories/javascript/</guid>
+      <description></description>
+    </item>
+    
+    <item>
       <title>Machine Learning</title>
       <link>/categories/machine-learning/</link>
       <pubDate>Sun, 17 Feb 2019 00:00:00 +0000</pubDate>
@@ -80,6 +98,15 @@
       <pubDate>Tue, 25 Jun 2019 00:00:00 +0000</pubDate>
       
       <guid>/categories/machine-learning/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Miscellaneous</title>
+      <link>/categories/miscellaneous/</link>
+      <pubDate>Sun, 11 Aug 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/categories/miscellaneous/</guid>
       <description></description>
     </item>
     

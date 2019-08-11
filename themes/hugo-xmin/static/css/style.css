@@ -32,8 +32,11 @@ pre {
 code { background: #f9f9f9; }
 pre code { background: none; }
 pre.sourceCode {
-    background: #e8e8e8;
     margin-top: 2% !important;
+}
+
+code span.kw {
+  color: rgb(0, 55, 255);
 }
 
 /* misc elements */
