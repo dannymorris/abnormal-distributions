@@ -6,10 +6,25 @@
     <description>Recent content in R on Abnormal Distributions</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 06 Jul 2019 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sun, 11 Aug 2019 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/categories/r/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Launch RStudio Server on AWS EMR Cluster</title>
+      <link>/post/2019/08/11/launch-rstudio-server-on-aws-emr-cluster/</link>
+      <pubDate>Sun, 11 Aug 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/08/11/launch-rstudio-server-on-aws-emr-cluster/</guid>
+      <description>This post documents the steps to launch RStudio Server on an AWS EMR cluster.
+Reference: Using sparklyr with an Apache Spark cluster
+ Open AWS Console and navigate to the EMR service
+ Select &amp;ldquo;Create cluster&amp;rdquo;
+ Select &amp;ldquo;Go to advanced options&amp;rdquo; to customize the cluster configuration
+ Under &amp;ldquo;Software Configuration&amp;rdquo;, select Spark. Other applications can be selected as needed. Click Next.
+  5 . Configure the hardware requirements as needed and click Next.</description>
+    </item>
     
     <item>
       <title>Deploying a Plumber API on AWS EC2 Instance</title>

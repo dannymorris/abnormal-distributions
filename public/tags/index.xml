@@ -23,7 +23,7 @@
     <item>
       <title>AWS</title>
       <link>/tags/aws/</link>
-      <pubDate>Sat, 06 Jul 2019 00:00:00 +0000</pubDate>
+      <pubDate>Sat, 24 Aug 2019 00:00:00 +0000</pubDate>
       
       <guid>/tags/aws/</guid>
       <description></description>
@@ -53,6 +53,24 @@
       <pubDate>Sun, 07 Jul 2019 00:00:00 +0000</pubDate>
       
       <guid>/tags/computer-vision/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Data Science</title>
+      <link>/tags/data-science/</link>
+      <pubDate>Sat, 24 Aug 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/data-science/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>EMR</title>
+      <link>/tags/emr/</link>
+      <pubDate>Sun, 11 Aug 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/emr/</guid>
       <description></description>
     </item>
     
@@ -113,9 +131,18 @@
     <item>
       <title>R</title>
       <link>/tags/r/</link>
-      <pubDate>Sat, 06 Jul 2019 00:00:00 +0000</pubDate>
+      <pubDate>Sun, 11 Aug 2019 00:00:00 +0000</pubDate>
       
       <guid>/tags/r/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>RStudio Server</title>
+      <link>/tags/rstudio-server/</link>
+      <pubDate>Sun, 11 Aug 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/tags/rstudio-server/</guid>
       <description></description>
     </item>
     

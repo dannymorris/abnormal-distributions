@@ -1,0 +1,89 @@
+---
+title: Hierarchical Clustering Text Data to Detect Duplicate Business Names
+author: Danny Morris
+date: '2019-08-12'
+slug: hierarchical-text-data-to-detect-duplicate-business-names
+categories:
+  - R
+  - Text Mining
+  - Clustering
+tags:
+  - R
+  - Text Mining
+  - Clustering
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(tidyverse)
+library(text2vec)
+```
+
+# Data
+
+```{r}
+df <- read_csv("http://www.opendata500.com/us/download/us_companies.csv")
+```
+
+# Text Preparation
+
+- remove non-alphanumeric characters
+- remove whitespace
+- convert to lowercase
+
+```{r}
+company_names <- df %>% 
+  pull(company_name) %>%
+  str_replace_all("[^[:alnum:] ]", "") %>%
+  str_replace_all(" ", "") %>%
+  tolower()
+
+sample_names <- sample(company_names, 1500, replace = T)
+
+define_replacements <- function(n = 5) {
+  N <- sample(letters, n, F)
+  paste0(N, collapse = "|")
+}
+
+sample_names <- map_chr(sample_names, function(x) {
+  str_replace_all(
+    string = x,
+    pattern = define_replacements(),
+    replacement = sample(letters, 1)
+  )
+})
+```
+
+# Bag of words
+
+```{r}
+iterator <- itoken(sample_names, 
+                   tokenizer = text2vec::char_tokenizer, 
+                   progressbar = FALSE)
+
+vocab <- create_vocabulary(iterator, ngram = c(3L, 3L))
+
+vectorizer <- vocab_vectorizer(vocab)
+
+dtm <- create_dtm(iterator, vectorizer)
+```
+
+# Cosine Distance
+
+```{r}
+cosine_sim <- sim2(dtm, dtm, method = "cosine", norm = "l2")
+
+cosine_sim[cosine_sim < 0.2] <- 0
+
+dgt_matrix <- as(cosine_sim, "dgTMatrix")
+```
+
+# Hierarchical Clustering
+
+```{r}
+hcl <- hclust(distance_obj, method = "ward.D2")
+
+plot(hcl)
+```
+

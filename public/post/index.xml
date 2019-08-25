@@ -6,10 +6,50 @@
     <description>Recent content in Posts on Abnormal Distributions</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sun, 11 Aug 2019 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sat, 24 Aug 2019 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Data Science on AWS</title>
+      <link>/post/2019/08/24/aws-tools-for-data-science/</link>
+      <pubDate>Sat, 24 Aug 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/08/24/aws-tools-for-data-science/</guid>
+      <description>This document describes some common goals of data science and how they can be acheived with tools and services on AWS.
+General Principles  Tools and services empower innovative data science Event driven Serverless* Accomodates big data Accomodates unstructured and binary data (e.g. images)
+ Servers may be involved, but they are configured to run on events
+  List of Tools  S3 Lambda API Gateway EC2 EMR R Python Spark SageMaker RStudio Server Jupyter Notebook  Data Science Goals 1.</description>
+    </item>
+    
+    <item>
+      <title>Event-Driven Code Execution Using S3, Lambda, EC2, and R</title>
+      <link>/post/2019/08/22/event-driven-code-execution-using-s3-lambda-ec2-r/</link>
+      <pubDate>Thu, 22 Aug 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/08/22/event-driven-code-execution-using-s3-lambda-ec2-r/</guid>
+      <description>This document describes how to launch a pre-configured EC2 instance triggred by an S3 event in order to execute an R script.
+Pipeline Overview The pipeline executes in this way:
+ A file is uploaded to an S3 bucket.
+ The file upload triggers a Lambda function that starts an EC2 instance, runs an R script, and stops the EC2 instance.
+ When run, the R script returns the output to an S3 bucket for consumption.</description>
+    </item>
+    
+    <item>
+      <title>Launch RStudio Server on AWS EMR Cluster</title>
+      <link>/post/2019/08/11/launch-rstudio-server-on-aws-emr-cluster/</link>
+      <pubDate>Sun, 11 Aug 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/08/11/launch-rstudio-server-on-aws-emr-cluster/</guid>
+      <description>This post documents the steps to launch RStudio Server on an AWS EMR cluster.
+Reference: Using sparklyr with an Apache Spark cluster
+ Open AWS Console and navigate to the EMR service
+ Select &amp;ldquo;Create cluster&amp;rdquo;
+ Select &amp;ldquo;Go to advanced options&amp;rdquo; to customize the cluster configuration
+ Under &amp;ldquo;Software Configuration&amp;rdquo;, select Spark. Other applications can be selected as needed. Click Next.
+  5 . Configure the hardware requirements as needed and click Next.</description>
+    </item>
     
     <item>
       <title>My Wedding Song</title>
