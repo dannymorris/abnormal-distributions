@@ -194,7 +194,7 @@ def run_command():
         MaxConcurrency="1",
         CloudWatchOutputConfig={'CloudWatchOutputEnabled': True},
         Parameters={
-            'commands': ["sudo su rstudio", "Rscript ../../home/rstudio/R/app.R"],
+            'commands': ["sudo su rstudio", "cd ../../home/rstudio/", "R -e 'getwd()'", "Rscript R/app.R"],
             'executionTimeout': ["300"]
         },
     )
@@ -229,8 +229,8 @@ def lambda_handler(event, context):
         start_ec2()
         retcode = run_command()
     finally:  # Independently of what happens, try to shutdown the EC2
-        #stop_ec2()
-        print("helo")
+        stop_ec2()
+        print("Function complete.")
 
     return retcode 
 ```
