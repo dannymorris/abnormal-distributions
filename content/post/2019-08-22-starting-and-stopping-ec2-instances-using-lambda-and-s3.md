@@ -9,19 +9,17 @@ tags:
   - AWS
 ---
 
-This document describes how to launch a pre-configured EC2 instance triggred by an S3 event in order to execute an R script. 
+This document outlines the steps to using S3 events to trigger a Lambda function that starts up an EC2 instance, executes a custom R script on the instance, then stops the instance. 
 
 # Pipeline Overview
 
 ![](/img/analysis-function-pipeline.PNG)
 
-The pipeline executes in this way:
-
 1. A file is uploaded to an S3 bucket.
 
 2. The file upload triggers a Lambda function that starts an EC2 instance, runs an R script, and stops the EC2 instance.
 
-3. When run, the R script returns the output to an S3 bucket for consumption.
+3. When run, the R script returns the output to an S3 bucket.
 
 # EC2 Configuration Overview
 
@@ -33,13 +31,7 @@ The pipeline executes in this way:
 
 4. Create and save R script that reads/write to S3
 
-5. 
-
-An EC2 instance running Amazon Linux AMI is launched and the required applications are installed (e.g. R, RStudio, Python, R packages). The instance is stopped, waiting to be launched by the Lambda function.
-
-2. 
-
-2. An R script is created and saved to the instance's file system. This file is then referenced in the Lambda function to be executed.
+5. Stop instance
 
 # Launch and Configure EC2 Instance
 
@@ -60,13 +52,15 @@ sudo su -
 
 ### Configure Access
 
+This may require setting access keys.
+
 ```
 aws configure
 ```
 
-### Install required applications
+### Install required software
 
-Python is pre-installed. The following code installs a version of R that AWS supports. At the time of this writing it is version 3.4.1 (latest is greater than 3.6.0). The gap between versions is only significant if you depend on technology which is very new.
+Python is pre-installed. The following code installs a version of R that AWS supports. At the time of this writing it is version 3.4.1 (latest is greater than 3.6.0). The gap between versions is only significant if you need the latest content developed in R.
 
 ```
 sudo yum update
@@ -141,6 +135,8 @@ R -e "source('app.R')"
 ```
 
 # Lambda Function
+
+The Lambda function utilizes the Python 3.7 runtime. It starts the pre-configured EC2 instance, runs an R script, and stops the instance.
 
 ```
 import boto3
@@ -244,6 +240,12 @@ def lambda_handler(event, context):
 Configure the Lambda function to execute when a file is placed in <BUCKET_NAME>/<PREFIX>
 
 ![](/img/lambda-add-trigger-config.PNG)
+
+# Configure IAM Role
+
+The IAM role requires permissions to execute Lambda, start and stop EC2 instances, and send commands to EC2 using SSM. Full access to these three services is optional.
+
+![](/img/ec2/iam.PNG)
 
 
 

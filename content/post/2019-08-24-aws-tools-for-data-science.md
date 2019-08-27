@@ -17,11 +17,9 @@ This document describes some common goals of data science and how they can be ac
 
 - Tools and services empower innovative data science
 - Event driven
-- Serverless*
+- Serverless
 - Accomodates big data
 - Accomodates unstructured and binary data (e.g. images)
-
-* Servers may be involved, but they are configured to run on events
 
 # List of Tools
 

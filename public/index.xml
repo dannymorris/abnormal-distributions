@@ -18,9 +18,7 @@
       
       <guid>/post/2019/08/24/aws-tools-for-data-science/</guid>
       <description>This document describes some common goals of data science and how they can be acheived with tools and services on AWS.
-General Principles  Tools and services empower innovative data science Event driven Serverless* Accomodates big data Accomodates unstructured and binary data (e.g. images)
- Servers may be involved, but they are configured to run on events
-  List of Tools  S3 Lambda API Gateway EC2 EMR R Python Spark SageMaker RStudio Server Jupyter Notebook  Data Science Goals 1.</description>
+General Principles  Tools and services empower innovative data science Event driven Serverless Accomodates big data Accomodates unstructured and binary data (e.g. images)  List of Tools  S3 Lambda API Gateway EC2 EMR R Python Spark SageMaker RStudio Server Jupyter Notebook  Data Science Goals 1. Batch Predictions  Objective: Generate predictions for batches of data on a recurring basis.</description>
     </item>
     
     <item>
@@ -29,11 +27,10 @@ General Principles  Tools and services empower innovative data science Event dri
       <pubDate>Thu, 22 Aug 2019 00:00:00 +0000</pubDate>
       
       <guid>/post/2019/08/22/event-driven-code-execution-using-s3-lambda-ec2-r/</guid>
-      <description>This document describes how to launch a pre-configured EC2 instance triggred by an S3 event in order to execute an R script.
-Pipeline Overview The pipeline executes in this way:
- A file is uploaded to an S3 bucket.
+      <description>This document outlines the steps to using S3 events to trigger a Lambda function that starts up an EC2 instance, executes a custom R script on the instance, then stops the instance.
+Pipeline Overview  A file is uploaded to an S3 bucket.
  The file upload triggers a Lambda function that starts an EC2 instance, runs an R script, and stops the EC2 instance.
- When run, the R script returns the output to an S3 bucket for consumption.</description>
+ When run, the R script returns the output to an S3 bucket.</description>
     </item>
     
     <item>
