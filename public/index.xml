@@ -6,10 +6,42 @@
     <description>Recent content in Home on Abnormal Distributions</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 24 Aug 2019 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sun, 01 Sep 2019 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Benefits of AWS EMR Notebooks for Data Science</title>
+      <link>/post/2019/09/01/benefits-of-aws-emr-notebooks-for-data-science-teams/</link>
+      <pubDate>Sun, 01 Sep 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/09/01/benefits-of-aws-emr-notebooks-for-data-science-teams/</guid>
+      <description>This document highlights some of the benefits of using EMR Notebooks for data science.
+EMR Notebooks is an AWS-managed service that provides access to Jupyter Notebooks running on an EMR cluster with kernels for PySpark, SparkR, and Python. This tool is ideal for exploratory analysis with Python and Spark and for developing applications for big data processing.
+1. Minimal configuration You can launch an EMR Notebook through the AWS Console with minimial configuration.</description>
+    </item>
+    
+    <item>
+      <title>Using SageMaker Notebooks for Machine Learning Development</title>
+      <link>/post/2019/09/01/using-sagemaker-notebooks-for-machine-learning/</link>
+      <pubDate>Sun, 01 Sep 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/09/01/using-sagemaker-notebooks-for-machine-learning/</guid>
+      <description>Reference: https://docs.aws.amazon.com/sagemaker/latest/dg/howitworks-create-ws.html
+This document highlights some of the benefits of using SageMaker notebooks for developing ML models.
+SageMaker is an AWS-managed service that provides several tools for machine learning, including a development environment for machine learning based on Jupyter Notebook.
+1. Minimal configuration You can launch a SageMaker notebook through the AWS Console with minimial configuration. Simply give the notebook a name, specifiy the instance type, then specify role and security options.</description>
+    </item>
+    
+    <item>
+      <title>Real-time Predictions using API Gateway, Lambda, SageMaker, and S3</title>
+      <link>/post/2019/08/26/real-time-predictions-using-api-gateway-lambda-sagemaker-and-s3/</link>
+      <pubDate>Mon, 26 Aug 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/08/26/real-time-predictions-using-api-gateway-lambda-sagemaker-and-s3/</guid>
+      <description></description>
+    </item>
     
     <item>
       <title>Data Science on AWS</title>
@@ -34,31 +66,28 @@ Pipeline Overview  A file is uploaded to an S3 bucket.
     </item>
     
     <item>
-      <title>Launch RStudio Server on AWS EMR Cluster</title>
-      <link>/post/2019/08/11/launch-rstudio-server-on-aws-emr-cluster/</link>
+      <title>Launch an EMR Cluster with Bootstrapped Actions Using the AWS CLI</title>
+      <link>/post/2019/08/11/launch-emr-cluster-bootstrapped-actions-using-aws-cli/</link>
       <pubDate>Sun, 11 Aug 2019 00:00:00 +0000</pubDate>
       
-      <guid>/post/2019/08/11/launch-rstudio-server-on-aws-emr-cluster/</guid>
-      <description>This post documents the steps to launch RStudio Server on an AWS EMR cluster.
-Reference: Using sparklyr with an Apache Spark cluster
- Open AWS Console and navigate to the EMR service
- Select &amp;ldquo;Create cluster&amp;rdquo;
- Select &amp;ldquo;Go to advanced options&amp;rdquo; to customize the cluster configuration
- Under &amp;ldquo;Software Configuration&amp;rdquo;, select Spark. Other applications can be selected as needed. Click Next.
-  5 . Configure the hardware requirements as needed and click Next.</description>
+      <guid>/post/2019/08/11/launch-emr-cluster-bootstrapped-actions-using-aws-cli/</guid>
+      <description>The following AWS CLI command will launch a 5 node (1 master node and 4 worker nodes) EMR 5.25 cluster with Spark, RStudio Server, Shiny Server, sparklyr, and other aplications pre-installed and ready to use.
+bootstrap.sh
+aws emr create-cluster \ --applications Name=Hadoop Name=Spark Name=JupyterHub Name=TensorFlow \ --release-label emr-5.25.0 \ --name &amp;quot;EMR 5.25 RStudio + sparklyr 2&amp;quot; \ --service-role EMR_DefaultRole \ --instance-groups InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m5a.2xlarge InstanceGroupType=CORE,InstanceCount=4,InstanceType=m5a.2xlarge \ --bootstrap-action Path=s3://aws-bigdata-blog/artifacts/aws-blog-emr-rstudio-sparklyr/rstudio_sparklyr_emr5.sh,Args=[&amp;quot;--rstudio&amp;quot;,&amp;quot;--sparklyr&amp;quot;,&amp;quot;--rstudio-url&amp;quot;,&amp;quot;https://download2.rstudio.org/server/centos6/x86_64/rstudio-server-rhel-1.2.1335-x86_64.rpm&amp;quot;],Name=&amp;quot;Install RStudio&amp;quot; \ --ec2-attributes InstanceProfile=EMR_EC2_DefaultRole,KeyName=$YOUR_KEY \ --configurations &#39;[{&amp;quot;Classification&amp;quot;:&amp;quot;spark&amp;quot;,&amp;quot;Properties&amp;quot;:{&amp;quot;maximizeResourceAllocation&amp;quot;:&amp;quot;true&amp;quot;}}]&#39; \ --region us-east-1  </description>
     </item>
     
     <item>
-      <title>My Wedding Song</title>
+      <title>Personal Music Recordings</title>
       <link>/post/2019/08/11/my-wedding-song/</link>
       <pubDate>Sun, 11 Aug 2019 00:00:00 +0000</pubDate>
       
       <guid>/post/2019/08/11/my-wedding-song/</guid>
-      <description>This post is not about data science. Instead, I am sharing the song I wrote and recorded for my wife when we were first dating. We ended up dancing to this song at our wedding.
-Title: See You Smile
+      <description>Title: See You Smile
 Author: Danny Morris
 Musicians: Danny Morris (vocals, guitar), Chris Gee (bass), Ben Catoe (keys)
-Recording engineer: Charlie Jackson</description>
+Recording engineer: Charlie Jackson
+ Title: Ever Burning Need
+Musicians: Danny Morris (guitars), Trey Marsh (bass), Ryan Kennedy-Forbes (keys)</description>
     </item>
     
     <item>
@@ -95,19 +124,6 @@ Recording engineer: Charlie Jackson</description>
       
       <guid>/post/2019/07/06/deploying-a-shiny-app-with-shiny-server-on-an-aws-ec2-instance/</guid>
       <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
-    </item>
-    
-    <item>
-      <title>My Data Science Tools and Techniques</title>
-      <link>/post/2019/07/06/fast-clustering-methods/</link>
-      <pubDate>Sat, 06 Jul 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2019/07/06/fast-clustering-methods/</guid>
-      <description>ToolsProgramming LanguagesDevelopment EnvironmentsData Storage and RetrievalData VisualizationReports, Dashboards, and ApplicationsDevelopment ToolsTechniquesThis document briefly describes the tools and techniques I am currently using for data science. The percentages reflect the amount of time spent with each tool under each heading.
-ToolsProgramming LanguagesR - 80%
-Python - 10%
-SQL - 5%
-Command line tools (Git, Linux, Docker, Powershell, Conda) - 5%</description>
     </item>
     
     <item>
