@@ -9,8 +9,6 @@ tags:
   - AWS
 ---
 
-# Test
-
 Today marks the first day of AWS re:Invent 2019. I am excited to deepen and document my expertise with machine learning on AWS. 
 
 My general goals for re:Invent are the following:

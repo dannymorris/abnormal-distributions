@@ -133,14 +133,21 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </div>
 <div id="r-packages" class="section level1">
 <h1>R packages</h1>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(tidyverse) <span class="co"># for data manipulation and %&gt;% operator</span>
-<span class="kw">library</span>(rsample)   <span class="co"># train/test split</span>
-<span class="kw">library</span>(ranger)    <span class="co"># random forest</span></code></pre>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(tidyverse) 
+<span class="kw">library</span>(aws.s3)
+<span class="kw">library</span>(aws.signature)
+<span class="kw">library</span>(rsample)   
+<span class="kw">library</span>(ranger) </code></pre>
 </div>
 <div id="data" class="section level1">
 <h1>Data</h1>
-<p>A CSV file of the raw data can be found <a href="https://www.kaggle.com/mlg-ulb/creditcardfraud/version/3">here</a>.</p>
-<pre class="sourceCode r"><code class="sourceCode r">credit_card &lt;-<span class="st"> </span><span class="kw">read_csv</span>(<span class="st">&quot;creditcard.csv&quot;</span>) <span class="op">%&gt;%</span>
+<p>The data is located in my S3 bucket, however a CSV of the raw data can be found <a href="https://www.kaggle.com/mlg-ulb/creditcardfraud/version/3">here</a>.</p>
+<pre class="sourceCode r"><code class="sourceCode r">aws.signature<span class="op">::</span><span class="kw">use_credentials</span>()</code></pre>
+<pre class="sourceCode r"><code class="sourceCode r">credit_card &lt;-<span class="st"> </span><span class="kw">s3read_using</span>(
+  <span class="dt">bucket =</span> <span class="st">&quot;abn-distro-data&quot;</span>,
+  <span class="dt">object =</span> <span class="st">&quot;creditcard.csv&quot;</span>,
+  <span class="dt">FUN =</span> read_csv
+) <span class="op">%&gt;%</span>
 <span class="st">  </span><span class="kw">select</span>(<span class="op">-</span>Time) <span class="op">%&gt;%</span>
 <span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Class =</span> <span class="kw">as.character</span>(Class))</code></pre>
 <p>A smaller sample is taken to reduce computational burden.</p>
@@ -242,27 +249,27 @@ final_votes &lt;-<span class="st"> </span><span class="kw">bind_cols</span>(mode
 ## 
 ##           Reference
 ## Prediction    0    1
-##          0 5842    7
-##          1  169   80
-##                                           
-##                Accuracy : 0.9711          
-##                  95% CI : (0.9666, 0.9752)
-##     No Information Rate : 0.9857          
-##     P-Value [Acc &gt; NIR] : 1               
-##                                           
-##                   Kappa : 0.4649          
-##  Mcnemar&#39;s Test P-Value : &lt;2e-16          
-##                                           
-##             Sensitivity : 0.91954         
-##             Specificity : 0.97188         
-##          Pos Pred Value : 0.32129         
-##          Neg Pred Value : 0.99880         
-##              Prevalence : 0.01427         
-##          Detection Rate : 0.01312         
-##    Detection Prevalence : 0.04083         
-##       Balanced Accuracy : 0.94571         
-##                                           
-##        &#39;Positive&#39; Class : 1               
+##          0 5861    7
+##          1  150   80
+##                                         
+##                Accuracy : 0.9743        
+##                  95% CI : (0.97, 0.9781)
+##     No Information Rate : 0.9857        
+##     P-Value [Acc &gt; NIR] : 1             
+##                                         
+##                   Kappa : 0.4943        
+##  Mcnemar&#39;s Test P-Value : &lt;2e-16        
+##                                         
+##             Sensitivity : 0.91954       
+##             Specificity : 0.97505       
+##          Pos Pred Value : 0.34783       
+##          Neg Pred Value : 0.99881       
+##              Prevalence : 0.01427       
+##          Detection Rate : 0.01312       
+##    Detection Prevalence : 0.03772       
+##       Balanced Accuracy : 0.94729       
+##                                         
+##        &#39;Positive&#39; Class : 1             
 ## </code></pre>
 </div>
 </div>
@@ -278,7 +285,7 @@ final_votes &lt;-<span class="st"> </span><span class="kw">bind_cols</span>(mode
 <span class="st">  </span><span class="kw">geom_density</span>() <span class="op">+</span>
 <span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Distribution of Sensitivty Across 25 Subsamples&quot;</span>,
        <span class="dt">subtitle =</span> <span class="st">&quot;Sensitivity scores vary by subsample. The ensemble approach reduces variation.&quot;</span>)</code></pre>
-<p><img src="/post/2019-07-01-rare-class-ensemble_files/figure-html/unnamed-chunk-14-1.png" width="672" /></p>
+<p><img src="/post/2019-07-01-rare-class-ensemble_files/figure-html/unnamed-chunk-15-1.png" width="672" /></p>
 </div>
 
 </main>

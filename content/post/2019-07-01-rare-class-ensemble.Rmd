@@ -42,17 +42,27 @@ This article demonstrates an approach for supervised learning using an ensemble 
 # R packages
 
 ```{r}
-library(tidyverse) # for data manipulation and %>% operator
-library(rsample)   # train/test split
-library(ranger)    # random forest
+library(tidyverse) 
+library(aws.s3)
+library(aws.signature)
+library(rsample)   
+library(ranger) 
 ```
 
 # Data
 
-A CSV file of the raw data can be found [here](https://www.kaggle.com/mlg-ulb/creditcardfraud/version/3).
+The data is located in my S3 bucket, however a CSV of the raw data can be found [here](https://www.kaggle.com/mlg-ulb/creditcardfraud/version/3).
 
 ```{r}
-credit_card <- read_csv("creditcard.csv") %>%
+aws.signature::use_credentials()
+```
+
+```{r}
+credit_card <- s3read_using(
+  bucket = "abn-distro-data",
+  object = "creditcard.csv",
+  FUN = read_csv
+) %>%
   select(-Time) %>%
   mutate(Class = as.character(Class))
 ```
