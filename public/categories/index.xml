@@ -23,7 +23,7 @@
     <item>
       <title>AWS</title>
       <link>/categories/aws/</link>
-      <pubDate>Sun, 01 Sep 2019 00:00:00 +0000</pubDate>
+      <pubDate>Thu, 05 Dec 2019 00:00:00 +0000</pubDate>
       
       <guid>/categories/aws/</guid>
       <description></description>
@@ -53,15 +53,6 @@
       <pubDate>Sun, 10 Feb 2019 00:00:00 +0000</pubDate>
       
       <guid>/categories/data-mining/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>Data Science</title>
-      <link>/categories/data-science/</link>
-      <pubDate>Sat, 24 Aug 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/categories/data-science/</guid>
       <description></description>
     </item>
     
@@ -104,18 +95,9 @@
     <item>
       <title>Machine learning</title>
       <link>/categories/machine-learning/</link>
-      <pubDate>Sun, 01 Sep 2019 00:00:00 +0000</pubDate>
+      <pubDate>Tue, 25 Jun 2019 00:00:00 +0000</pubDate>
       
       <guid>/categories/machine-learning/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>Miscellaneous</title>
-      <link>/categories/miscellaneous/</link>
-      <pubDate>Sun, 11 Aug 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/categories/miscellaneous/</guid>
       <description></description>
     </item>
     
@@ -179,6 +161,15 @@
       <pubDate>Sun, 17 Feb 2019 00:00:00 +0000</pubDate>
       
       <guid>/categories/text-mining/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Web Development</title>
+      <link>/categories/web-development/</link>
+      <pubDate>Sun, 20 Jan 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/categories/web-development/</guid>
       <description></description>
     </item>
     

@@ -1,5 +1,5 @@
 ---
-title: HTTP Post Requests Using R, Python, and Node.js
+title: HTTP POST Requests Using Node.js
 author: Danny Morris
 date: '2019-07-15'
 slug: http-post-request-using-node-js
@@ -15,9 +15,7 @@ editor_options:
   chunk_output_type: console
 ---
 
-```{r}
-library(knitr)
-```
+This simple snippet demonstrates how to use Node to make a POST request.
 
 ```{node, eval = F}
 const https = require('http')
@@ -56,12 +54,4 @@ req.end()
 
 ```
 
-# R
-
-```{r, eval = F}
-resp <- httr::POST(
-  url = "http://ec2-instance-dns:8000/predict",
-  body = iris[, 1:4]
-)
-```
 

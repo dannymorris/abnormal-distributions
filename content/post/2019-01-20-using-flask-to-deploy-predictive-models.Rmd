@@ -1,5 +1,5 @@
 ---
-title: Basics of deploying Flask applications to localhost on Windows
+title: Deploying Flask Apps Locally on Windows
 author: Danny Morris
 date: '2019-01-20'
 output: 
@@ -9,17 +9,15 @@ slug: using-flask-to-deploy-predictive-models
 categories:
   - Python
   - Machine Learning
+  - Web Development
 tags:
-  - API
   - Python
   - Flask
 editor_options: 
   chunk_output_type: console
 ---
 
-# Purpose
-
-Deploying production code is one of the toughest challenges that data scientists face. There seems to be significantly more content available on model development than model deployment. In this article, I document my experience building and deploying an web application written in Python using the Flask microframework. In another article, I'll build off of this document and deploy a machine learning model that serves predictions.
+This document describes an approach to developing a Flask app and deploying locally.
 
 # Environment
 

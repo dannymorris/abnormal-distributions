@@ -30,22 +30,13 @@
     </item>
     
     <item>
-      <title>Basics of deploying Flask applications to localhost on Windows</title>
+      <title>Deploying Flask Apps Locally on Windows</title>
       <link>/post/2019/01/20/using-flask-to-deploy-predictive-models/</link>
       <pubDate>Sun, 20 Jan 2019 00:00:00 +0000</pubDate>
       
       <guid>/post/2019/01/20/using-flask-to-deploy-predictive-models/</guid>
-      <description>PurposeEnvironmentCreate and activate conda environment in Anaconda PromptInstall dependenciesVery simple Flask appRun the appTest the appNext stepsPurposeDeploying production code is one of the toughest challenges that data scientists face. There seems to be significantly more content available on model development than model deployment. In this article, I document my experience building and deploying an web application written in Python using the Flask microframework.</description>
-    </item>
-    
-    <item>
-      <title>A specific comparison of feature engineering in R and Python</title>
-      <link>/post/2018/01/09/a-specific-comparison-of-feature-engineering-in-r-and-python/</link>
-      <pubDate>Tue, 09 Jan 2018 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2018/01/09/a-specific-comparison-of-feature-engineering-in-r-and-python/</guid>
-      <description>PurposeOriginal dataFeatures to engineerRPythonPurposeMoving from raw data to data that is prime for analysis is called feature engineering and it is a fundamental aspect of data science. Experienced data scientists will agree that feature engineering is an essential skill.
-This article demonstrates the same engineering pipeline written in R and Python. The pipeline is not particularly complicated, though it resembles something that a data scientist would do.</description>
+      <description>EnvironmentCreate and activate conda environment in Anaconda PromptInstall dependenciesVery simple Flask appRun the appTest the appNext stepsThis document describes an approach to developing a Flask app and deploying locally.
+EnvironmentWindows 10Anaconda version 2018.12 (includes conda)Create and activate conda environment in Anaconda PromptBefore I begin with building the Flask app, I’ll create a conda environment to house the dependencies needed to run the app.</description>
     </item>
     
     <item>

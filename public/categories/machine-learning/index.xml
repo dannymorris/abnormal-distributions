@@ -6,31 +6,10 @@
     <description>Recent content in Machine learning on Abnormal Distributions</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sun, 01 Sep 2019 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 25 Jun 2019 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/categories/machine-learning/index.xml" rel="self" type="application/rss+xml" />
     
-    
-    <item>
-      <title>Using SageMaker Notebooks for Machine Learning Development</title>
-      <link>/post/2019/09/01/using-sagemaker-notebooks-for-machine-learning/</link>
-      <pubDate>Sun, 01 Sep 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2019/09/01/using-sagemaker-notebooks-for-machine-learning/</guid>
-      <description>Reference: https://docs.aws.amazon.com/sagemaker/latest/dg/howitworks-create-ws.html
-This document highlights some of the benefits of using SageMaker notebooks for developing ML models.
-SageMaker is an AWS-managed service that provides several tools for machine learning, including a development environment for machine learning based on Jupyter Notebook.
-1. Minimal configuration You can launch a SageMaker notebook through the AWS Console with minimial configuration. Simply give the notebook a name, specifiy the instance type, then specify role and security options.</description>
-    </item>
-    
-    <item>
-      <title>Real-time Predictions using API Gateway, Lambda, SageMaker, and S3</title>
-      <link>/post/2019/08/26/real-time-predictions-using-api-gateway-lambda-sagemaker-and-s3/</link>
-      <pubDate>Mon, 26 Aug 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2019/08/26/real-time-predictions-using-api-gateway-lambda-sagemaker-and-s3/</guid>
-      <description></description>
-    </item>
     
     <item>
       <title>Example Gradient Boosted Classifier Using Python&#39;s Scikit Learn</title>

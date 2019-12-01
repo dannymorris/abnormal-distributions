@@ -3,23 +3,28 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>/post/2019/12/05/aws-reinvent-day-4/</loc>
+    <lastmod>2019-12-05T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/post/2019/12/04/aws-reinvent-day-3/</loc>
+    <lastmod>2019-12-04T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/post/2019/12/03/aws-reinvent-day-2/</loc>
+    <lastmod>2019-12-03T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/post/2019/12/02/aws-reinvent-day-1/</loc>
+    <lastmod>2019-12-02T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>/post/2019/09/01/benefits-of-aws-emr-notebooks-for-data-science-teams/</loc>
     <lastmod>2019-09-01T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/post/2019/09/01/using-sagemaker-notebooks-for-machine-learning/</loc>
-    <lastmod>2019-09-01T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/post/2019/08/26/real-time-predictions-using-api-gateway-lambda-sagemaker-and-s3/</loc>
-    <lastmod>2019-08-26T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/post/2019/08/24/aws-tools-for-data-science/</loc>
-    <lastmod>2019-08-24T00:00:00+00:00</lastmod>
   </url>
   
   <url>
@@ -29,11 +34,6 @@
   
   <url>
     <loc>/post/2019/08/11/launch-emr-cluster-bootstrapped-actions-using-aws-cli/</loc>
-    <lastmod>2019-08-11T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/post/2019/08/11/my-wedding-song/</loc>
     <lastmod>2019-08-11T00:00:00+00:00</lastmod>
   </url>
   
@@ -103,11 +103,6 @@
   </url>
   
   <url>
-    <loc>/post/2018/01/09/a-specific-comparison-of-feature-engineering-in-r-and-python/</loc>
-    <lastmod>2018-01-09T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
     <loc>/post/2018/01/09/getting-started-with-python-in-r-markdown-using-the-reticulate-package/</loc>
     <lastmod>2018-01-09T00:00:00+00:00</lastmod>
   </url>
@@ -126,13 +121,13 @@
   
   <url>
     <loc>/tags/aws/</loc>
-    <lastmod>2019-09-01T00:00:00+00:00</lastmod>
+    <lastmod>2019-12-05T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/categories/aws/</loc>
-    <lastmod>2019-09-01T00:00:00+00:00</lastmod>
+    <lastmod>2019-12-05T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -177,18 +172,6 @@
   </url>
   
   <url>
-    <loc>/tags/data-science/</loc>
-    <lastmod>2019-08-24T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>/categories/data-science/</loc>
-    <lastmod>2019-08-24T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
     <loc>/tags/emr/</loc>
     <lastmod>2019-08-11T00:00:00+00:00</lastmod>
     <priority>0</priority>
@@ -220,7 +203,7 @@
   
   <url>
     <loc>/</loc>
-    <lastmod>2019-09-01T00:00:00+00:00</lastmod>
+    <lastmod>2019-12-05T00:00:00+00:00</lastmod>
   </url>
   
   <url>
@@ -237,7 +220,7 @@
   
   <url>
     <loc>/tags/machine-learning/</loc>
-    <lastmod>2019-09-01T00:00:00+00:00</lastmod>
+    <lastmod>2019-06-25T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -249,25 +232,13 @@
   
   <url>
     <loc>/categories/machine-learning/</loc>
-    <lastmod>2019-09-01T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>/categories/miscellaneous/</loc>
-    <lastmod>2019-08-11T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>/tags/music/</loc>
-    <lastmod>2019-08-11T00:00:00+00:00</lastmod>
+    <lastmod>2019-06-25T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/post/</loc>
-    <lastmod>2019-09-01T00:00:00+00:00</lastmod>
+    <lastmod>2019-12-05T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -364,6 +335,12 @@
   <url>
     <loc>/categories/text-mining/</loc>
     <lastmod>2019-02-17T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/categories/web-development/</loc>
+    <lastmod>2019-01-20T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   

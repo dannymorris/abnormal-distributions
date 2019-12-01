@@ -93,7 +93,7 @@ R CMD BATCH launch-sample-plumber.R
 
 8. Invoke the API's POST method from anywhere
 
-```{r}
+```{r, eval=F}
 # From a Rstudio desktop client...
 
 library(httr)
