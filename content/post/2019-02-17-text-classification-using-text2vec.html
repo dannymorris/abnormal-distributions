@@ -413,7 +413,7 @@ glmnet_classifier =<span class="st"> </span>glmnet<span class="op">::</span><spa
 <p>To measure the performance of the classifier, we can look at the AUROC.</p>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">paste</span>(<span class="st">&quot;Maximum AUROC from training:&quot;</span>, 
       <span class="kw">max</span>(glmnet_classifier<span class="op">$</span>cvm) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">round</span>(., <span class="dv">4</span>))</code></pre>
-<pre><code>## [1] &quot;Maximum AUROC from training: 0.9909&quot;</code></pre>
+<pre><code>## [1] &quot;Maximum AUROC from training: 0.9911&quot;</code></pre>
 </div>
 <div id="predict-test-set" class="section level1">
 <h1>Predict Test Set</h1>
@@ -435,7 +435,7 @@ test_auc =<span class="st"> </span>glmnet<span class="op">:::</span><span class=
                          <span class="dt">prob =</span> probs)
 
 <span class="kw">paste</span>(<span class="st">&quot;AUROC for testing set:&quot;</span>, <span class="kw">round</span>(test_auc, <span class="dv">4</span>))</code></pre>
-<pre><code>## [1] &quot;AUROC for testing set: 0.9948&quot;</code></pre>
+<pre><code>## [1] &quot;AUROC for testing set: 0.9941&quot;</code></pre>
 </div>
 <div id="class-labels" class="section level2">
 <h2>Class Labels</h2>
@@ -451,26 +451,26 @@ caret<span class="op">::</span><span class="kw">confusionMatrix</span>(<span cla
 ## 
 ##           Reference
 ## Prediction    0    1
-##          0 1940   58
-##          1   25  986
-##                                          
-##                Accuracy : 0.9724         
-##                  95% CI : (0.9659, 0.978)
-##     No Information Rate : 0.653          
-##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16      
-##                                          
-##                   Kappa : 0.9387         
-##  Mcnemar&#39;s Test P-Value : 0.000444       
-##                                          
-##               Precision : 0.9753         
-##                  Recall : 0.9444         
-##                      F1 : 0.9596         
-##              Prevalence : 0.3470         
-##          Detection Rate : 0.3277         
-##    Detection Prevalence : 0.3360         
-##       Balanced Accuracy : 0.9659         
-##                                          
-##        &#39;Positive&#39; Class : 1              
+##          0 1942   78
+##          1   23  966
+##                                           
+##                Accuracy : 0.9664          
+##                  95% CI : (0.9594, 0.9726)
+##     No Information Rate : 0.653           
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
+##                                           
+##                   Kappa : 0.925           
+##  Mcnemar&#39;s Test P-Value : 7.735e-08       
+##                                           
+##               Precision : 0.9767          
+##                  Recall : 0.9253          
+##                      F1 : 0.9503          
+##              Prevalence : 0.3470          
+##          Detection Rate : 0.3210          
+##    Detection Prevalence : 0.3287          
+##       Balanced Accuracy : 0.9568          
+##                                           
+##        &#39;Positive&#39; Class : 1               
 ## </code></pre>
 </div>
 </div>
@@ -521,7 +521,7 @@ pruned_vocab =<span class="st"> </span>text2vec<span class="op">::</span><span c
 
 pruned_vectorizer =<span class="st"> </span><span class="kw">vocab_vectorizer</span>(pruned_vocab)</code></pre>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">replicate_model</span>(pruned_vectorizer)<span class="op">$</span>auc</code></pre>
-<pre><code>## [1] 0.9964886</code></pre>
+<pre><code>## [1] 0.9948822</code></pre>
 </div>
 <div id="n-grams" class="section level1">
 <h1>N-grams</h1>
@@ -530,14 +530,14 @@ bigrams =<span class="st"> </span><span class="kw">create_vocabulary</span>(iter
 bigram_vectorizer =<span class="st"> </span><span class="kw">vocab_vectorizer</span>(bigrams)
 
 <span class="kw">replicate_model</span>(bigram_vectorizer)<span class="op">$</span>auc</code></pre>
-<pre><code>## [1] 0.9953104</code></pre>
+<pre><code>## [1] 0.9951059</code></pre>
 </div>
 <div id="feature-hashing" class="section level1">
 <h1>Feature Hashing</h1>
 <pre class="sourceCode r"><code class="sourceCode r">hash_vectorizer =<span class="st"> </span><span class="kw">hash_vectorizer</span>(<span class="dt">hash_size =</span> <span class="dv">2</span> <span class="op">^</span><span class="st"> </span><span class="dv">14</span>, <span class="dt">ngram =</span> <span class="kw">c</span>(1L, 2L))
 
 <span class="kw">replicate_model</span>(hash_vectorizer)<span class="op">$</span>auc</code></pre>
-<pre><code>## [1] 0.9957065</code></pre>
+<pre><code>## [1] 0.9960145</code></pre>
 </div>
 <div id="tf-idf" class="section level1">
 <h1>TF-IDF</h1>
@@ -573,7 +573,7 @@ glmnet_classifier =<span class="st"> </span><span class="kw">cv.glmnet</span>(
 <span class="co"># AUROC from training </span>
 <span class="kw">paste</span>(<span class="st">&quot;Maximum AUROC from training:&quot;</span>, 
       <span class="kw">max</span>(glmnet_classifier<span class="op">$</span>cvm) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">round</span>(., <span class="dv">4</span>))</code></pre>
-<pre><code>## [1] &quot;Maximum AUROC from training: 0.9943&quot;</code></pre>
+<pre><code>## [1] &quot;Maximum AUROC from training: 0.9941&quot;</code></pre>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="co"># class probabilities for documents in testing set</span>
 probs =<span class="st"> </span><span class="kw">predict</span>(glmnet_classifier, doc_term_test_tfidf, <span class="dt">type =</span> <span class="st">&#39;response&#39;</span>)[,<span class="dv">1</span>]
 
@@ -581,7 +581,7 @@ probs =<span class="st"> </span><span class="kw">predict</span>(glmnet_classifie
 labeled_documents<span class="op">$</span>reuters_test<span class="op">$</span>earn_ind <span class="op">%&gt;%</span>
 <span class="st">  </span><span class="kw">as.integer</span>() <span class="op">%&gt;%</span>
 <span class="st">  </span>glmnet<span class="op">::</span><span class="kw">auc</span>(., <span class="dt">prob =</span> probs)</code></pre>
-<pre><code>## [1] 0.9975666</code></pre>
+<pre><code>## [1] 0.9971713</code></pre>
 </div>
 <div id="xgboost" class="section level1">
 <h1>XGBoost</h1>
