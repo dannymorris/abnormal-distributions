@@ -1,33 +1,23 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes" ?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Machine Learning on Abnormal Distributions</title>
+    <title>Machine learning on Abnormal Distributions</title>
     <link>/categories/machine-learning/</link>
-    <description>Recent content in Machine Learning on Abnormal Distributions</description>
+    <description>Recent content in Machine learning on Abnormal Distributions</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sun, 17 Feb 2019 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Tue, 25 Jun 2019 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/categories/machine-learning/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
-      <title>Bag of Words Text Classification in R</title>
-      <link>/post/2019/02/17/text-classification-using-text2vec/</link>
-      <pubDate>Sun, 17 Feb 2019 00:00:00 +0000</pubDate>
+      <title>Example Gradient Boosted Classifier Using Python&#39;s Scikit Learn</title>
+      <link>/post/2019/06/25/example-gradient-boosted-classifier-using-scikit-learn/</link>
+      <pubDate>Tue, 25 Jun 2019 00:00:00 +0000</pubDate>
       
-      <guid>/post/2019/02/17/text-classification-using-text2vec/</guid>
+      <guid>/post/2019/06/25/example-gradient-boosted-classifier-using-scikit-learn/</guid>
       <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
-    </item>
-    
-    <item>
-      <title>Deploying Flask Apps Locally on Windows</title>
-      <link>/post/2019/01/20/using-flask-to-deploy-predictive-models/</link>
-      <pubDate>Sun, 20 Jan 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2019/01/20/using-flask-to-deploy-predictive-models/</guid>
-      <description>EnvironmentCreate and activate conda environment in Anaconda PromptInstall dependenciesVery simple Flask appRun the appTest the appNext stepsThis document describes an approach to developing a Flask app and deploying locally.
-EnvironmentWindows 10Anaconda version 2018.12 (includes conda)Create and activate conda environment in Anaconda PromptBefore I begin with building the Flask app, I’ll create a conda environment to house the dependencies needed to run the app.</description>
     </item>
     
   </channel>

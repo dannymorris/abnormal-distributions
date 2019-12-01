@@ -12,4 +12,4 @@ This site is built with [blogdown](https://github.com/rstudio/blogdown) and depl
 
 Feel free to connect with me on [LinkedIn](https://www.linkedin.com/in/drmorris87/), send me an [email](mailto:drmorris87@outlook.com), or visit my [Github](https://github.com/dannymorris).
 
-# Posts
+# Recent Posts
