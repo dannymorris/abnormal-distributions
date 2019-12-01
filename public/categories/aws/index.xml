@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>AWS on Abnormal Distributions</title>
+    <link>/categories/aws/</link>
+    <description>Recent content in AWS on Abnormal Distributions</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Thu, 05 Dec 2019 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="/categories/aws/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>AWS re:Invent 2019 - Day 4</title>
+      <link>/post/2019/12/05/aws-reinvent-day-4/</link>
+      <pubDate>Thu, 05 Dec 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/12/05/aws-reinvent-day-4/</guid>
+      <description>TBD</description>
+    </item>
+    
+    <item>
+      <title>AWS re:Invent 2019 - Day 3</title>
+      <link>/post/2019/12/04/aws-reinvent-day-3/</link>
+      <pubDate>Wed, 04 Dec 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/12/04/aws-reinvent-day-3/</guid>
+      <description>TBD</description>
+    </item>
+    
+    <item>
+      <title>AWS re:Invent 2019 - Day 2</title>
+      <link>/post/2019/12/03/aws-reinvent-day-2/</link>
+      <pubDate>Tue, 03 Dec 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/12/03/aws-reinvent-day-2/</guid>
+      <description>TBD</description>
+    </item>
+    
+    <item>
+      <title>AWS re:Invent 2019 - Day 1</title>
+      <link>/post/2019/12/02/aws-reinvent-day-1/</link>
+      <pubDate>Mon, 02 Dec 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/12/02/aws-reinvent-day-1/</guid>
+      <description>Test Today marks the first day of AWS re:Invent 2019. I am excited to deepen and document my expertise with machine learning on AWS.
+My general goals for re:Invent are the following:
+ Improve my understanding of serverless services (e.g. Lambda, S3, Glue, API Gateway, Kinesis, Athena) and how they can be used to build and monitor robust machine learning pipelines. I&amp;rsquo;d like to build and document 1-3 sample pipelines for reference.</description>
+    </item>
+    
+    <item>
+      <title>Benefits of AWS EMR Notebooks for Data Science</title>
+      <link>/post/2019/09/01/benefits-of-aws-emr-notebooks-for-data-science-teams/</link>
+      <pubDate>Sun, 01 Sep 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/09/01/benefits-of-aws-emr-notebooks-for-data-science-teams/</guid>
+      <description>This document highlights some of the benefits of using EMR Notebooks for data science.
+EMR Notebooks is an AWS-managed service that provides access to Jupyter Notebooks running on an EMR cluster with kernels for PySpark, SparkR, and Python. This tool is ideal for exploratory analysis with Python and Spark and for developing applications for big data processing.
+1. Minimal configuration You can launch an EMR Notebook through the AWS Console with minimial configuration.</description>
+    </item>
+    
+    <item>
+      <title>Event-Driven Code Execution Using S3, Lambda, EC2, and R</title>
+      <link>/post/2019/08/22/event-driven-code-execution-using-s3-lambda-ec2-r/</link>
+      <pubDate>Thu, 22 Aug 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/08/22/event-driven-code-execution-using-s3-lambda-ec2-r/</guid>
+      <description>This document outlines the steps to using S3 events to trigger a Lambda function that starts up an EC2 instance, executes a custom R script on the instance, then stops the instance.
+Pipeline Overview  A file is uploaded to an S3 bucket.
+ The file upload triggers a Lambda function that starts an EC2 instance, runs an R script, and stops the EC2 instance.
+ When run, the R script returns the output to an S3 bucket.</description>
+    </item>
+    
+    <item>
+      <title>Launch an EMR Cluster with Bootstrapped Actions Using the AWS CLI</title>
+      <link>/post/2019/08/11/launch-emr-cluster-bootstrapped-actions-using-aws-cli/</link>
+      <pubDate>Sun, 11 Aug 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/08/11/launch-emr-cluster-bootstrapped-actions-using-aws-cli/</guid>
+      <description>The following AWS CLI command will launch a 5 node (1 master node and 4 worker nodes) EMR 5.25 cluster with Spark, RStudio Server, Shiny Server, sparklyr, and other aplications pre-installed and ready to use.
+bootstrap.sh
+aws emr create-cluster \ --applications Name=Hadoop Name=Spark Name=JupyterHub Name=TensorFlow \ --release-label emr-5.25.0 \ --name &amp;quot;EMR 5.25 RStudio + sparklyr 2&amp;quot; \ --service-role EMR_DefaultRole \ --instance-groups InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m5a.2xlarge InstanceGroupType=CORE,InstanceCount=4,InstanceType=m5a.2xlarge \ --bootstrap-action Path=s3://aws-bigdata-blog/artifacts/aws-blog-emr-rstudio-sparklyr/rstudio_sparklyr_emr5.sh,Args=[&amp;quot;--rstudio&amp;quot;,&amp;quot;--sparklyr&amp;quot;,&amp;quot;--rstudio-url&amp;quot;,&amp;quot;https://download2.rstudio.org/server/centos6/x86_64/rstudio-server-rhel-1.2.1335-x86_64.rpm&amp;quot;],Name=&amp;quot;Install RStudio&amp;quot; \ --ec2-attributes InstanceProfile=EMR_EC2_DefaultRole,KeyName=$YOUR_KEY \ --configurations &#39;[{&amp;quot;Classification&amp;quot;:&amp;quot;spark&amp;quot;,&amp;quot;Properties&amp;quot;:{&amp;quot;maximizeResourceAllocation&amp;quot;:&amp;quot;true&amp;quot;}}]&#39; \ --region us-east-1  </description>
+    </item>
+    
+    <item>
+      <title>Deploying a Plumber API on AWS EC2 Instance</title>
+      <link>/post/2019/07/06/deploying-a-plumber-api-on-aws-ec2-instance/</link>
+      <pubDate>Sat, 06 Jul 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/07/06/deploying-a-plumber-api-on-aws-ec2-instance/</guid>
+      <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
+    </item>
+    
+    <item>
+      <title>Deploying a Shiny App with Shiny Server on an AWS EC2 Instance</title>
+      <link>/post/2019/07/06/deploying-a-shiny-app-with-shiny-server-on-an-aws-ec2-instance/</link>
+      <pubDate>Sat, 06 Jul 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/07/06/deploying-a-shiny-app-with-shiny-server-on-an-aws-ec2-instance/</guid>
+      <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
+    </item>
+    
+  </channel>
+</rss>

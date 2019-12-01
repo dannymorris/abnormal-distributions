@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Tidy Binomial Calculator Using the probs Package | Abnormal Distributions</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/">Home</a></li>
+      
+      <li><a href="/about/">About</a></li>
+      
+      <li><a href="/post/">All Posts</a></li>
+      
+      <li><a href="/categories/">By Topic</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">Tidy Binomial Calculator Using the probs Package</span></h1>
+<h2 class="author">Danny Morris</h2>
+<h2 class="date">2019/04/08</h2>
+</div>
+
+<main>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#install">Install</a></li>
+<li><a href="#simulated-data">Simulated Data</a></li>
+</ul>
+</div>
+
+<p>This short post introduces a simple R package called <code>probs</code> that I created for tidy binomial probability calculations.</p>
+<div id="install" class="section level1">
+<h1>Install</h1>
+<p>The <code>probs</code> package lives on GitHub.</p>
+<pre class="r"><code>library(devtools)
+
+devtools::install_github(&quot;dannymorris/probs&quot;)</code></pre>
+</div>
+<div id="simulated-data" class="section level1">
+<h1>Simulated Data</h1>
+<p>Recently, I needed to communicate to a larger audience the probability of detecting a particular event. Specifically, a pre-existing process was in place that required humans to sift through a sample of 100 PDF documents out of 40,000 documents. The intent of this process was determine whether or not the entire batch of documents was faulty or passable.</p>
+<p>Based on previous data, there was reason to believe that a batch of 40,000 documents <em>may</em> contain 50 faulty documents. So the humans would manually inspect a sample of 100 documents, hoping to find at least 1 faulty document.</p>
+<p>I created the <code>probs</code> package to quickly determine the probability of detecting 1 or more faulty documents in a sample of 100, given that the batch of 40,000 documents may contain 50 faulty documents.</p>
+<pre class="r"><code># probability of detecting a single faulty document in a batch of 40,000 documents, assuming there are 50 faulty documents in total.
+prob_faulty &lt;- 50/40000
+
+paste(&quot;The probability that any randomly selected document is faulty is&quot;, prob_faulty)</code></pre>
+<pre><code>## [1] &quot;The probability that any randomly selected document is faulty is 0.00125&quot;</code></pre>
+<p>In other words, the probability of detecting a single faulty document in this case is .00125.</p>
+<p>The question is now <strong>what is the probability that no faulty documents will be found in a sample of 100 documents, assuming there are 50 faulty documents in a batch of 40,000?</strong></p>
+<pre class="r"><code>library(probs)
+
+probs::cumul_binom_prob(
+  n_success = 0,
+  prob_success = prob_faulty,
+  sample_size = 100
+)</code></pre>
+<pre><code>## $results
+## # A tibble: 1 x 5
+##   lower_tail upper_tail n_success prob_success sample_size
+##        &lt;dbl&gt;      &lt;dbl&gt;     &lt;dbl&gt;        &lt;dbl&gt;       &lt;dbl&gt;
+## 1      0.882      0.118         0      0.00125         100
+## 
+## $explanation
+## [1] &quot;The probability of 0 or fewer successes is 0.8824&quot; 
+## [2] &quot;The probability of more than 0 successes is 0.1176&quot;</code></pre>
+<p>The printout from the function explains that .88 is the probability that someone would find 0 faulty documents in a sample of 100. In other words, the humans are wasting their time if they are expecting to discover even a single faulty document.</p>
+</div>
+
+</main>
+
+  <footer>
+  <script src="//yihui.name/js/math-code.js"></script>
+<script async src="//mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+<script async src="//yihui.name/js/center-img.js"></script>
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-143402170-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-143402170-1');
+</script>
+
+
+  
+  <hr/>
+  <a href="https://github.com/dannymorris">Github</a> | <a href="https://www.linkedin.com/in/drmorris87/">LinkedIn</a> | <a href="mailto:drmorris87@outlook.com">Email</a>
+  
+  </footer>
+  </body>
+</html>
+

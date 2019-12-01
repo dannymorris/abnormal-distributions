@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>A Note on EDA versus Software Development | Abnormal Distributions</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/">Home</a></li>
+      
+      <li><a href="/about/">About</a></li>
+      
+      <li><a href="/post/">All Posts</a></li>
+      
+      <li><a href="/categories/">By Topic</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">A Note on EDA versus Software Development</span></h1>
+<h2 class="author">Danny Morris</h2>
+<h2 class="date">2019/07/03</h2>
+</div>
+
+<main>
+<p>This summer, I have had the pleasure of mentoring Elan Anderson, an intern who joined through my company&rsquo;s highly-sought summer internship program. He and I are building SimText, an app that performs record linkage using statistial text mining. The core algorithm, which is available as an R package, utilizes the <code>text2vec</code> framework for efficient text vectorization, base R for general purpose programming, and some C++ via <code>Rcpp</code> for efficient manipulation of sparse matrices. Elan then built a <code>shiny</code> web application to enable access to our business users. By far, it is one of neatest projects I&rsquo;ve worked on.</p>
+
+<p>While working through the various features of SimText, I was reminded of the different mentalities I use for software development compared with exploratory data analysis (EDA). Minimalism is key when developing software. Minimizing dependencies, complexities in the codebase, and slow bottlenecks make for an application that is easier to deploy, maintain, and use. Writing good tests, even if it&rsquo;s just to measure speed of tricky code blocks, is good for optimizing the application. When I created the first development version of SimText at the beginning of the year, the core algorithm has 11 pacakge dependencies. After a recent refactoring, the core algorithm has only 3.</p>
+
+<p>With exploratory data analysis, you have more freedom to just&hellip;explore. The most important thing is gaining a deeper understanding of the data. Aside from being able to reproduce the analysis scientifically, exploratory data analysis carries far less risk than software development. For this reason, code doesn&rsquo;t necessarily need to be optimized, and you can probably get away with extra dependencies that may provide specialized functionality for the analysis.</p>
+
+</main>
+
+  <footer>
+  <script src="//yihui.name/js/math-code.js"></script>
+<script async src="//mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+<script async src="//yihui.name/js/center-img.js"></script>
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-143402170-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-143402170-1');
+</script>
+
+
+  
+  <hr/>
+  <a href="https://github.com/dannymorris">Github</a> | <a href="https://www.linkedin.com/in/drmorris87/">LinkedIn</a> | <a href="mailto:drmorris87@outlook.com">Email</a>
+  
+  </footer>
+  </body>
+</html>
+

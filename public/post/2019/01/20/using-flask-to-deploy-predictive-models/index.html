@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Deploying Flask Apps Locally on Windows | Abnormal Distributions</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/">Home</a></li>
+      
+      <li><a href="/about/">About</a></li>
+      
+      <li><a href="/post/">All Posts</a></li>
+      
+      <li><a href="/categories/">By Topic</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">Deploying Flask Apps Locally on Windows</span></h1>
+<h2 class="author">Danny Morris</h2>
+<h2 class="date">2019/01/20</h2>
+</div>
+
+<main>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#environment">Environment</a></li>
+<li><a href="#create-and-activate-conda-environment-in-anaconda-prompt">Create and activate conda environment in Anaconda Prompt</a></li>
+<li><a href="#install-dependencies">Install dependencies</a></li>
+<li><a href="#very-simple-flask-app">Very simple Flask app</a></li>
+<li><a href="#run-the-app">Run the app</a></li>
+<li><a href="#test-the-app">Test the app</a></li>
+<li><a href="#next-steps">Next steps</a></li>
+</ul>
+</div>
+
+<p>This document describes an approach to developing a Flask app and deploying locally.</p>
+<div id="environment" class="section level1">
+<h1>Environment</h1>
+<ul>
+<li>Windows 10</li>
+<li>Anaconda version 2018.12 (includes conda)</li>
+</ul>
+</div>
+<div id="create-and-activate-conda-environment-in-anaconda-prompt" class="section level1">
+<h1>Create and activate conda environment in Anaconda Prompt</h1>
+<p>Before I begin with building the Flask app, I’ll create a conda environment to house the dependencies needed to run the app. A conda environment is simply an isolated directory that contains a specific collection of conda packages needed for the job. Python and Flask are the dependencies needed to run this particular app.</p>
+<p><strong>Open Anaconda Prompt</strong> and enter the following commands to create and activate a new conda environment.</p>
+<pre><code>conda create -n flask-app
+conda activate flask-app</code></pre>
+<p>By activating the environment named “flask-app”, we enable package installation to the environment.</p>
+</div>
+<div id="install-dependencies" class="section level1">
+<h1>Install dependencies</h1>
+<p>While in Anaconda Prompt, make sure the conda environment is activated. Enter this command to install the necessary dependencies to build and deploy the Flask app.</p>
+<pre><code>conda install python==3.6</code></pre>
+<p>Run <code>conda list</code> to see a list of dependencies installed in the conda environment. Here I am installing Python 3.6, though other versions can be specified as well.</p>
+</div>
+<div id="very-simple-flask-app" class="section level1">
+<h1>Very simple Flask app</h1>
+<p>Now that the conda environment is created and activated and the dependencies are installed, I can start building the Flask app. Open a text editor (e.g. Notepad++, Spyder, etc.) and create a Python script called <code>app.py</code> containing the following Python code.</p>
+<pre><code># app.py
+from flask import Flask
+
+app = Flask(__name__)
+
+@app.route(&#39;/&#39;)
+def hello_world():
+    return &#39;Hello world!\n&#39;
+
+if __name__ == &#39;__main__&#39;:
+    app.run()</code></pre>
+</div>
+<div id="run-the-app" class="section level1">
+<h1>Run the app</h1>
+<p>Open Anaconda Prompt and make sure the conda environment is activated, then change directory to the folder where <code>app.py</code> was saved. For example, if <code>app.py</code> was saved in <code>C:\Users\Owner\Documents\flask-project</code>, your command in Anaconda Prompt may look like this.</p>
+<pre><code>cd Documents/flask-project</code></pre>
+<p>Once the new directory has been set, I can deploy the app using the following code.</p>
+<pre><code>python app.py</code></pre>
+<p>If done correctly, the print out in Anaconda Prompt should look like this.</p>
+<p><img src="/img/flask-run-app.png" /></p>
+</div>
+<div id="test-the-app" class="section level1">
+<h1>Test the app</h1>
+<p>To test if the app is working as expected, open a web browser and navigate to <code>http://localhost:5000</code>. You should a message that reads “Hello world!” on the page.</p>
+</div>
+<div id="next-steps" class="section level1">
+<h1>Next steps</h1>
+<p>In another article I’ll look deploying a machine learning built using scikit-learn.</p>
+</div>
+
+</main>
+
+  <footer>
+  <script src="//yihui.name/js/math-code.js"></script>
+<script async src="//mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+<script async src="//yihui.name/js/center-img.js"></script>
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-143402170-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-143402170-1');
+</script>
+
+
+  
+  <hr/>
+  <a href="https://github.com/dannymorris">Github</a> | <a href="https://www.linkedin.com/in/drmorris87/">LinkedIn</a> | <a href="mailto:drmorris87@outlook.com">Email</a>
+  
+  </footer>
+  </body>
+</html>
+

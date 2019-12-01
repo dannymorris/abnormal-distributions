@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>JavaScript on Abnormal Distributions</title>
+    <link>/tags/javascript/</link>
+    <description>Recent content in JavaScript on Abnormal Distributions</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Mon, 15 Jul 2019 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="/tags/javascript/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>HTTP POST Requests Using Node.js</title>
+      <link>/post/2019/07/15/http-post-request-using-node-js/</link>
+      <pubDate>Mon, 15 Jul 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/07/15/http-post-request-using-node-js/</guid>
+      <description>This simple snippet demonstrates how to use Node to make a POST request.
+const https = require(&amp;#39;http&amp;#39;)const data = JSON.stringify({doc_set_1: &amp;#39;hello&amp;#39;})const options = {hostname: &amp;#39;ec2-instance-dns.com&amp;#39;,port: &amp;#39;8000&amp;#39;,path: &amp;#39;/textsim&amp;#39;,method: &amp;#39;POST&amp;#39;,headers: {&amp;#39;Content-Type&amp;#39;: &amp;#39;application/json&amp;#39;,&amp;#39;Content-Length&amp;#39;: data.length}}const req = https.request(options, (res) =&amp;gt; {console.log(`statusCode: ${res.statusCode}`)res.on(&amp;#39;data&amp;#39;, (d) =&amp;gt; {process.stdout.write(d)})})req.on(&amp;#39;error&amp;#39;, (error) =&amp;gt; {console.error(error)})req.write(data)req.</description>
+    </item>
+    
+  </channel>
+</rss>
