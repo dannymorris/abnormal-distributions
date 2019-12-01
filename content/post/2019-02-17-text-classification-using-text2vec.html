@@ -413,7 +413,7 @@ glmnet_classifier =<span class="st"> </span>glmnet<span class="op">::</span><spa
 <p>To measure the performance of the classifier, we can look at the AUROC.</p>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">paste</span>(<span class="st">&quot;Maximum AUROC from training:&quot;</span>, 
       <span class="kw">max</span>(glmnet_classifier<span class="op">$</span>cvm) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">round</span>(., <span class="dv">4</span>))</code></pre>
-<pre><code>## [1] &quot;Maximum AUROC from training: 0.9912&quot;</code></pre>
+<pre><code>## [1] &quot;Maximum AUROC from training: 0.991&quot;</code></pre>
 </div>
 <div id="predict-test-set" class="section level1">
 <h1>Predict Test Set</h1>
@@ -435,7 +435,7 @@ test_auc =<span class="st"> </span>glmnet<span class="op">:::</span><span class=
                          <span class="dt">prob =</span> probs)
 
 <span class="kw">paste</span>(<span class="st">&quot;AUROC for testing set:&quot;</span>, <span class="kw">round</span>(test_auc, <span class="dv">4</span>))</code></pre>
-<pre><code>## [1] &quot;AUROC for testing set: 0.9942&quot;</code></pre>
+<pre><code>## [1] &quot;AUROC for testing set: 0.9939&quot;</code></pre>
 </div>
 <div id="class-labels" class="section level2">
 <h2>Class Labels</h2>
@@ -451,26 +451,26 @@ caret<span class="op">::</span><span class="kw">confusionMatrix</span>(<span cla
 ## 
 ##           Reference
 ## Prediction    0    1
-##          0 1942   75
-##          1   23  969
-##                                           
-##                Accuracy : 0.9674          
-##                  95% CI : (0.9605, 0.9735)
-##     No Information Rate : 0.653           
-##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
-##                                           
-##                   Kappa : 0.9273          
-##  Mcnemar&#39;s Test P-Value : 2.58e-07        
-##                                           
-##               Precision : 0.9768          
-##                  Recall : 0.9282          
-##                      F1 : 0.9519          
-##              Prevalence : 0.3470          
-##          Detection Rate : 0.3220          
-##    Detection Prevalence : 0.3297          
-##       Balanced Accuracy : 0.9582          
-##                                           
-##        &#39;Positive&#39; Class : 1               
+##          0 1941   79
+##          1   24  965
+##                                          
+##                Accuracy : 0.9658         
+##                  95% CI : (0.9586, 0.972)
+##     No Information Rate : 0.653          
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16      
+##                                          
+##                   Kappa : 0.9235         
+##  Mcnemar&#39;s Test P-Value : 1.033e-07      
+##                                          
+##               Precision : 0.9757         
+##                  Recall : 0.9243         
+##                      F1 : 0.9493         
+##              Prevalence : 0.3470         
+##          Detection Rate : 0.3207         
+##    Detection Prevalence : 0.3287         
+##       Balanced Accuracy : 0.9561         
+##                                          
+##        &#39;Positive&#39; Class : 1              
 ## </code></pre>
 </div>
 </div>
@@ -530,14 +530,14 @@ bigrams =<span class="st"> </span><span class="kw">create_vocabulary</span>(iter
 bigram_vectorizer =<span class="st"> </span><span class="kw">vocab_vectorizer</span>(bigrams)
 
 <span class="kw">replicate_model</span>(bigram_vectorizer)<span class="op">$</span>auc</code></pre>
-<pre><code>## [1] 0.9953104</code></pre>
+<pre><code>## [1] 0.9949324</code></pre>
 </div>
 <div id="feature-hashing" class="section level1">
 <h1>Feature Hashing</h1>
 <pre class="sourceCode r"><code class="sourceCode r">hash_vectorizer =<span class="st"> </span><span class="kw">hash_vectorizer</span>(<span class="dt">hash_size =</span> <span class="dv">2</span> <span class="op">^</span><span class="st"> </span><span class="dv">14</span>, <span class="dt">ngram =</span> <span class="kw">c</span>(1L, 2L))
 
 <span class="kw">replicate_model</span>(hash_vectorizer)<span class="op">$</span>auc</code></pre>
-<pre><code>## [1] 0.9954476</code></pre>
+<pre><code>## [1] 0.9950796</code></pre>
 </div>
 <div id="tf-idf" class="section level1">
 <h1>TF-IDF</h1>
@@ -573,7 +573,7 @@ glmnet_classifier =<span class="st"> </span><span class="kw">cv.glmnet</span>(
 <span class="co"># AUROC from training </span>
 <span class="kw">paste</span>(<span class="st">&quot;Maximum AUROC from training:&quot;</span>, 
       <span class="kw">max</span>(glmnet_classifier<span class="op">$</span>cvm) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">round</span>(., <span class="dv">4</span>))</code></pre>
-<pre><code>## [1] &quot;Maximum AUROC from training: 0.9945&quot;</code></pre>
+<pre><code>## [1] &quot;Maximum AUROC from training: 0.9942&quot;</code></pre>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="co"># class probabilities for documents in testing set</span>
 probs =<span class="st"> </span><span class="kw">predict</span>(glmnet_classifier, doc_term_test_tfidf, <span class="dt">type =</span> <span class="st">&#39;response&#39;</span>)[,<span class="dv">1</span>]
 
@@ -581,7 +581,7 @@ probs =<span class="st"> </span><span class="kw">predict</span>(glmnet_classifie
 labeled_documents<span class="op">$</span>reuters_test<span class="op">$</span>earn_ind <span class="op">%&gt;%</span>
 <span class="st">  </span><span class="kw">as.integer</span>() <span class="op">%&gt;%</span>
 <span class="st">  </span>glmnet<span class="op">::</span><span class="kw">auc</span>(., <span class="dt">prob =</span> probs)</code></pre>
-<pre><code>## [1] 0.9971883</code></pre>
+<pre><code>## [1] 0.9972483</code></pre>
 </div>
 <div id="xgboost" class="section level1">
 <h1>XGBoost</h1>
