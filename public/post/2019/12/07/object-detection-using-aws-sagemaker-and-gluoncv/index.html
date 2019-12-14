@@ -27,7 +27,7 @@
 
 <div class="article-meta">
 <h1><span class="title">Object Detection Using AWS SageMaker and GluonCV</span></h1>
-<h2 class="author">Danny</h2>
+<h2 class="author">Danny Morris</h2>
 <h2 class="date">2019/12/07</h2>
 </div>
 
@@ -38,15 +38,39 @@
 
 <h3 id="collecting-and-preparing-training-images">Collecting and preparing training images</h3>
 
-<p>To collect images for training, I searched Google for &ldquo;bluecross blueshied logo&rdquo;, &ldquo;bluecross blueshield letter&rdquo;, &ldquo;bluecross blueshield building&rdquo;, &ldquo;bluecross blueshield shirt&rdquo;, &ldquo;bluecross blueshield event&rdquo;, &ldquo;bluecross blueshield shirt&rdquo;, and &ldquo;bluecross blueshield bus&rdquo;. I ended up with 400 images for training and validation.</p>
+<p>To collect images for training, I searched Google for &ldquo;bluecross blueshied logo&rdquo;, &ldquo;bluecross blueshield letter&rdquo;, &ldquo;bluecross blueshield building&rdquo;, &ldquo;bluecross blueshield shirt&rdquo;, &ldquo;bluecross blueshield event&rdquo;, &ldquo;bluecross blueshield shirt&rdquo;, and &ldquo;bluecross blueshield bus&rdquo;. The logos in the images varied in size, shape, angle, clarity, and background. I ended up with 400 images for training and validation. The raw, unlabeled images were stored in an S3 bucket</p>
 
-<p>The raw images were stored in an S3, then I used OpenCV to convert raw images to gray scale. I am not entirely sure how important this step was, but I decided that I was only interesetd in capturing the shape of the logo without respect for color. The gray scale images were put into the S3 bucket.</p>
+<p>To prepare the images for training, I used OpenCV to convert raw images to gray scale. The effectiveness of gray scale coversion is debatable, but I decided that I was only interesetd in capturing the shape of the logo without respect for color. The gray scale images were put into the S3 bucket.</p>
+
+<pre><code># Python function that accepts raw image S3 key and creates a gray scale copy
+def convert_to_gray(s3_key):
+    # defining s3 bucket object
+    s3 = boto3.client(&quot;s3&quot;)
+    bucket_name = &quot;bcbs-logo-training-images&quot;
+    # fetching object from bucket
+    file_obj = s3.get_object(Bucket=bucket_name, Key=s3_key)
+    # reading the file content in bytes
+    file_content = file_obj[&quot;Body&quot;].read()
+    # creating 1D array from bytes data range between[0,255]
+    np_array = np.fromstring(file_content, np.uint8)
+    # decoding array
+    image_np = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
+    # converting image from RGB to Grayscale
+    gray = cv2.cvtColor(image_np, cv2.COLOR_BGR2GRAY)
+    return gray
+    
+gray_imgs = list(map(convert_to_gray, keys))
+</code></pre>
+
+<p>Here is an example training image with an angled logo.</p>
 
 <p><img src="/img/bcbs-logo-sample-gray.PNG" alt="" /></p>
 
 <h3 id="labeling-images-with-bounding-box">Labeling images with bounding box</h3>
 
-<p>AWS Ground Truth is a useful service for labeling training data. <a href="https://aws.amazon.com/getting-started/tutorials/build-training-datasets-amazon-sagemaker-ground-truth/">This article</a> walks through the basic steps to labeling images using Grouth Truth.</p>
+<p>AWS Ground Truth is a useful service for labeling training data. <a href="https://aws.amazon.com/getting-started/tutorials/build-training-datasets-amazon-sagemaker-ground-truth/">This article</a> walks through the basic steps to use Grouth Truth for image labeling. The result of Ground Truth is a &ldquo;manifest file&rdquo; that contains the S3 locations and bounding box annotations for the training images.</p>
+
+<p>Here is an example labeled image.</p>
 
 <p><img src="/img/bcbs-logo-sample-label.PNG" alt="" /></p>
 
@@ -56,7 +80,22 @@
 
 <p>I elected to use the pre-trained weights from a <a href="https://arxiv.org/pdf/1704.04861.pdf">MobileNet SSD</a> network, while replacing the pre-trained output layer with a new output layer that predicts my custom class (BCBS logos). GluonCV includes MobileNet as one of its pre-trained models for object detection, making it very easy to get started with this network. MobileNets are lightweight neural networks for computer vision applications. They have significantly fewer parameters compared to popular models for similar applications, making them more efficient for training and prediction at the cost of minimal reduction in accuracy.</p>
 
-<p>I trained the network using a single GPU instance (ml.p3.2xlarge).</p>
+<p>I launched the training job on a single GPU instance (ml.p3.2xlarge).</p>
+
+<pre><code>mxnet_estimator = MXNet(entry_point = 'train_bcbs_logo_detection_ssd.py',
+                        source_dir = 'entry_point',
+                        role = role,
+                        train_instance_type = 'ml.p3.2xlarge',
+                        train_instance_count = 1,
+                        framework_version = '1.4.0', 
+                        py_version = 'py3')
+                        
+
+s3_train_data = 's3://bcbs-logo-training-images/gray_images'
+s3_label_data = 's3://bcbs-logo-training-images/gray_images/labels/bcbs-logo-labeling/manifests/output/'
+
+mxnet_estimator.fit({'train': s3_train_data, 'labels': s3_label_data})                       
+</code></pre>
 
 <h3 id="evaluation">Evaluation</h3>
 
