@@ -6,47 +6,49 @@
     <description>Recent content in AWS on Abnormal Distributions</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 05 Dec 2019 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sat, 07 Dec 2019 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/categories/aws/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
-      <title>AWS re:Invent 2019 - Day 4</title>
-      <link>/post/2019/12/05/aws-reinvent-day-4/</link>
-      <pubDate>Thu, 05 Dec 2019 00:00:00 +0000</pubDate>
+      <title>Object Detection Using AWS SageMaker and GluonCV </title>
+      <link>/post/2019/12/07/object-detection-using-aws-sagemaker-and-gluoncv/</link>
+      <pubDate>Sat, 07 Dec 2019 00:00:00 +0000</pubDate>
       
-      <guid>/post/2019/12/05/aws-reinvent-day-4/</guid>
-      <description>TBD</description>
-    </item>
-    
-    <item>
-      <title>AWS re:Invent 2019 - Day 3</title>
-      <link>/post/2019/12/04/aws-reinvent-day-3/</link>
-      <pubDate>Wed, 04 Dec 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2019/12/04/aws-reinvent-day-3/</guid>
-      <description>TBD</description>
+      <guid>/post/2019/12/07/object-detection-using-aws-sagemaker-and-gluoncv/</guid>
+      <description>This post briefly describes how I built an object detection model using AWS SageMaker and GluonCV to detect Blue Cross Blue Shield logos. Full code and notebooks can be found in the GitHub repo.
+Collecting and preparing training images To collect images for training, I searched Google for &amp;ldquo;bluecross blueshied logo&amp;rdquo;, &amp;ldquo;bluecross blueshield letter&amp;rdquo;, &amp;ldquo;bluecross blueshield building&amp;rdquo;, &amp;ldquo;bluecross blueshield shirt&amp;rdquo;, &amp;ldquo;bluecross blueshield event&amp;rdquo;, &amp;ldquo;bluecross blueshield shirt&amp;rdquo;, and &amp;ldquo;bluecross blueshield bus&amp;rdquo;.</description>
     </item>
     
     <item>
       <title>AWS re:Invent 2019 - Day 2</title>
-      <link>/post/2019/12/03/aws-reinvent-day-2/</link>
+      <link>/post/2019/12/03/aws-re-invent-2019-day-2/</link>
       <pubDate>Tue, 03 Dec 2019 00:00:00 +0000</pubDate>
       
-      <guid>/post/2019/12/03/aws-reinvent-day-2/</guid>
-      <description>TBD</description>
+      <guid>/post/2019/12/03/aws-re-invent-2019-day-2/</guid>
+      <description>Day 2 of re:Invent was not as busy and diverse as day 1 for me, but it was extremely valuable toward my preparation for the Machine Learning Certification exam.
+The Machine Learning exam tests your knowledge of all aspects of the ML, including MLOps (training, tuning, deploying, monitoring), deep learning concepts, data storage, and data processing. The core services which are given the most attention on the exam include S3, Glue, EMR, Athena, Kinesis, SageMaker, and AI Services.</description>
     </item>
     
     <item>
       <title>AWS re:Invent 2019 - Day 1</title>
-      <link>/post/2019/12/02/aws-reinvent-day-1/</link>
+      <link>/post/2019/12/02/aws-re-invent-2019-day-1/</link>
       <pubDate>Mon, 02 Dec 2019 00:00:00 +0000</pubDate>
       
-      <guid>/post/2019/12/02/aws-reinvent-day-1/</guid>
-      <description>Today marks the first day of AWS re:Invent 2019. I am excited to deepen and document my expertise with machine learning on AWS.
+      <guid>/post/2019/12/02/aws-re-invent-2019-day-1/</guid>
+      <description>The first day of AWS re:Invent 2019 is coming to a close. For me, today was mostly about using SageMaker to build and deploy deep learning models. In the first session, I used Tensorflow and Glove to train a text classifier from word vector representations. The primary focus was bringing custom Docker environments for training and inference. Some time at the beginning was spent discussing the major differences between traditional NLP pipelines and deep learning NLP pipelines.</description>
+    </item>
+    
+    <item>
+      <title>AWS re:Invent 2019 - Day 0</title>
+      <link>/post/2019/12/01/aws-reinvent-day-1/</link>
+      <pubDate>Sun, 01 Dec 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/12/01/aws-reinvent-day-1/</guid>
+      <description>Tomorrow marks the start of AWS re:Invent 2019. I am excited to go and deepen my expertise with machine learning on AWS.
 My general goals for re:Invent are the following:
- Improve my understanding of serverless services (e.g. Lambda, S3, Glue, API Gateway, Kinesis, Athena) and how they can be used to build and monitor robust machine learning pipelines. I&amp;rsquo;d like to build and document 1-3 sample pipelines for reference.</description>
+ Improve my understanding of serverless services (e.g. Lambda, S3, Glue, API Gateway, Kinesis, Athena) and how they can be used to build and monitor flexible, scalable machine learning pipelines. I&amp;rsquo;d like to build and document 1-3 sample pipelines using batch, streaming, and/or unstructured data (e.</description>
     </item>
     
     <item>
