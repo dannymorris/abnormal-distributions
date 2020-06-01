@@ -1,5 +1,5 @@
 ---
-title: A Data-Centric Ensemble Approach for Supervised Classification with Imbalanced Classes
+title: A strategy for rare class learning using data-centric ensembling
 author: Danny Morris
 date: 2019-07-01
 output: 
@@ -17,76 +17,44 @@ editor_options:
   chunk_output_type: console
 ---
 
-```{r, include = F}
-knitr::opts_chunk$set(
-  echo = T, message = F, warning = F
-)
+```{r, include=F}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
 ```
 
-# Overview
+## Overview
 
-This article demonstrates an approach for supervised learning using an ensemble of classifiers applied to imbalanced data. At the core of the ensemble technique is *data-centric subsampling.* The basic steps include:
+This post demonstrates a strategy for predicting out-of-sample cases using a binary classification ensemble when the training data contains imbalanced classes. This strategy is described by [Charu Aggarwal](http://charuaggarwal.net/) in section 7.2 of his book [Outlier Analysis](https://www.amazon.com/Outlier-Analysis-Charu-C-Aggarwal/dp/3319475770/ref=pd_cp_14_1?pd_rd_w=8M3qy&pf_rd_p=ef4dc990-a9ca-4945-ae0b-f8d549198ed6&pf_rd_r=3TGSZZ1H5HYKMT0G80Q8&pd_rd_r=f1e3c156-9e78-11e9-801d-cdc96cae2e7b&pd_rd_wg=DXbV0&pd_rd_i=3319475770&psc=1&refRID=3TGSZZ1H5HYKMT0G80Q8). 
 
-1. Designate 80% of the original data for training and 20% for testing. These percentages can be modified as needed.
+This ensemble strategy aims to reduce the overall variance of the classification model by fitting several models to different subsamples of the training data, generating predictions for out-of-sample cases using the parameter estimates from each model, then combining the predictions for each out-of-sample case to arrive at a final prediction for each out-of-sample case. It is a useful strategy when the outcome being modeled is rare, e.g. unexpected health crisis.
 
-2. Decide on *S* number of subsamples. Between 10 and 25 is recommended by [Charu Aggarwal](http://charuaggarwal.net/) in his book [Outlier Analysis](https://www.amazon.com/Outlier-Analysis-Charu-C-Aggarwal/dp/3319475770/ref=pd_cp_14_1?pd_rd_w=8M3qy&pf_rd_p=ef4dc990-a9ca-4945-ae0b-f8d549198ed6&pf_rd_r=3TGSZZ1H5HYKMT0G80Q8&pd_rd_r=f1e3c156-9e78-11e9-801d-cdc96cae2e7b&pd_rd_wg=DXbV0&pd_rd_i=3319475770&psc=1&refRID=3TGSZZ1H5HYKMT0G80Q8).
-
-3. Using functional programming, extract *S* subsamples from the training data. Within each subsample, the entire positive class is retained and the negative class is down-sampled to match the size of the positive class.
-
-4. Fit *S* models, one to each subsample.
-
-5. Apply each of the *S* models to the testing dat to generate *S sets* of predictions.
-
-6. Combine the *S sets* of predictions into a single vector of predictions using majority vote.
-
-# R packages
+## Packages
 
 ```{r}
 library(tidyverse) 
-library(aws.s3)
-library(aws.signature)
 library(rsample)   
 library(ranger) 
+library(imbalance)
+library(yardstick)
+
+options(yardstick.event_first = F)
 ```
 
-# Data
-
-The data is located in my S3 bucket, however a CSV of the raw data can be found [here](https://www.kaggle.com/mlg-ulb/creditcardfraud/version/3).
+## Data
 
 ```{r}
-aws.signature::use_credentials()
-```
-
-```{r}
-credit_card <- s3read_using(
-  bucket = "abn-distro-data",
-  object = "creditcard.csv",
-  FUN = read_csv
-) %>%
-  select(-Time) %>%
-  mutate(Class = as.character(Class))
-```
-
-A smaller sample is taken to reduce computational burden.
-
-```{r}
-sample_majority <- credit_card %>%
-  filter(Class == "0") %>%
-  sample_n(30000)
-
-sample_df <- bind_rows(
-  sample_majority,
-  credit_card %>% filter(Class == "1")
-)
+sample_df <- imbalance::banana %>%
+  as_tibble()
 ```
 
 Class distribution.
 
 ```{r}
-table(sample_df$Class)
+sample_df %>%
+  count(Class) %>%
+  mutate(pct_n = n/sum(n))
 ```
 
-# Global Train/Test Split
+## Training and out-of-sample splits
 
 ```{r}
 split_pct <- 0.8
@@ -102,33 +70,21 @@ split_idx <- rsample::initial_split(
 
 ```{r}
 train <- rsample::training(split_idx)
-test <- rsample::testing(split_idx)
+
+out_of_sample <- rsample::assessment(split_idx)
 ```
 
-# Subsampling
-
-### Give specifications for the subsampling procedure.
+## Generate subsamples from training data
 
 ```{r}
 # determine the number of rows to which the negative class is down-sampled
 # by default, set to the number of positive cases
 downsample_level <- train %>%
-  dplyr::filter(Class == "1") %>%
+  dplyr::filter(Class == "positive") %>%
   nrow()
 
-# number of subsamples N
-n_subsamples <- 25
+subsample_idx <- seq(1,  25, 1)
 
-# sequence of integers from 1:N
-# used for iterations
-subsample_idx <- seq(1, n_subsamples, 1)
-
-cat("Subsamples index:", subsample_idx)
-```
-
-### Generate subsamples
-
-```{r}
 subsamples <- purrr::map(subsample_idx, function(idx) {
   train %>%
     dplyr::group_by(Class) %>%
@@ -137,61 +93,48 @@ subsamples <- purrr::map(subsample_idx, function(idx) {
 }) 
 ```
 
-# Training 
-
-### Fit individual model to each subsample
+## Fit ensemble of models
 
 ```{r}
 models <- map(subsamples, function(idx) {
   ranger_model <- ranger::ranger(
     formula = as.factor(Class) ~ .,
     data = idx,
+    probability = T
   )
 })
 ```
 
-# Testing
-
-### Apply individual models to predict testing set
+## Predicted labels via ensemble
 
 ```{r}
-model_votes <- map(models, function(idx) {
-  predict(idx, data = test)$predictions
-})
+probs <- map(models, function(idx) {
+  predict(idx, data = out_of_sample)$predictions[, "positive"]
+}) 
+
+avg_prob <- probs %>%
+  bind_cols() %>%
+  apply(., 1., mean)
+
+pred_label <- ifelse(avg_prob >= 0.5, "positive", "negative")
 ```
 
-### Combine predictions via majority vote
+## Results
 
 ```{r}
-# a function to compute the mode of a discrete vector
-majority_vote <- function(x) {
-  ux <- unique(x)
-  ux[which.max(tabulate(match(x, ux)))]
-}
+ensemble_f1 <- f_meas_vec(out_of_sample$Class, factor(pred_label))
 
-final_votes <- bind_cols(model_votes) %>%
-  apply(., 1, majority_vote)
-```
-
-### Evaluate performance
-
-```{r}
-caret::confusionMatrix(factor(final_votes, levels = c("0", "1")),
-                       factor(test$Class, levels = c("0", "1")),
-                       positive = "1")
-```
-
-# Why This Approach?
-
-```{r}
-map_dbl(model_votes, function(model) {
-  caret::sensitivity(model, 
-                         factor(test$Class, levels = c("0", "1")), 
-                         positive = "1")
+map_dbl(probs, function(prob) {
+  label <- ifelse(prob >= 0.5, "positive", "negative")
+  yardstick::f_meas_vec(out_of_sample$Class, factor(label))
 }) %>%
-  enframe(name = "Subsample", value = "Sensitivity") %>%
-  ggplot(aes(x = Sensitivity)) +
-  geom_density() +
-  labs(title = "Distribution of Sensitivty Across 25 Subsamples",
-       subtitle = "Sensitivity scores vary by subsample. The ensemble approach reduces variation.")
+  enframe(name = "Subsample", value = "Subsample_F1") %>%
+  mutate(Ensemble_F1 = ensemble_f1) %>%
+  gather(Metric, Value, -Subsample) %>%
+  ggplot(aes(x = Subsample, y = Value)) +
+  geom_line(aes(group = Metric, color = Metric), lwd = 1) +
+  scale_color_manual(values = c("blue", "gray80")) +
+  labs(title = "F1 across 25 subsamples",
+       subtitle = "The ensemble reduces variation and improves accuracy.") +
+  theme_bw()
 ```

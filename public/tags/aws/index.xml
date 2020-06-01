@@ -12,7 +12,7 @@
     
     
     <item>
-      <title>Object Detection Using AWS SageMaker and GluonCV </title>
+      <title>Object detection using AWS SageMaker and GluonCV </title>
       <link>/post/2019/12/07/object-detection-using-aws-sagemaker-and-gluoncv/</link>
       <pubDate>Sat, 07 Dec 2019 00:00:00 +0000</pubDate>
       
@@ -22,84 +22,20 @@ Collecting and preparing training images To collect images for training, I searc
     </item>
     
     <item>
-      <title>AWS re:Invent 2019 - Day 2</title>
-      <link>/post/2019/12/03/aws-re-invent-2019-day-2/</link>
-      <pubDate>Tue, 03 Dec 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2019/12/03/aws-re-invent-2019-day-2/</guid>
-      <description>Day 2 of re:Invent was not as busy and diverse as day 1 for me, but it was extremely valuable toward my preparation for the Machine Learning Certification exam.
-The Machine Learning exam tests your knowledge of all aspects of the ML, including MLOps (training, tuning, deploying, monitoring), deep learning concepts, data storage, and data processing. The core services which are given the most attention on the exam include S3, Glue, EMR, Athena, Kinesis, SageMaker, and AI Services.</description>
-    </item>
-    
-    <item>
-      <title>AWS re:Invent 2019 - Day 1</title>
-      <link>/post/2019/12/02/aws-re-invent-2019-day-1/</link>
-      <pubDate>Mon, 02 Dec 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2019/12/02/aws-re-invent-2019-day-1/</guid>
-      <description>The first day of AWS re:Invent 2019 is coming to a close. For me, today was mostly about using SageMaker to build and deploy deep learning models. In the first session, I used Tensorflow and Glove to train a text classifier from word vector representations. The primary focus was bringing custom Docker environments for training and inference. Some time at the beginning was spent discussing the major differences between traditional NLP pipelines and deep learning NLP pipelines.</description>
-    </item>
-    
-    <item>
-      <title>AWS re:Invent 2019 - Day 0</title>
-      <link>/post/2019/12/01/aws-reinvent-day-1/</link>
-      <pubDate>Sun, 01 Dec 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2019/12/01/aws-reinvent-day-1/</guid>
-      <description>Tomorrow marks the start of AWS re:Invent 2019. I am excited to go and deepen my expertise with machine learning on AWS.
-My general goals for re:Invent are the following:
- Improve my understanding of serverless services (e.g. Lambda, S3, Glue, API Gateway, Kinesis, Athena) and how they can be used to build and monitor flexible, scalable machine learning pipelines. I&amp;rsquo;d like to build and document 1-3 sample pipelines using batch, streaming, and/or unstructured data (e.</description>
-    </item>
-    
-    <item>
-      <title>Benefits of AWS EMR Notebooks for Data Science</title>
-      <link>/post/2019/09/01/benefits-of-aws-emr-notebooks-for-data-science-teams/</link>
-      <pubDate>Sun, 01 Sep 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2019/09/01/benefits-of-aws-emr-notebooks-for-data-science-teams/</guid>
-      <description>This document highlights some of the benefits of using EMR Notebooks for data science.
-EMR Notebooks is an AWS-managed service that provides access to Jupyter Notebooks running on an EMR cluster with kernels for PySpark, SparkR, and Python. This tool is ideal for exploratory analysis with Python and Spark and for developing applications for big data processing.
-1. Minimal configuration You can launch an EMR Notebook through the AWS Console with minimial configuration.</description>
-    </item>
-    
-    <item>
-      <title>Event-Driven Code Execution Using S3, Lambda, EC2, and R</title>
-      <link>/post/2019/08/22/event-driven-code-execution-using-s3-lambda-ec2-r/</link>
-      <pubDate>Thu, 22 Aug 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2019/08/22/event-driven-code-execution-using-s3-lambda-ec2-r/</guid>
-      <description>This document outlines the steps to using S3 events to trigger a Lambda function that starts up an EC2 instance, executes a custom R script on the instance, then stops the instance.
-Pipeline Overview  A file is uploaded to an S3 bucket.
- The file upload triggers a Lambda function that starts an EC2 instance, runs an R script, and stops the EC2 instance.
- When run, the R script returns the output to an S3 bucket.</description>
-    </item>
-    
-    <item>
-      <title>Launch an EMR Cluster with Bootstrapped Actions Using the AWS CLI</title>
-      <link>/post/2019/08/11/launch-emr-cluster-bootstrapped-actions-using-aws-cli/</link>
-      <pubDate>Sun, 11 Aug 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2019/08/11/launch-emr-cluster-bootstrapped-actions-using-aws-cli/</guid>
-      <description>The following AWS CLI command will launch a 5 node (1 master node and 4 worker nodes) EMR 5.25 cluster with Spark, RStudio Server, Shiny Server, sparklyr, and other aplications pre-installed and ready to use.
-bootstrap.sh
-aws emr create-cluster \ --applications Name=Hadoop Name=Spark Name=JupyterHub Name=TensorFlow \ --release-label emr-5.25.0 \ --name &amp;quot;EMR 5.25 RStudio + sparklyr 2&amp;quot; \ --service-role EMR_DefaultRole \ --instance-groups InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m5a.2xlarge InstanceGroupType=CORE,InstanceCount=4,InstanceType=m5a.2xlarge \ --bootstrap-action Path=s3://aws-bigdata-blog/artifacts/aws-blog-emr-rstudio-sparklyr/rstudio_sparklyr_emr5.sh,Args=[&amp;quot;--rstudio&amp;quot;,&amp;quot;--sparklyr&amp;quot;,&amp;quot;--rstudio-url&amp;quot;,&amp;quot;https://download2.rstudio.org/server/centos6/x86_64/rstudio-server-rhel-1.2.1335-x86_64.rpm&amp;quot;],Name=&amp;quot;Install RStudio&amp;quot; \ --ec2-attributes InstanceProfile=EMR_EC2_DefaultRole,KeyName=$YOUR_KEY \ --configurations &#39;[{&amp;quot;Classification&amp;quot;:&amp;quot;spark&amp;quot;,&amp;quot;Properties&amp;quot;:{&amp;quot;maximizeResourceAllocation&amp;quot;:&amp;quot;true&amp;quot;}}]&#39; \ --region us-east-1  </description>
-    </item>
-    
-    <item>
-      <title>Deploying a Plumber API on AWS EC2 Instance</title>
-      <link>/post/2019/07/06/deploying-a-plumber-api-on-aws-ec2-instance/</link>
-      <pubDate>Sat, 06 Jul 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2019/07/06/deploying-a-plumber-api-on-aws-ec2-instance/</guid>
-      <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
-    </item>
-    
-    <item>
-      <title>Deploying a Shiny App with Shiny Server on an AWS EC2 Instance</title>
+      <title>Deploying a Shiny app using Shiny Server on an AWS EC2 instance</title>
       <link>/post/2019/07/06/deploying-a-shiny-app-with-shiny-server-on-an-aws-ec2-instance/</link>
       <pubDate>Sat, 06 Jul 2019 00:00:00 +0000</pubDate>
       
       <guid>/post/2019/07/06/deploying-a-shiny-app-with-shiny-server-on-an-aws-ec2-instance/</guid>
+      <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
+    </item>
+    
+    <item>
+      <title>Deploying a plumber API on AWS EC2 instance</title>
+      <link>/post/2019/07/06/deploying-a-plumber-api-on-aws-ec2-instance/</link>
+      <pubDate>Sat, 06 Jul 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2019/07/06/deploying-a-plumber-api-on-aws-ec2-instance/</guid>
       <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
     </item>
     

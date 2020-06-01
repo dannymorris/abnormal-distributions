@@ -1,5 +1,5 @@
 ---
-title: Deploying a Plumber API on AWS EC2 Instance
+title: Deploying a plumber API on AWS EC2 instance
 author: Danny Morris
 date: '2019-07-06'
 output: 
@@ -91,14 +91,12 @@ cd /home/rstudio/plumber-apps/
 R CMD BATCH launch-sample-plumber.R
 ```
 
-8. Invoke the API's POST method from anywhere
+8. Invoke the API's POST method
 
 ```{r, eval=F}
-# From a Rstudio desktop client...
-
 library(httr)
 
-request <- POST("http://ec2-18-224-95-116.us-east-2.compute.amazonaws.com:8000/sum?b=1&a=3")
+request <- POST("http://ec2-<ip-address>.us-east-2.compute.amazonaws.com:8000/sum?b=1&a=3")
 
 content(request, "parsed")
 ```

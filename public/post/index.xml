@@ -6,13 +6,22 @@
     <description>Recent content in Posts on Abnormal Distributions</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sat, 07 Dec 2019 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sun, 31 May 2020 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/post/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
-      <title>Object Detection Using AWS SageMaker and GluonCV </title>
+      <title>Evaluating forecasting models using rolling origin cross validation</title>
+      <link>/post/2020/05/31/forecast-evaluation-on-a-rolling-origin/</link>
+      <pubDate>Sun, 31 May 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2020/05/31/forecast-evaluation-on-a-rolling-origin/</guid>
+      <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
+    </item>
+    
+    <item>
+      <title>Object detection using AWS SageMaker and GluonCV </title>
       <link>/post/2019/12/07/object-detection-using-aws-sagemaker-and-gluoncv/</link>
       <pubDate>Sat, 07 Dec 2019 00:00:00 +0000</pubDate>
       
@@ -22,99 +31,7 @@ Collecting and preparing training images To collect images for training, I searc
     </item>
     
     <item>
-      <title>AWS re:Invent 2019 - Day 2</title>
-      <link>/post/2019/12/03/aws-re-invent-2019-day-2/</link>
-      <pubDate>Tue, 03 Dec 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2019/12/03/aws-re-invent-2019-day-2/</guid>
-      <description>Day 2 of re:Invent was not as busy and diverse as day 1 for me, but it was extremely valuable toward my preparation for the Machine Learning Certification exam.
-The Machine Learning exam tests your knowledge of all aspects of the ML, including MLOps (training, tuning, deploying, monitoring), deep learning concepts, data storage, and data processing. The core services which are given the most attention on the exam include S3, Glue, EMR, Athena, Kinesis, SageMaker, and AI Services.</description>
-    </item>
-    
-    <item>
-      <title>AWS re:Invent 2019 - Day 1</title>
-      <link>/post/2019/12/02/aws-re-invent-2019-day-1/</link>
-      <pubDate>Mon, 02 Dec 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2019/12/02/aws-re-invent-2019-day-1/</guid>
-      <description>The first day of AWS re:Invent 2019 is coming to a close. For me, today was mostly about using SageMaker to build and deploy deep learning models. In the first session, I used Tensorflow and Glove to train a text classifier from word vector representations. The primary focus was bringing custom Docker environments for training and inference. Some time at the beginning was spent discussing the major differences between traditional NLP pipelines and deep learning NLP pipelines.</description>
-    </item>
-    
-    <item>
-      <title>AWS re:Invent 2019 - Day 0</title>
-      <link>/post/2019/12/01/aws-reinvent-day-1/</link>
-      <pubDate>Sun, 01 Dec 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2019/12/01/aws-reinvent-day-1/</guid>
-      <description>Tomorrow marks the start of AWS re:Invent 2019. I am excited to go and deepen my expertise with machine learning on AWS.
-My general goals for re:Invent are the following:
- Improve my understanding of serverless services (e.g. Lambda, S3, Glue, API Gateway, Kinesis, Athena) and how they can be used to build and monitor flexible, scalable machine learning pipelines. I&amp;rsquo;d like to build and document 1-3 sample pipelines using batch, streaming, and/or unstructured data (e.</description>
-    </item>
-    
-    <item>
-      <title>Benefits of AWS EMR Notebooks for Data Science</title>
-      <link>/post/2019/09/01/benefits-of-aws-emr-notebooks-for-data-science-teams/</link>
-      <pubDate>Sun, 01 Sep 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2019/09/01/benefits-of-aws-emr-notebooks-for-data-science-teams/</guid>
-      <description>This document highlights some of the benefits of using EMR Notebooks for data science.
-EMR Notebooks is an AWS-managed service that provides access to Jupyter Notebooks running on an EMR cluster with kernels for PySpark, SparkR, and Python. This tool is ideal for exploratory analysis with Python and Spark and for developing applications for big data processing.
-1. Minimal configuration You can launch an EMR Notebook through the AWS Console with minimial configuration.</description>
-    </item>
-    
-    <item>
-      <title>Event-Driven Code Execution Using S3, Lambda, EC2, and R</title>
-      <link>/post/2019/08/22/event-driven-code-execution-using-s3-lambda-ec2-r/</link>
-      <pubDate>Thu, 22 Aug 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2019/08/22/event-driven-code-execution-using-s3-lambda-ec2-r/</guid>
-      <description>This document outlines the steps to using S3 events to trigger a Lambda function that starts up an EC2 instance, executes a custom R script on the instance, then stops the instance.
-Pipeline Overview  A file is uploaded to an S3 bucket.
- The file upload triggers a Lambda function that starts an EC2 instance, runs an R script, and stops the EC2 instance.
- When run, the R script returns the output to an S3 bucket.</description>
-    </item>
-    
-    <item>
-      <title>Launch an EMR Cluster with Bootstrapped Actions Using the AWS CLI</title>
-      <link>/post/2019/08/11/launch-emr-cluster-bootstrapped-actions-using-aws-cli/</link>
-      <pubDate>Sun, 11 Aug 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2019/08/11/launch-emr-cluster-bootstrapped-actions-using-aws-cli/</guid>
-      <description>The following AWS CLI command will launch a 5 node (1 master node and 4 worker nodes) EMR 5.25 cluster with Spark, RStudio Server, Shiny Server, sparklyr, and other aplications pre-installed and ready to use.
-bootstrap.sh
-aws emr create-cluster \ --applications Name=Hadoop Name=Spark Name=JupyterHub Name=TensorFlow \ --release-label emr-5.25.0 \ --name &amp;quot;EMR 5.25 RStudio + sparklyr 2&amp;quot; \ --service-role EMR_DefaultRole \ --instance-groups InstanceGroupType=MASTER,InstanceCount=1,InstanceType=m5a.2xlarge InstanceGroupType=CORE,InstanceCount=4,InstanceType=m5a.2xlarge \ --bootstrap-action Path=s3://aws-bigdata-blog/artifacts/aws-blog-emr-rstudio-sparklyr/rstudio_sparklyr_emr5.sh,Args=[&amp;quot;--rstudio&amp;quot;,&amp;quot;--sparklyr&amp;quot;,&amp;quot;--rstudio-url&amp;quot;,&amp;quot;https://download2.rstudio.org/server/centos6/x86_64/rstudio-server-rhel-1.2.1335-x86_64.rpm&amp;quot;],Name=&amp;quot;Install RStudio&amp;quot; \ --ec2-attributes InstanceProfile=EMR_EC2_DefaultRole,KeyName=$YOUR_KEY \ --configurations &#39;[{&amp;quot;Classification&amp;quot;:&amp;quot;spark&amp;quot;,&amp;quot;Properties&amp;quot;:{&amp;quot;maximizeResourceAllocation&amp;quot;:&amp;quot;true&amp;quot;}}]&#39; \ --region us-east-1  </description>
-    </item>
-    
-    <item>
-      <title>HTTP POST Requests Using Node.js</title>
-      <link>/post/2019/07/15/http-post-request-using-node-js/</link>
-      <pubDate>Mon, 15 Jul 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2019/07/15/http-post-request-using-node-js/</guid>
-      <description>This simple snippet demonstrates how to use Node to make a POST request.
-const https = require(&amp;#39;http&amp;#39;)const data = JSON.stringify({doc_set_1: &amp;#39;hello&amp;#39;})const options = {hostname: &amp;#39;ec2-instance-dns.com&amp;#39;,port: &amp;#39;8000&amp;#39;,path: &amp;#39;/textsim&amp;#39;,method: &amp;#39;POST&amp;#39;,headers: {&amp;#39;Content-Type&amp;#39;: &amp;#39;application/json&amp;#39;,&amp;#39;Content-Length&amp;#39;: data.length}}const req = https.request(options, (res) =&amp;gt; {console.log(`statusCode: ${res.statusCode}`)res.on(&amp;#39;data&amp;#39;, (d) =&amp;gt; {process.stdout.write(d)})})req.on(&amp;#39;error&amp;#39;, (error) =&amp;gt; {console.error(error)})req.write(data)req.</description>
-    </item>
-    
-    <item>
-      <title>Detecting Image Differences Using Python and OpenCV</title>
-      <link>/post/2019/07/07/detecting-image-differences-using-python-and-opencv/</link>
-      <pubDate>Sun, 07 Jul 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2019/07/07/detecting-image-differences-using-python-and-opencv/</guid>
-      <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
-    </item>
-    
-    <item>
-      <title>Deploying a Plumber API on AWS EC2 Instance</title>
-      <link>/post/2019/07/06/deploying-a-plumber-api-on-aws-ec2-instance/</link>
-      <pubDate>Sat, 06 Jul 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2019/07/06/deploying-a-plumber-api-on-aws-ec2-instance/</guid>
-      <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
-    </item>
-    
-    <item>
-      <title>Deploying a Shiny App with Shiny Server on an AWS EC2 Instance</title>
+      <title>Deploying a Shiny app using Shiny Server on an AWS EC2 instance</title>
       <link>/post/2019/07/06/deploying-a-shiny-app-with-shiny-server-on-an-aws-ec2-instance/</link>
       <pubDate>Sat, 06 Jul 2019 00:00:00 +0000</pubDate>
       
@@ -123,16 +40,16 @@ const https = require(&amp;#39;http&amp;#39;)const data = JSON.stringify({doc_
     </item>
     
     <item>
-      <title>A Note on EDA versus Software Development</title>
-      <link>/post/2019/07/03/a-note-on-eda-versus-software-development/</link>
-      <pubDate>Wed, 03 Jul 2019 00:00:00 +0000</pubDate>
+      <title>Deploying a plumber API on AWS EC2 instance</title>
+      <link>/post/2019/07/06/deploying-a-plumber-api-on-aws-ec2-instance/</link>
+      <pubDate>Sat, 06 Jul 2019 00:00:00 +0000</pubDate>
       
-      <guid>/post/2019/07/03/a-note-on-eda-versus-software-development/</guid>
-      <description>This summer, I have had the pleasure of mentoring Elan Anderson, an intern who joined through my company&amp;rsquo;s highly-sought summer internship program. He and I are building SimText, an app that performs record linkage using statistial text mining. The core algorithm, which is available as an R package, utilizes the text2vec framework for efficient text vectorization, base R for general purpose programming, and some C++ via Rcpp for efficient manipulation of sparse matrices.</description>
+      <guid>/post/2019/07/06/deploying-a-plumber-api-on-aws-ec2-instance/</guid>
+      <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
     </item>
     
     <item>
-      <title>A Data-Centric Ensemble Approach for Supervised Classification with Imbalanced Classes</title>
+      <title>A strategy for rare class learning using data-centric ensembling</title>
       <link>/post/2019/07/01/rare-class-ensemble/</link>
       <pubDate>Mon, 01 Jul 2019 00:00:00 +0000</pubDate>
       
@@ -141,70 +58,20 @@ const https = require(&amp;#39;http&amp;#39;)const data = JSON.stringify({doc_
     </item>
     
     <item>
-      <title>Row-wise Max Values for a Sparse Matrix Using RcppArmadillo</title>
+      <title>Finding rowwise maximum values in sparse matrices using RcppArmadillo</title>
       <link>/post/2019/07/01/row-wise-min-and-max-values-in-a-sparse-matrix/</link>
       <pubDate>Mon, 01 Jul 2019 00:00:00 +0000</pubDate>
       
       <guid>/post/2019/07/01/row-wise-min-and-max-values-in-a-sparse-matrix/</guid>
-      <description>Using Inline FunctionsSourcing a .cpp FileThis document demonstrates how to extract maximum values for each row in a sparse matrix using RcppArmadillo for speed and efficiency.
-library(Matrix)library(Rcpp)library(RcppArmadillo)library(magrittr)A sample sparse matrix implemented in the Matrix pacakge.
-i &amp;lt;- c(1,3:8) j &amp;lt;- c(2,9,6:10)x &amp;lt;- 7 * (1:7)sparse_matrix &amp;lt;- sparseMatrix(i, j, x = x) sparse_matrix## 8 x 10 sparse Matrix of class &amp;quot;dgCMatrix&amp;quot;## ## [1,] .</description>
+      <description>Sample dataInline Rcpp functionsExternal C++ scriptThis post demonstrates a fast and efficient stategy for finding the maximum value and position of the maximum value for each row in a sparse matrix using RcppArmadillo. This basic function can be used in the context of similarity search where the rows i and columns j are entities in a square matrix and the values represent the similarity between the ith and jth entity.</description>
     </item>
     
     <item>
-      <title>Example Gradient Boosted Classifier Using Python&#39;s Scikit Learn</title>
-      <link>/post/2019/06/25/example-gradient-boosted-classifier-using-scikit-learn/</link>
-      <pubDate>Tue, 25 Jun 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2019/06/25/example-gradient-boosted-classifier-using-scikit-learn/</guid>
-      <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
-    </item>
-    
-    <item>
-      <title>Tidy Binomial Calculator Using the probs Package</title>
-      <link>/post/2019/04/08/tidy-binomial-calculator/</link>
-      <pubDate>Mon, 08 Apr 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2019/04/08/tidy-binomial-calculator/</guid>
-      <description>InstallSimulated DataThis short post introduces a simple R package called probs that I created for tidy binomial probability calculations.
-InstallThe probs package lives on GitHub.
-library(devtools)devtools::install_github(&amp;quot;dannymorris/probs&amp;quot;)Simulated DataRecently, I needed to communicate to a larger audience the probability of detecting a particular event. Specifically, a pre-existing process was in place that required humans to sift through a sample of 100 PDF documents out of 40,000 documents.</description>
-    </item>
-    
-    <item>
-      <title>Bag of Words Text Classification in R</title>
+      <title>Text classification using sparse matrices, bag of words, TF-IDF, and penalized logistic regression</title>
       <link>/post/2019/02/17/text-classification-using-text2vec/</link>
       <pubDate>Sun, 17 Feb 2019 00:00:00 +0000</pubDate>
       
       <guid>/post/2019/02/17/text-classification-using-text2vec/</guid>
-      <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
-    </item>
-    
-    <item>
-      <title>Tidy Text Mining in R</title>
-      <link>/post/2019/02/10/tidy-text-mining-in-r/</link>
-      <pubDate>Sun, 10 Feb 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2019/02/10/tidy-text-mining-in-r/</guid>
-      <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
-    </item>
-    
-    <item>
-      <title>Deploying Flask Apps Locally on Windows</title>
-      <link>/post/2019/01/20/using-flask-to-deploy-predictive-models/</link>
-      <pubDate>Sun, 20 Jan 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2019/01/20/using-flask-to-deploy-predictive-models/</guid>
-      <description>EnvironmentCreate and activate conda environment in Anaconda PromptInstall dependenciesVery simple Flask appRun the appTest the appNext stepsThis document describes an approach to developing a Flask app and deploying locally.
-EnvironmentWindows 10Anaconda version 2018.12 (includes conda)Create and activate conda environment in Anaconda PromptBefore I begin with building the Flask app, I’ll create a conda environment to house the dependencies needed to run the app.</description>
-    </item>
-    
-    <item>
-      <title>Getting started with Python in R Markdown using the reticulate package</title>
-      <link>/post/2018/01/09/getting-started-with-python-in-r-markdown-using-the-reticulate-package/</link>
-      <pubDate>Tue, 09 Jan 2018 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2018/01/09/getting-started-with-python-in-r-markdown-using-the-reticulate-package/</guid>
       <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
     </item>
     

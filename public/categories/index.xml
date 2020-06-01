@@ -6,7 +6,7 @@
     <description>Recent content in Categories on Abnormal Distributions</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Mon, 15 Jul 2019 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sat, 06 Jul 2019 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/categories/index.xml" rel="self" type="application/rss+xml" />
     
@@ -14,7 +14,7 @@
     <item>
       <title>API</title>
       <link>/categories/api/</link>
-      <pubDate>Mon, 15 Jul 2019 00:00:00 +0000</pubDate>
+      <pubDate>Sat, 06 Jul 2019 00:00:00 +0000</pubDate>
       
       <guid>/categories/api/</guid>
       <description></description>
@@ -48,38 +48,11 @@
     </item>
     
     <item>
-      <title>Data Mining</title>
-      <link>/categories/data-mining/</link>
-      <pubDate>Sun, 10 Feb 2019 00:00:00 +0000</pubDate>
+      <title>Forecasting</title>
+      <link>/categories/forecasting/</link>
+      <pubDate>Sun, 31 May 2020 00:00:00 +0000</pubDate>
       
-      <guid>/categories/data-mining/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>EMR</title>
-      <link>/categories/emr/</link>
-      <pubDate>Sun, 11 Aug 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/categories/emr/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>HTTP</title>
-      <link>/categories/http/</link>
-      <pubDate>Mon, 15 Jul 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/categories/http/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>JavaScript</title>
-      <link>/categories/javascript/</link>
-      <pubDate>Mon, 15 Jul 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/categories/javascript/</guid>
+      <guid>/categories/forecasting/</guid>
       <description></description>
     </item>
     
@@ -93,38 +66,11 @@
     </item>
     
     <item>
-      <title>Machine learning</title>
-      <link>/categories/machine-learning/</link>
-      <pubDate>Tue, 25 Jun 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/categories/machine-learning/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>Python</title>
-      <link>/categories/python/</link>
-      <pubDate>Sun, 07 Jul 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/categories/python/</guid>
-      <description></description>
-    </item>
-    
-    <item>
       <title>R</title>
       <link>/categories/r/</link>
-      <pubDate>Sun, 11 Aug 2019 00:00:00 +0000</pubDate>
+      <pubDate>Sun, 31 May 2020 00:00:00 +0000</pubDate>
       
       <guid>/categories/r/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>RStudio Server</title>
-      <link>/categories/rstudio-server/</link>
-      <pubDate>Sun, 11 Aug 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/categories/rstudio-server/</guid>
       <description></description>
     </item>
     
@@ -138,24 +84,6 @@
     </item>
     
     <item>
-      <title>Software Development</title>
-      <link>/categories/software-development/</link>
-      <pubDate>Wed, 03 Jul 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/categories/software-development/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>Statistics</title>
-      <link>/categories/statistics/</link>
-      <pubDate>Mon, 08 Apr 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/categories/statistics/</guid>
-      <description></description>
-    </item>
-    
-    <item>
       <title>Text Mining</title>
       <link>/categories/text-mining/</link>
       <pubDate>Sun, 17 Feb 2019 00:00:00 +0000</pubDate>
@@ -165,11 +93,11 @@
     </item>
     
     <item>
-      <title>Web Development</title>
-      <link>/categories/web-development/</link>
-      <pubDate>Sun, 20 Jan 2019 00:00:00 +0000</pubDate>
+      <title>Time Series</title>
+      <link>/categories/time-series/</link>
+      <pubDate>Sun, 31 May 2020 00:00:00 +0000</pubDate>
       
-      <guid>/categories/web-development/</guid>
+      <guid>/categories/time-series/</guid>
       <description></description>
     </item>
     

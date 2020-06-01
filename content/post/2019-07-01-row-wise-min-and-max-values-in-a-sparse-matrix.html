@@ -1,5 +1,5 @@
 ---
-title: Row-wise Max Values for a Sparse Matrix Using RcppArmadillo
+title: Finding rowwise maximum values in sparse matrices using RcppArmadillo
 author: Danny Morris
 date: '2019-07-01'
 output: 
@@ -18,17 +18,19 @@ editor_options:
 
 <div id="TOC">
 <ul>
-<li><a href="#using-inline-functions">Using Inline Functions</a></li>
-<li><a href="#sourcing-a-.cpp-file">Sourcing a .cpp File</a></li>
+<li><a href="#sample-data">Sample data</a></li>
+<li><a href="#inline-rcpp-functions">Inline Rcpp functions</a></li>
+<li><a href="#external-c-script">External C++ script</a></li>
 </ul>
 </div>
 
-<p>This document demonstrates how to extract maximum values for each row in a sparse matrix using RcppArmadillo for speed and efficiency.</p>
+<p>This post demonstrates a fast and efficient stategy for finding the maximum value and position of the maximum value for each row in a sparse matrix using RcppArmadillo. This basic function can be used in the context of similarity search where the rows <em>i</em> and columns <em>j</em> are entities in a square matrix and the values represent the similarity between the <em>ith</em> and <em>jth</em> entity. The values in the matrix can be obtained using any means. The position of the rowwise maximum value for the <em>ith</em> row corresponds to the <em>jth</em> entity that is most similar to the <em>ith</em> entity. I’ve successfully used this approach to search large databases for highly similar customer records, indicating potential duplication.</p>
 <pre class="r"><code>library(Matrix)
 library(Rcpp)
 library(RcppArmadillo)
 library(magrittr)</code></pre>
-<p>A sample sparse matrix implemented in the Matrix pacakge.</p>
+<div id="sample-data" class="section level1">
+<h1>Sample data</h1>
 <pre class="r"><code>i &lt;- c(1,3:8) 
 j &lt;- c(2,9,6:10)
 x &lt;- 7 * (1:7)
@@ -46,8 +48,9 @@ sparse_matrix</code></pre>
 ## [6,] . . . . .  .  . 35  .  .
 ## [7,] . . . . .  .  .  . 42  .
 ## [8,] . . . . .  .  .  .  . 49</code></pre>
-<div id="using-inline-functions" class="section level1">
-<h1>Using Inline Functions</h1>
+</div>
+<div id="inline-rcpp-functions" class="section level1">
+<h1>Inline Rcpp functions</h1>
 <pre class="r"><code>rowwise_max &lt;- Rcpp::cppFunction(
   &quot;arma::sp_mat sp_row_max(arma::sp_mat X) {
    return arma::max(X, 1);
@@ -63,8 +66,8 @@ rowwise_max_idx &lt;- Rcpp::cppFunction(
 
 rowwise_max_idx(sparse_matrix) %&gt;% as.vector()</code></pre>
 </div>
-<div id="sourcing-a-.cpp-file" class="section level1">
-<h1>Sourcing a .cpp File</h1>
+<div id="external-c-script" class="section level1">
+<h1>External C++ script</h1>
 <p><code>rowwise_max.cpp</code></p>
 <pre class="cpp"><code># include &lt;RcppArmadillo.h&gt;
 // [[Rcpp::depends(RcppArmadillo)]]

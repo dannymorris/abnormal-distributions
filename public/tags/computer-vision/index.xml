@@ -12,22 +12,13 @@
     
     
     <item>
-      <title>Object Detection Using AWS SageMaker and GluonCV </title>
+      <title>Object detection using AWS SageMaker and GluonCV </title>
       <link>/post/2019/12/07/object-detection-using-aws-sagemaker-and-gluoncv/</link>
       <pubDate>Sat, 07 Dec 2019 00:00:00 +0000</pubDate>
       
       <guid>/post/2019/12/07/object-detection-using-aws-sagemaker-and-gluoncv/</guid>
       <description>This post briefly describes how I built an object detection model using AWS SageMaker and GluonCV to detect Blue Cross Blue Shield logos. Full code and notebooks can be found in the GitHub repo.
 Collecting and preparing training images To collect images for training, I searched Google for &amp;ldquo;bluecross blueshied logo&amp;rdquo;, &amp;ldquo;bluecross blueshield letter&amp;rdquo;, &amp;ldquo;bluecross blueshield building&amp;rdquo;, &amp;ldquo;bluecross blueshield shirt&amp;rdquo;, &amp;ldquo;bluecross blueshield event&amp;rdquo;, &amp;ldquo;bluecross blueshield shirt&amp;rdquo;, and &amp;ldquo;bluecross blueshield bus&amp;rdquo;.</description>
-    </item>
-    
-    <item>
-      <title>Detecting Image Differences Using Python and OpenCV</title>
-      <link>/post/2019/07/07/detecting-image-differences-using-python-and-opencv/</link>
-      <pubDate>Sun, 07 Jul 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2019/07/07/detecting-image-differences-using-python-and-opencv/</guid>
-      <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
     </item>
     
   </channel>

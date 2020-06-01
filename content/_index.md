@@ -6,7 +6,7 @@ title: Home
 
 # Abnormal Distributions
 
-This is the homepage and personal website of Danny Morris, a Data Scientist at HealthNow NY in Buffalo, NY. I built this site to document interesting or relevant techniques related to data science and machine learning for future reference.
+This is the homepage and personal website of Danny Morris. I am a Data Scientist focused on building practical, testable, and reproducible models to deliver business solutions and answer questions. I love writing tidy R code (Python is just okay), and I love writing about interesting things that I'm learning. 
 
 This site is built with [blogdown](https://github.com/rstudio/blogdown) and deployed with [Netlify](https://www.netlify.com/)
 

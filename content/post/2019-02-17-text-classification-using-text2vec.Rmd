@@ -1,5 +1,5 @@
 ---
-title: Bag of Words Text Classification in R
+title: Text classification using sparse matrices, bag of words, TF-IDF, and penalized logistic regression
 author: Danny Morris
 date: '2019-02-17'
 output: 
@@ -23,408 +23,154 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
 ```
 
-In this article, I'll demonstrate how to perform a type of text classification using a collection of Reuters news articles. I'll touch on topics such as text extraction and cleansing, tokenization, feature vectorization, document-term matrices, vocabulary pruning, n-grams, feature hashing, TF-IDF, and training/testing penalized logistic regression and XGBoost.
+This post demonstrates a strategy for text classification (binary) using efficient data representation, transformation, and modeling techniques. Using the `text2vec` package, raw text is tokenized, converted to sparse bag-of-words feature matrix, and weighted using TF-IDF. The weighted bag-of-words feature matrix is used as an input to an efficient penalized logistic regression algorithm implemented in the `glmnet` pacakge. This pipeline is implemented along with repeated cross validation for robust model evaluation.
 
-The main text mining packages to demonstrate are [tidytext](https://www.tidytextmining.com/) for general text mining and processing and [text2vec](http://text2vec.org/) for sparse document-term matrices and feature vectorization. The penalized logistic regression classifer comes from the [glmnet](https://web.stanford.edu/~hastie/glmnet/glmnet_alpha.html) pacakage and the XGBoost implementation comes from the [xgboost](https://xgboost.readthedocs.io/en/latest/R-package/xgboostPresentation.html) package.
-
-# Load R Packages
+## Packages
 
 ```{r}
 library(text2vec)     # NLP tools
 library(tidytext)     # tidy text mining
-
-library(glmnet)       # logistic regression training
-library(xgboost)      # XGBoost implementation
-
+library(glmnet)       # logistic regression
+library(tidymodels)   # modeling
 library(tidyverse)    # general purpose data manipulation
 library(textstem)     # word lemmatization
-library(caret)        # model evaluation
 ```
 
-# Load Data
-
-The collection of documents I am working with is a sample of documents that appeared on the Reuters newswire in 1987. These data are commonly used for demonstrating text mining applications.
-
-The first step is to load the raw text documents into the R session. The `readr::read_lines()` function reads text line by line and converts each line of text to a row in a table. This is the general approach to converting text documents to a familiar tabular data structure. 
+## Data
 
 ```{r}
-reuters = list(
-  reuters_train = readr::read_lines("reuters-train"),
-  reuters_test = readr::read_lines("reuters-test")
-) %>%
-  map(., function(x) tibble::tibble(txt = x))
-
-reuters
+text_df <- read_csv("text_clf.csv") %>%
+  sample_frac(0.1) %>%
+  mutate(doc_id = row_number())
 ```
 
-# Extract Individual News Articles
-
-Our data is currently in the form of one-row-per-line-of-text. For this particular collection of documents, each document begins with a "</REUTERS" tag. When performing tokenization using the `tidytext` package, we can specify this pattern to separate individual documents. Futhermore, we will parse each document in search of the body of the text (i.e. the actual article and not the metadata).
-
-The function below will perform this step in addition to some others, including:
-
-1. Separate individual documents (i.e. document tokenization) 
-2. Extract text between \<body> tags containing the body of the news article
-3. Remove non-alphabetic characters (e.g. numbers, symbols) 
+## Model function
 
 ```{r}
-get_document_text = function(x) {
-  x %>% 
-    # document tokens
-    tidytext::unnest_tokens(output = article, 
-                            input = txt, 
-                            token = "regex", 
-                            pattern = "</REUTERS>") %>%
-    # id docs
-    mutate(doc_id = row_number()) %>%
-    # extract text between body tags
-    filter(str_detect(article, "<body>")) %>%
-    mutate(body_text = sub(".*<body> *(.*?) *</body>.*", "\\1", article)) %>%
-    # remove non-alphabetic characters and extra whitespace
-    mutate(body_text = str_replace_all(body_text, "[^[:alpha:]]", " ")) %>%
-    mutate(body_text = trimws(body_text)) %>%
-    select(-article) 
-}
-```
-
-Apply `get_document_text()` to training and testing sets and return a data structure with one-row-per-document and the body of the article.
-
-```{r}
-document_text = reuters %>%
-  map(., get_document_text)
-
-document_text
-```
-
-# Get Documents with Topic "earn"
-
-1. Extract text between \<TOPICS> tags for each document
-2. Search \<TOPICS> tags for the term "earn."
-3. Create a reference table of matching documents
-
-```{r}
-# A function to search documents containing specified tpic
-search_documents_for_topic = function(topic) {
+# Arguments: training and testing data
+# Returns: AUC of out-of-sample (testing) predictions
+model_function <- function(train, test) {
   
-  reuters %>%
+  model_dfs <- list(train = train, test = test)
+  
+  ############
+  # Tokenize #
+  ############
+  
+  tokens <- model_dfs %>%
     map(., function(x) {
       x %>%
-        # get text between TOPICS tags
-        filter(str_detect(txt, "<TOPICS>")) %>%
-        mutate(doc_id = row_number()) %>%
-        # retain document with matching topic
-        filter(str_detect(txt, topic)) %>%
-        mutate(earn_ind = 1L) %>%
-        select(doc_id, earn_ind)
+        tidytext::unnest_tokens(word, Text) %>%
+        ungroup() %>%
+        # remove stopwords
+        anti_join(stop_words, by = "word") %>%
+        # lemmatize
+        mutate(word = textstem::lemmatize_words(word)) %>%
+        mutate(word = str_replace_all(word, "[^[:alpha:]]", " ")) %>% 
+        mutate(word = str_replace(gsub("\\s+", " ", str_trim(word)), "B", "b")) %>%
+        # obtain the vector of words (tokens) for each training and testing document
+        split(.$doc_id) %>%
+        map(., function(x) x %>% pull(word))
     })
-}
-```
-
-Run `seach_document_for_topic("earn")` to obtain indexed collection of documents containing "earn" in the set of topics.
-
-```{r}
-# create reference table of matching docs
-documents_with_earn = search_documents_for_topic("earn")
-
-documents_with_earn
-```
-
-# Label Documents
-
-Using the reference table of documents containing the topic of "earn," label all training and testing documents with a binary indicator for the presence (1) or absence (0) of the topic "earn."
-
-```{r}
-labeled_documents = map2(document_text, documents_with_earn, function(x, y) {
-  left_join(x = x, 
-            y = y, 
-            by = "doc_id") %>%
-    mutate(earn_ind = ifelse(is.na(earn_ind), "0", earn_ind)) 
-})
-
-labeled_documents
-```
-
-# Create Word Tokens
-
-The labeled data set contains an indexed collection of documents that have been parsed, cleansed, and labeled for classification. The next step
-
-1. Tokenize documents by word
-2. Remove stopwords
-3. Apply lemmatization to standardize and reduce the number of unique terms. Applying lemmatization necessitates that we again eliminate non-alphabetic characters as the lemmatization method converts some words to digits (e.g. "tenth" -> 10).
-4. Obtain vector of tokens (words) for each document in training and testing sets
-
-```{r}
-tokens = labeled_documents %>%
-  map(., function(x) {
-    x %>%
-      tidytext::unnest_tokens(word, body_text) %>%
-      ungroup() %>%
-      # remove stopwords
-      anti_join(stop_words, by = "word") %>%
-      # lemmatize
-      mutate(word = textstem::lemmatize_words(word)) %>%
-      mutate(word = str_replace_all(word, "[^[:alpha:]]", " ")) %>% 
-      mutate(word = str_replace(gsub("\\s+", " ", str_trim(word)), "B", "b")) %>%
-      # obtain the vector of words (tokens) for each training and testing document
-      split(.$doc_id) %>%
-      map(., function(x) x %>% pull(word))
-  })
-```
-
-Here is a sample of 10 words from the first document in the training set.
-
-```{r}
-# first ten words found in the first training document
-tokens$reuters_train$`1`[1:10]
-```
-
-# Vectorize Vocabulary from Training Documents
-
-Using the set of tokens from the training set, create a training vocaulary that collects unique terms and corresponding statistics. Then transform the vocabulary into the feature vector space for each document.
-
-```{r}
-# collect unique terms and mark with id
-iter_train = text2vec::itoken(iterable = tokens$reuters_train, 
-                               ids = labeled_documents$reuters_train$doc_id,
-                               progressbar = FALSE)
-
-vocab = text2vec::create_vocabulary(iter_train)
-```
-
-# Create document-term Matrix
-
-First we vectorize each training document to generate features and convert the data structure to a sparse matrix. The `Matrix` package offers a sparse matrix class that has been recommended.
-
-```{r}
-vectorizer = text2vec::vocab_vectorizer(vocab)
-
-doc_term_train = text2vec::create_dtm(iter_train, vectorizer)
-
-head(doc_term_train)
-```
-
-The document-term matrix is a sparse matrix implementation from the Matrix package.
-
-# Train Classifier
-
-The author of `text2vec` demonstrates the effectiveness of the logistic classifier available in the `glmnet` package. This implementation offers penalization and cross-validation, and it trains relatively quickly. The feature matrix is the document-term matrix created in the previous step. The vector of labels comes come from the collection of labeled documents.
-
-```{r}
-# 4-fold cross validation
-n_folds = 4
-
-glmnet_classifier = glmnet::cv.glmnet(
-  x = doc_term_train, 
-  y = labeled_documents$reuters_train %>% pull(earn_ind),
-  # set binary classification
-  family = 'binomial', 
-  # L1 penalty
-  alpha = 1,
-  # interested in the area under ROC curve
-  type.measure = "auc",
-  # 5-fold cross-validation
-  nfolds = n_folds,
-  # high value is less accurate, but has faster training
-  thresh = 1e-3,
-  # again lower number of iterations for faster training
-  maxit = 1e3)
-```
-
-To measure the performance of the classifier, we can look at the AUROC. 
-
-```{r}
-paste("Maximum AUROC from training:", 
-      max(glmnet_classifier$cvm) %>% round(., 4))
-```
-
-# Predict Test Set
-
-To make predictions for the test set, we first need to vectorize the documents in the test set using the vectorizer created from the training data. This ensures that all features (words) present in the training vocabulary appear in the vocabulary of the test set. 
-
-2. Create a document-term matrix from the vocabulary
-
-```{r}
-iter_test = text2vec::itoken(iterable = tokens$reuters_test, 
-                             ids = labeled_documents$reuters_test$doc_id,
-                             progressbar = FALSE)
-
-doc_term_test = create_dtm(iter_test, vectorizer)
-```
-
-## Class Probabilities
-
-```{r}
-# obtain probability of document containing "earn"
-probs = predict(glmnet_classifier, doc_term_test, type = 'response')[, 1]
-
-test_auc = glmnet:::auc(y = labeled_documents$reuters_test$earn_ind %>% as.integer(),
-                         prob = probs)
-
-paste("AUROC for testing set:", round(test_auc, 4))
-```
-
-## Class Labels
-
-Alternatively, we can predict the class labels directly. Class labels are determined based on the class with the highest predicted probability.
-
-```{r}
-class_labels = predict(glmnet_classifier, doc_term_test, type = 'class') %>%
-  as.factor()
-
-caret::confusionMatrix(data = class_labels,
-                       reference = as.factor(labeled_documents$reuters_test$earn_ind),
-                       positive = "1",
-                       mode = "prec_recall")
-```
-
-# Replicate Model Using Pruned Vocabulary
-
-Pruning the vocabulary reduces the size of the vocabulary, leading to faster performance in training and scoring.
-
-The following function replicate the modeling process that was previously described. The basic procedure is to create document-term matrices from feature vector spaces, train the classifier, and measure the AUROC.
-
-```{r}
-replicate_model = function(vectorizer) {
   
-  doc_term_train  = create_dtm(iter_train, vectorizer)
-  doc_term_test   = create_dtm(iter_test, vectorizer)
+  ########################################
+  # Create vocabulary from training data #
+  ########################################
   
-  train_labels = labeled_documents$reuters_train %>% pull(earn_ind)
-  test_labels = labeled_documents$reuters_test %>% pull(earn_ind)
+  iter_train <- text2vec::itoken(iterable = tokens$train, 
+                                 ids = model_dfs$train$doc_id,
+                                 progressbar = FALSE)
   
-  n_folds = 4
+  iter_test <- text2vec::itoken(iterable = tokens$test, 
+                                ids = model_dfs$test$doc_id,
+                                progressbar = FALSE)
+  
+  vocab <- text2vec::create_vocabulary(iter_train)
+  
+  vectorizer <- text2vec::vocab_vectorizer(vocab)
+  
+  ##########################
+  # Document-term matrices #
+  ##########################
+  
+  doc_term_train = text2vec::create_dtm(iter_train, vectorizer)
+  doc_term_test = create_dtm(iter_test, vectorizer)
+  
+  ##########
+  # TF-IDF #
+  ##########
+  
+  tf_idf = TfIdf$new()
+  
+  # fit tf-idf to training data
+  doc_term_train_tfidf = fit_transform(doc_term_train, tf_idf)
+  
+  # apply pre-trained tf-idf transformation to testing data
+  doc_term_test_tfidf  = transform(doc_term_test, tf_idf)
+  
+  ####################
+  # Train classifier #
+  ####################
   
   glmnet_classifier = cv.glmnet(
-    x = doc_term_train, 
-    y = train_labels,
+    x = doc_term_train_tfidf, 
+    y = model_dfs$train$Label,
     family = 'binomial', 
     alpha = 1,
     type.measure = "auc",
-    nfolds = n_folds,
+    nfolds = 5,
     thresh = 1e-3,
-    maxit = 1e3
+    maxit = 1e3)
+  
+  probs = predict(glmnet_classifier, doc_term_test_tfidf, type = 'response')[, 1]
+  
+  ###########################
+  # Measure AUC on test set #
+  ###########################
+  
+  test_auc = glmnet:::auc(
+    y = model_dfs$test$Label %>% as.integer(),
+    prob = probs
   )
   
-  probs = predict(glmnet_classifier, doc_term_test, type = 'response')[, 1]
-  class_labels = predict(glmnet_classifier, doc_term_test, type = 'class')
+  return(test_auc)
   
-  auc = glmnet:::auc(y = test_labels %>% as.integer(),
-                      prob = probs) 
-  
-  list(auc = auc,
-       predicted_probs = probs,
-       predicted_labels = class_labels,
-       true_labels = test_labels) %>%
-    return()
 }
 ```
 
-Here we create the vocabulary from the training data, prune, and vectorize the documents.
+## Implement cross validation
+
+Using `purrr::map()`, run the model function within each cross validation fold.
 
 ```{r}
-vocab = text2vec::create_vocabulary(iter_train)
+n_folds <- 5
+n_repeats <- 3
 
-pruned_vocab = text2vec::prune_vocabulary(vocab, 
-                                           term_count_min = 50, 
-                                           doc_proportion_max = 0.5,
-                                           doc_proportion_min = 0.001)
+cv_splits <- rsample::vfold_cv(text_df, 
+                               v = n_folds, 
+                               repeats = n_repeats, 
+                               strata = 'Label')
 
-pruned_vectorizer = vocab_vectorizer(pruned_vocab)
+cv_models <- map_dbl(cv_splits$splits, function(cv) {
+  train <- rsample::training(cv)
+  test <- rsample::testing(cv)
+  model_function(train = train, test = test)
+})
 ```
 
-```{r}
-replicate_model(pruned_vectorizer)$auc
-```
+## Evaluate CV results
 
-# N-grams
+Evaluate performance of the classifier by looking at the distribution of AUC across all cross validation folds.
 
 ```{r}
-# bi-grams
-bigrams = create_vocabulary(iter_train, ngram = c(1L, 2L))
-bigram_vectorizer = vocab_vectorizer(bigrams)
-
-replicate_model(bigram_vectorizer)$auc
-```
-
-# Feature Hashing
-
-```{r}
-hash_vectorizer = hash_vectorizer(hash_size = 2 ^ 14, ngram = c(1L, 2L))
-
-replicate_model(hash_vectorizer)$auc
-```
-
-# TF-IDF
-
-Term frequency - inverse document frequency (TF-IDF) is a measure used to identify terms that make each document unique. This degree of uniqueness for a word in a document is used as a weight to normalize the documents. Common terms are given less weight, and rare terms are given more weight.
-
-```{r}
-# create vocabulary from training data
-vocab = create_vocabulary(iter_train)
-
-# vectorize documents and create DTM from training data
-vectorizer = vocab_vectorizer(vocab)
-doc_term_train = create_dtm(iter_train, vectorizer)
-
-# define tf-idf model
-tf_idf = TfIdf$new()
-
-# fit tf-idf to training data
-doc_term_train_tfidf = fit_transform(doc_term_train, tf_idf)
-
-# apply pre-trained tf-idf transformation to testing data
-doc_term_test_tfidf  = create_dtm(iter_test, vectorizer) %>% 
-  transform(tf_idf)
-
-# build classifier using tf-idf normalized documents as features
-glmnet_classifier = cv.glmnet(
-  x = doc_term_train_tfidf, 
-  y = labeled_documents$reuters_train %>% pull(earn_ind),
-  family = 'binomial', 
-  alpha = 1,
-  type.measure = "auc",
-  nfolds = n_folds,
-  thresh = 1e-3,
-  maxit = 1e3)
-
-# AUROC from training 
-paste("Maximum AUROC from training:", 
-      max(glmnet_classifier$cvm) %>% round(., 4))
-
-# class probabilities for documents in testing set
-probs = predict(glmnet_classifier, doc_term_test_tfidf, type = 'response')[,1]
-
-# AUROc from testing 
-labeled_documents$reuters_test$earn_ind %>%
-  as.integer() %>%
-  glmnet::auc(., prob = probs)
-```
-
-# XGBoost
-
-The XGBoost algorithm is a tree-based method used for classification. An ensemble technique, it combines the output from several independent decision trees and creates an aggregate score (or label). Each tree is designed to learn from the errors produced by the previous tree and grow smarter.
-
-```{r}
-xgb = xgboost::xgboost(
-  data = doc_term_train_tfidf, 
-  label = labeled_documents$reuters_train[['earn_ind']], 
-  nrounds = 100,
-  objective = "binary:logistic")
-```
-
-```{r}
-xgb$evaluation_log %>%
-  as_tibble() %>%
-  ggplot(aes(x = iter, y = train_error)) +
-  geom_line() +
-  labs(title = "XGBoost Training Error")
-```
-
-```{r}
-xgb_probs = predict(xgb, doc_term_test_tfidf, type = 'response')
-
-labeled_documents$reuters_test$earn_ind %>%
-  as.integer() %>%
-  glmnet::auc(., prob = xgb_probs)
+cv_models %>%
+  enframe() %>%
+  ggplot(aes(x = value)) +
+  geom_density() +
+  labs(title = "Distribution of AUC across all cross validation folds",
+       subtitle = paste("N models = ", length(cv_splits$splits)),
+       x = "AUC") +
+  scale_x_continuous(breaks = scales::pretty_breaks(n=10)) +
+  theme_bw()
 ```
 

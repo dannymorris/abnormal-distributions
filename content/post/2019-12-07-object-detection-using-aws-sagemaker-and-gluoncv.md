@@ -1,5 +1,5 @@
 ---
-title: 'Object Detection Using AWS SageMaker and GluonCV '
+title: 'Object detection using AWS SageMaker and GluonCV '
 author: Danny Morris
 date: '2019-12-07'
 slug: object-detection-using-aws-sagemaker-and-gluoncv

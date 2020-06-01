@@ -12,14 +12,12 @@
     
     
     <item>
-      <title>Row-wise Max Values for a Sparse Matrix Using RcppArmadillo</title>
+      <title>Finding rowwise maximum values in sparse matrices using RcppArmadillo</title>
       <link>/post/2019/07/01/row-wise-min-and-max-values-in-a-sparse-matrix/</link>
       <pubDate>Mon, 01 Jul 2019 00:00:00 +0000</pubDate>
       
       <guid>/post/2019/07/01/row-wise-min-and-max-values-in-a-sparse-matrix/</guid>
-      <description>Using Inline FunctionsSourcing a .cpp FileThis document demonstrates how to extract maximum values for each row in a sparse matrix using RcppArmadillo for speed and efficiency.
-library(Matrix)library(Rcpp)library(RcppArmadillo)library(magrittr)A sample sparse matrix implemented in the Matrix pacakge.
-i &amp;lt;- c(1,3:8) j &amp;lt;- c(2,9,6:10)x &amp;lt;- 7 * (1:7)sparse_matrix &amp;lt;- sparseMatrix(i, j, x = x) sparse_matrix## 8 x 10 sparse Matrix of class &amp;quot;dgCMatrix&amp;quot;## ## [1,] .</description>
+      <description>Sample dataInline Rcpp functionsExternal C++ scriptThis post demonstrates a fast and efficient stategy for finding the maximum value and position of the maximum value for each row in a sparse matrix using RcppArmadillo. This basic function can be used in the context of similarity search where the rows i and columns j are entities in a square matrix and the values represent the similarity between the ith and jth entity.</description>
     </item>
     
   </channel>

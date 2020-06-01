@@ -1,25 +1,0 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
-<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
-  <channel>
-    <title>Flask on Abnormal Distributions</title>
-    <link>/tags/flask/</link>
-    <description>Recent content in Flask on Abnormal Distributions</description>
-    <generator>Hugo -- gohugo.io</generator>
-    <language>en-us</language>
-    <lastBuildDate>Sun, 20 Jan 2019 00:00:00 +0000</lastBuildDate>
-    
-	<atom:link href="/tags/flask/index.xml" rel="self" type="application/rss+xml" />
-    
-    
-    <item>
-      <title>Deploying Flask Apps Locally on Windows</title>
-      <link>/post/2019/01/20/using-flask-to-deploy-predictive-models/</link>
-      <pubDate>Sun, 20 Jan 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/post/2019/01/20/using-flask-to-deploy-predictive-models/</guid>
-      <description>EnvironmentCreate and activate conda environment in Anaconda PromptInstall dependenciesVery simple Flask appRun the appTest the appNext stepsThis document describes an approach to developing a Flask app and deploying locally.
-EnvironmentWindows 10Anaconda version 2018.12 (includes conda)Create and activate conda environment in Anaconda PromptBefore I begin with building the Flask app, I’ll create a conda environment to house the dependencies needed to run the app.</description>
-    </item>
-    
-  </channel>
-</rss>

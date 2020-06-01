@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Deploying a Plumber API on AWS EC2 Instance | Abnormal Distributions</title>
+    <title>Deploying a plumber API on AWS EC2 instance | Abnormal Distributions</title>
     <link rel="stylesheet" href="/css/style.css" />
     <link rel="stylesheet" href="/css/fonts.css" />
     
@@ -15,8 +15,6 @@
       
       <li><a href="/">Home</a></li>
       
-      <li><a href="/about/">About</a></li>
-      
       <li><a href="/post/">All Posts</a></li>
       
       <li><a href="/categories/">By Topic</a></li>
@@ -26,7 +24,7 @@
     </nav>
 
 <div class="article-meta">
-<h1><span class="title">Deploying a Plumber API on AWS EC2 Instance</span></h1>
+<h1><span class="title">Deploying a plumber API on AWS EC2 instance</span></h1>
 <h2 class="author">Danny Morris</h2>
 <h2 class="date">2019/07/06</h2>
 </div>
@@ -158,13 +156,11 @@ install.packages(&quot;plumber&quot;)</code></pre>
 </ol>
 <pre><code>R CMD BATCH launch-sample-plumber.R</code></pre>
 <ol start="8" style="list-style-type: decimal">
-<li>Invoke the API’s POST method from anywhere</li>
+<li>Invoke the API’s POST method</li>
 </ol>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># From a Rstudio desktop client...</span>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(httr)
 
-<span class="kw">library</span>(httr)
-
-request &lt;-<span class="st"> </span><span class="kw">POST</span>(<span class="st">&quot;http://ec2-18-224-95-116.us-east-2.compute.amazonaws.com:8000/sum?b=1&amp;a=3&quot;</span>)
+request &lt;-<span class="st"> </span><span class="kw">POST</span>(<span class="st">&quot;http://ec2-&lt;ip-address&gt;.us-east-2.compute.amazonaws.com:8000/sum?b=1&amp;a=3&quot;</span>)
 
 <span class="kw">content</span>(request, <span class="st">&quot;parsed&quot;</span>)</code></pre>
 </div>

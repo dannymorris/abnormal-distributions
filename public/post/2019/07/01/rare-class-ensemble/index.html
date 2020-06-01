@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>A Data-Centric Ensemble Approach for Supervised Classification with Imbalanced Classes | Abnormal Distributions</title>
+    <title>A strategy for rare class learning using data-centric ensembling | Abnormal Distributions</title>
     <link rel="stylesheet" href="/css/style.css" />
     <link rel="stylesheet" href="/css/fonts.css" />
     
@@ -15,8 +15,6 @@
       
       <li><a href="/">Home</a></li>
       
-      <li><a href="/about/">About</a></li>
-      
       <li><a href="/post/">All Posts</a></li>
       
       <li><a href="/categories/">By Topic</a></li>
@@ -26,7 +24,7 @@
     </nav>
 
 <div class="article-meta">
-<h1><span class="title">A Data-Centric Ensemble Approach for Supervised Classification with Imbalanced Classes</span></h1>
+<h1><span class="title">A strategy for rare class learning using data-centric ensembling</span></h1>
 <h2 class="author">Danny Morris</h2>
 <h2 class="date">2019/07/01</h2>
 </div>
@@ -100,73 +98,47 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div id="TOC">
 <ul>
 <li><a href="#overview">Overview</a></li>
-<li><a href="#r-packages">R packages</a></li>
+<li><a href="#packages">Packages</a></li>
 <li><a href="#data">Data</a></li>
-<li><a href="#global-traintest-split">Global Train/Test Split</a></li>
-<li><a href="#subsampling">Subsampling</a><ul>
-<li><a href="#give-specifications-for-the-subsampling-procedure.">Give specifications for the subsampling procedure.</a></li>
-<li><a href="#generate-subsamples">Generate subsamples</a></li>
-</ul></li>
-<li><a href="#training">Training</a><ul>
-<li><a href="#fit-individual-model-to-each-subsample">Fit individual model to each subsample</a></li>
-</ul></li>
-<li><a href="#testing">Testing</a><ul>
-<li><a href="#apply-individual-models-to-predict-testing-set">Apply individual models to predict testing set</a></li>
-<li><a href="#combine-predictions-via-majority-vote">Combine predictions via majority vote</a></li>
-<li><a href="#evaluate-performance">Evaluate performance</a></li>
-</ul></li>
-<li><a href="#why-this-approach">Why This Approach?</a></li>
+<li><a href="#training-and-out-of-sample-splits">Training and out-of-sample splits</a></li>
+<li><a href="#generate-subsamples-from-training-data">Generate subsamples from training data</a></li>
+<li><a href="#fit-ensemble-of-models">Fit ensemble of models</a></li>
+<li><a href="#predicted-labels-via-ensemble">Predicted labels via ensemble</a></li>
+<li><a href="#results">Results</a></li>
 </ul>
 </div>
 
-<div id="overview" class="section level1">
-<h1>Overview</h1>
-<p>This article demonstrates an approach for supervised learning using an ensemble of classifiers applied to imbalanced data. At the core of the ensemble technique is <em>data-centric subsampling.</em> The basic steps include:</p>
-<ol style="list-style-type: decimal">
-<li><p>Designate 80% of the original data for training and 20% for testing. These percentages can be modified as needed.</p></li>
-<li><p>Decide on <em>S</em> number of subsamples. Between 10 and 25 is recommended by <a href="http://charuaggarwal.net/">Charu Aggarwal</a> in his book <a href="https://www.amazon.com/Outlier-Analysis-Charu-C-Aggarwal/dp/3319475770/ref=pd_cp_14_1?pd_rd_w=8M3qy&amp;pf_rd_p=ef4dc990-a9ca-4945-ae0b-f8d549198ed6&amp;pf_rd_r=3TGSZZ1H5HYKMT0G80Q8&amp;pd_rd_r=f1e3c156-9e78-11e9-801d-cdc96cae2e7b&amp;pd_rd_wg=DXbV0&amp;pd_rd_i=3319475770&amp;psc=1&amp;refRID=3TGSZZ1H5HYKMT0G80Q8">Outlier Analysis</a>.</p></li>
-<li><p>Using functional programming, extract <em>S</em> subsamples from the training data. Within each subsample, the entire positive class is retained and the negative class is down-sampled to match the size of the positive class.</p></li>
-<li><p>Fit <em>S</em> models, one to each subsample.</p></li>
-<li><p>Apply each of the <em>S</em> models to the testing dat to generate <em>S sets</em> of predictions.</p></li>
-<li><p>Combine the <em>S sets</em> of predictions into a single vector of predictions using majority vote.</p></li>
-</ol>
+<div id="overview" class="section level2">
+<h2>Overview</h2>
+<p>This post demonstrates a strategy for predicting out-of-sample cases using a binary classification ensemble when the training data contains imbalanced classes. This strategy is described by <a href="http://charuaggarwal.net/">Charu Aggarwal</a> in section 7.2 of his book <a href="https://www.amazon.com/Outlier-Analysis-Charu-C-Aggarwal/dp/3319475770/ref=pd_cp_14_1?pd_rd_w=8M3qy&amp;pf_rd_p=ef4dc990-a9ca-4945-ae0b-f8d549198ed6&amp;pf_rd_r=3TGSZZ1H5HYKMT0G80Q8&amp;pd_rd_r=f1e3c156-9e78-11e9-801d-cdc96cae2e7b&amp;pd_rd_wg=DXbV0&amp;pd_rd_i=3319475770&amp;psc=1&amp;refRID=3TGSZZ1H5HYKMT0G80Q8">Outlier Analysis</a>.</p>
+<p>This ensemble strategy aims to reduce the overall variance of the classification model by fitting several models to different subsamples of the training data, generating predictions for out-of-sample cases using the parameter estimates from each model, then combining the predictions for each out-of-sample case to arrive at a final prediction for each out-of-sample case. It is a useful strategy when the outcome being modeled is rare, e.g. unexpected health crisis.</p>
 </div>
-<div id="r-packages" class="section level1">
-<h1>R packages</h1>
+<div id="packages" class="section level2">
+<h2>Packages</h2>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(tidyverse) 
-<span class="kw">library</span>(aws.s3)
-<span class="kw">library</span>(aws.signature)
 <span class="kw">library</span>(rsample)   
-<span class="kw">library</span>(ranger) </code></pre>
-</div>
-<div id="data" class="section level1">
-<h1>Data</h1>
-<p>The data is located in my S3 bucket, however a CSV of the raw data can be found <a href="https://www.kaggle.com/mlg-ulb/creditcardfraud/version/3">here</a>.</p>
-<pre class="sourceCode r"><code class="sourceCode r">aws.signature<span class="op">::</span><span class="kw">use_credentials</span>()</code></pre>
-<pre class="sourceCode r"><code class="sourceCode r">credit_card &lt;-<span class="st"> </span><span class="kw">s3read_using</span>(
-  <span class="dt">bucket =</span> <span class="st">&quot;abn-distro-data&quot;</span>,
-  <span class="dt">object =</span> <span class="st">&quot;creditcard.csv&quot;</span>,
-  <span class="dt">FUN =</span> read_csv
-) <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">select</span>(<span class="op">-</span>Time) <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Class =</span> <span class="kw">as.character</span>(Class))</code></pre>
-<p>A smaller sample is taken to reduce computational burden.</p>
-<pre class="sourceCode r"><code class="sourceCode r">sample_majority &lt;-<span class="st"> </span>credit_card <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">filter</span>(Class <span class="op">==</span><span class="st"> &quot;0&quot;</span>) <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">sample_n</span>(<span class="dv">30000</span>)
+<span class="kw">library</span>(ranger) 
+<span class="kw">library</span>(imbalance)
+<span class="kw">library</span>(yardstick)
 
-sample_df &lt;-<span class="st"> </span><span class="kw">bind_rows</span>(
-  sample_majority,
-  credit_card <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(Class <span class="op">==</span><span class="st"> &quot;1&quot;</span>)
-)</code></pre>
-<p>Class distribution.</p>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">table</span>(sample_df<span class="op">$</span>Class)</code></pre>
-<pre><code>## 
-##     0     1 
-## 30000   492</code></pre>
+<span class="kw">options</span>(<span class="dt">yardstick.event_first =</span> F)</code></pre>
 </div>
-<div id="global-traintest-split" class="section level1">
-<h1>Global Train/Test Split</h1>
+<div id="data" class="section level2">
+<h2>Data</h2>
+<pre class="sourceCode r"><code class="sourceCode r">sample_df &lt;-<span class="st"> </span>imbalance<span class="op">::</span>banana <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">as_tibble</span>()</code></pre>
+<p>Class distribution.</p>
+<pre class="sourceCode r"><code class="sourceCode r">sample_df <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">count</span>(Class) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">pct_n =</span> n<span class="op">/</span><span class="kw">sum</span>(n))</code></pre>
+<pre><code>## # A tibble: 2 x 3
+##   Class        n pct_n
+##   &lt;fct&gt;    &lt;int&gt; &lt;dbl&gt;
+## 1 negative  2376   0.9
+## 2 positive   264   0.1</code></pre>
+</div>
+<div id="training-and-out-of-sample-splits" class="section level2">
+<h2>Training and out-of-sample splits</h2>
 <pre class="sourceCode r"><code class="sourceCode r">split_pct &lt;-<span class="st"> </span><span class="fl">0.8</span>
 
 <span class="kw">set.seed</span>(<span class="dv">9560</span>)
@@ -177,115 +149,66 @@ split_idx &lt;-<span class="st"> </span>rsample<span class="op">::</span><span c
   <span class="dt">strata =</span> <span class="st">&quot;Class&quot;</span>
 )</code></pre>
 <pre class="sourceCode r"><code class="sourceCode r">train &lt;-<span class="st"> </span>rsample<span class="op">::</span><span class="kw">training</span>(split_idx)
-test &lt;-<span class="st"> </span>rsample<span class="op">::</span><span class="kw">testing</span>(split_idx)</code></pre>
+
+out_of_sample &lt;-<span class="st"> </span>rsample<span class="op">::</span><span class="kw">assessment</span>(split_idx)</code></pre>
 </div>
-<div id="subsampling" class="section level1">
-<h1>Subsampling</h1>
-<div id="give-specifications-for-the-subsampling-procedure." class="section level3">
-<h3>Give specifications for the subsampling procedure.</h3>
+<div id="generate-subsamples-from-training-data" class="section level2">
+<h2>Generate subsamples from training data</h2>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="co"># determine the number of rows to which the negative class is down-sampled</span>
 <span class="co"># by default, set to the number of positive cases</span>
 downsample_level &lt;-<span class="st"> </span>train <span class="op">%&gt;%</span>
-<span class="st">  </span>dplyr<span class="op">::</span><span class="kw">filter</span>(Class <span class="op">==</span><span class="st"> &quot;1&quot;</span>) <span class="op">%&gt;%</span>
+<span class="st">  </span>dplyr<span class="op">::</span><span class="kw">filter</span>(Class <span class="op">==</span><span class="st"> &quot;positive&quot;</span>) <span class="op">%&gt;%</span>
 <span class="st">  </span><span class="kw">nrow</span>()
 
-<span class="co"># number of subsamples N</span>
-n_subsamples &lt;-<span class="st"> </span><span class="dv">25</span>
+subsample_idx &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv">1</span>,  <span class="dv">25</span>, <span class="dv">1</span>)
 
-<span class="co"># sequence of integers from 1:N</span>
-<span class="co"># used for iterations</span>
-subsample_idx &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv">1</span>, n_subsamples, <span class="dv">1</span>)
-
-<span class="kw">cat</span>(<span class="st">&quot;Subsamples index:&quot;</span>, subsample_idx)</code></pre>
-<pre><code>## Subsamples index: 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25</code></pre>
-</div>
-<div id="generate-subsamples" class="section level3">
-<h3>Generate subsamples</h3>
-<pre class="sourceCode r"><code class="sourceCode r">subsamples &lt;-<span class="st"> </span>purrr<span class="op">::</span><span class="kw">map</span>(subsample_idx, <span class="cf">function</span>(idx) {
+subsamples &lt;-<span class="st"> </span>purrr<span class="op">::</span><span class="kw">map</span>(subsample_idx, <span class="cf">function</span>(idx) {
   train <span class="op">%&gt;%</span>
 <span class="st">    </span>dplyr<span class="op">::</span><span class="kw">group_by</span>(Class) <span class="op">%&gt;%</span>
 <span class="st">    </span><span class="kw">sample_n</span>(<span class="dt">size =</span> downsample_level) <span class="op">%&gt;%</span>
 <span class="st">    </span><span class="kw">ungroup</span>()
 }) </code></pre>
 </div>
-</div>
-<div id="training" class="section level1">
-<h1>Training</h1>
-<div id="fit-individual-model-to-each-subsample" class="section level3">
-<h3>Fit individual model to each subsample</h3>
+<div id="fit-ensemble-of-models" class="section level2">
+<h2>Fit ensemble of models</h2>
 <pre class="sourceCode r"><code class="sourceCode r">models &lt;-<span class="st"> </span><span class="kw">map</span>(subsamples, <span class="cf">function</span>(idx) {
   ranger_model &lt;-<span class="st"> </span>ranger<span class="op">::</span><span class="kw">ranger</span>(
     <span class="dt">formula =</span> <span class="kw">as.factor</span>(Class) <span class="op">~</span><span class="st"> </span>.,
     <span class="dt">data =</span> idx,
+    <span class="dt">probability =</span> T
   )
 })</code></pre>
 </div>
-</div>
-<div id="testing" class="section level1">
-<h1>Testing</h1>
-<div id="apply-individual-models-to-predict-testing-set" class="section level3">
-<h3>Apply individual models to predict testing set</h3>
-<pre class="sourceCode r"><code class="sourceCode r">model_votes &lt;-<span class="st"> </span><span class="kw">map</span>(models, <span class="cf">function</span>(idx) {
-  <span class="kw">predict</span>(idx, <span class="dt">data =</span> test)<span class="op">$</span>predictions
-})</code></pre>
-</div>
-<div id="combine-predictions-via-majority-vote" class="section level3">
-<h3>Combine predictions via majority vote</h3>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># a function to compute the mode of a discrete vector</span>
-majority_vote &lt;-<span class="st"> </span><span class="cf">function</span>(x) {
-  ux &lt;-<span class="st"> </span><span class="kw">unique</span>(x)
-  ux[<span class="kw">which.max</span>(<span class="kw">tabulate</span>(<span class="kw">match</span>(x, ux)))]
-}
+<div id="predicted-labels-via-ensemble" class="section level2">
+<h2>Predicted labels via ensemble</h2>
+<pre class="sourceCode r"><code class="sourceCode r">probs &lt;-<span class="st"> </span><span class="kw">map</span>(models, <span class="cf">function</span>(idx) {
+  <span class="kw">predict</span>(idx, <span class="dt">data =</span> out_of_sample)<span class="op">$</span>predictions[, <span class="st">&quot;positive&quot;</span>]
+}) 
 
-final_votes &lt;-<span class="st"> </span><span class="kw">bind_cols</span>(model_votes) <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">apply</span>(., <span class="dv">1</span>, majority_vote)</code></pre>
+avg_prob &lt;-<span class="st"> </span>probs <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">bind_cols</span>() <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">apply</span>(., <span class="fl">1.</span>, mean)
+
+pred_label &lt;-<span class="st"> </span><span class="kw">ifelse</span>(avg_prob <span class="op">&gt;=</span><span class="st"> </span><span class="fl">0.5</span>, <span class="st">&quot;positive&quot;</span>, <span class="st">&quot;negative&quot;</span>)</code></pre>
 </div>
-<div id="evaluate-performance" class="section level3">
-<h3>Evaluate performance</h3>
-<pre class="sourceCode r"><code class="sourceCode r">caret<span class="op">::</span><span class="kw">confusionMatrix</span>(<span class="kw">factor</span>(final_votes, <span class="dt">levels =</span> <span class="kw">c</span>(<span class="st">&quot;0&quot;</span>, <span class="st">&quot;1&quot;</span>)),
-                       <span class="kw">factor</span>(test<span class="op">$</span>Class, <span class="dt">levels =</span> <span class="kw">c</span>(<span class="st">&quot;0&quot;</span>, <span class="st">&quot;1&quot;</span>)),
-                       <span class="dt">positive =</span> <span class="st">&quot;1&quot;</span>)</code></pre>
-<pre><code>## Confusion Matrix and Statistics
-## 
-##           Reference
-## Prediction    0    1
-##          0 5869    7
-##          1  142   80
-##                                           
-##                Accuracy : 0.9756          
-##                  95% CI : (0.9714, 0.9793)
-##     No Information Rate : 0.9857          
-##     P-Value [Acc &gt; NIR] : 1               
-##                                           
-##                   Kappa : 0.5077          
-##  Mcnemar&#39;s Test P-Value : &lt;2e-16          
-##                                           
-##             Sensitivity : 0.91954         
-##             Specificity : 0.97638         
-##          Pos Pred Value : 0.36036         
-##          Neg Pred Value : 0.99881         
-##              Prevalence : 0.01427         
-##          Detection Rate : 0.01312         
-##    Detection Prevalence : 0.03641         
-##       Balanced Accuracy : 0.94796         
-##                                           
-##        &#39;Positive&#39; Class : 1               
-## </code></pre>
-</div>
-</div>
-<div id="why-this-approach" class="section level1">
-<h1>Why This Approach?</h1>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">map_dbl</span>(model_votes, <span class="cf">function</span>(model) {
-  caret<span class="op">::</span><span class="kw">sensitivity</span>(model, 
-                         <span class="kw">factor</span>(test<span class="op">$</span>Class, <span class="dt">levels =</span> <span class="kw">c</span>(<span class="st">&quot;0&quot;</span>, <span class="st">&quot;1&quot;</span>)), 
-                         <span class="dt">positive =</span> <span class="st">&quot;1&quot;</span>)
+<div id="results" class="section level2">
+<h2>Results</h2>
+<pre class="sourceCode r"><code class="sourceCode r">ensemble_f1 &lt;-<span class="st"> </span><span class="kw">f_meas_vec</span>(out_of_sample<span class="op">$</span>Class, <span class="kw">factor</span>(pred_label))
+
+<span class="kw">map_dbl</span>(probs, <span class="cf">function</span>(prob) {
+  label &lt;-<span class="st"> </span><span class="kw">ifelse</span>(prob <span class="op">&gt;=</span><span class="st"> </span><span class="fl">0.5</span>, <span class="st">&quot;positive&quot;</span>, <span class="st">&quot;negative&quot;</span>)
+  yardstick<span class="op">::</span><span class="kw">f_meas_vec</span>(out_of_sample<span class="op">$</span>Class, <span class="kw">factor</span>(label))
 }) <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">enframe</span>(<span class="dt">name =</span> <span class="st">&quot;Subsample&quot;</span>, <span class="dt">value =</span> <span class="st">&quot;Sensitivity&quot;</span>) <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Sensitivity)) <span class="op">+</span>
-<span class="st">  </span><span class="kw">geom_density</span>() <span class="op">+</span>
-<span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Distribution of Sensitivty Across 25 Subsamples&quot;</span>,
-       <span class="dt">subtitle =</span> <span class="st">&quot;Sensitivity scores vary by subsample. The ensemble approach reduces variation.&quot;</span>)</code></pre>
-<p><img src="/post/2019-07-01-rare-class-ensemble_files/figure-html/unnamed-chunk-15-1.png" width="672" /></p>
+<span class="st">  </span><span class="kw">enframe</span>(<span class="dt">name =</span> <span class="st">&quot;Subsample&quot;</span>, <span class="dt">value =</span> <span class="st">&quot;Subsample_F1&quot;</span>) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Ensemble_F1 =</span> ensemble_f1) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">gather</span>(Metric, Value, <span class="op">-</span>Subsample) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Subsample, <span class="dt">y =</span> Value)) <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">group =</span> Metric, <span class="dt">color =</span> Metric), <span class="dt">lwd =</span> <span class="dv">1</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">scale_color_manual</span>(<span class="dt">values =</span> <span class="kw">c</span>(<span class="st">&quot;blue&quot;</span>, <span class="st">&quot;gray80&quot;</span>)) <span class="op">+</span>
+<span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;F1 across 25 subsamples&quot;</span>,
+       <span class="dt">subtitle =</span> <span class="st">&quot;The ensemble reduces variation and improves accuracy.&quot;</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">theme_bw</span>()</code></pre>
+<p><img src="/post/2019-07-01-rare-class-ensemble_files/figure-html/unnamed-chunk-10-1.png" width="672" /></p>
 </div>
 
 </main>

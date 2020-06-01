@@ -1,5 +1,5 @@
 ---
-title: Bag of Words Text Classification in R
+title: Text classification using sparse matrices, bag of words, TF-IDF, and penalized logistic regression
 author: Danny Morris
 date: '2019-02-17'
 output: 
@@ -85,622 +85,150 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 <div id="TOC">
 <ul>
-<li><a href="#load-r-packages">Load R Packages</a></li>
-<li><a href="#load-data">Load Data</a></li>
-<li><a href="#extract-individual-news-articles">Extract Individual News Articles</a></li>
-<li><a href="#get-documents-with-topic-earn">Get Documents with Topic “earn”</a></li>
-<li><a href="#label-documents">Label Documents</a></li>
-<li><a href="#create-word-tokens">Create Word Tokens</a></li>
-<li><a href="#vectorize-vocabulary-from-training-documents">Vectorize Vocabulary from Training Documents</a></li>
-<li><a href="#create-document-term-matrix">Create document-term Matrix</a></li>
-<li><a href="#train-classifier">Train Classifier</a></li>
-<li><a href="#predict-test-set">Predict Test Set</a><ul>
-<li><a href="#class-probabilities">Class Probabilities</a></li>
-<li><a href="#class-labels">Class Labels</a></li>
-</ul></li>
-<li><a href="#replicate-model-using-pruned-vocabulary">Replicate Model Using Pruned Vocabulary</a></li>
-<li><a href="#n-grams">N-grams</a></li>
-<li><a href="#feature-hashing">Feature Hashing</a></li>
-<li><a href="#tf-idf">TF-IDF</a></li>
-<li><a href="#xgboost">XGBoost</a></li>
+<li><a href="#packages">Packages</a></li>
+<li><a href="#data">Data</a></li>
+<li><a href="#model-function">Model function</a></li>
+<li><a href="#implement-cross-validation">Implement cross validation</a></li>
+<li><a href="#evaluate-cv-results">Evaluate CV results</a></li>
 </ul>
 </div>
 
-<p>In this article, I’ll demonstrate how to perform a type of text classification using a collection of Reuters news articles. I’ll touch on topics such as text extraction and cleansing, tokenization, feature vectorization, document-term matrices, vocabulary pruning, n-grams, feature hashing, TF-IDF, and training/testing penalized logistic regression and XGBoost.</p>
-<p>The main text mining packages to demonstrate are <a href="https://www.tidytextmining.com/">tidytext</a> for general text mining and processing and <a href="http://text2vec.org/">text2vec</a> for sparse document-term matrices and feature vectorization. The penalized logistic regression classifer comes from the <a href="https://web.stanford.edu/~hastie/glmnet/glmnet_alpha.html">glmnet</a> pacakage and the XGBoost implementation comes from the <a href="https://xgboost.readthedocs.io/en/latest/R-package/xgboostPresentation.html">xgboost</a> package.</p>
-<div id="load-r-packages" class="section level1">
-<h1>Load R Packages</h1>
+<p>This post demonstrates a strategy for text classification (binary) using efficient data representation, transformation, and modeling techniques. Using the <code>text2vec</code> package, raw text is tokenized, converted to sparse bag-of-words feature matrix, and weighted using TF-IDF. The weighted bag-of-words feature matrix is used as an input to an efficient penalized logistic regression algorithm implemented in the <code>glmnet</code> pacakge. This pipeline is implemented along with repeated cross validation for robust model evaluation.</p>
+<div id="packages" class="section level2">
+<h2>Packages</h2>
 <pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(text2vec)     <span class="co"># NLP tools</span>
 <span class="kw">library</span>(tidytext)     <span class="co"># tidy text mining</span>
-
-<span class="kw">library</span>(glmnet)       <span class="co"># logistic regression training</span>
-<span class="kw">library</span>(xgboost)      <span class="co"># XGBoost implementation</span>
-
+<span class="kw">library</span>(glmnet)       <span class="co"># logistic regression</span>
+<span class="kw">library</span>(tidymodels)   <span class="co"># modeling</span>
 <span class="kw">library</span>(tidyverse)    <span class="co"># general purpose data manipulation</span>
-<span class="kw">library</span>(textstem)     <span class="co"># word lemmatization</span>
-<span class="kw">library</span>(caret)        <span class="co"># model evaluation</span></code></pre>
+<span class="kw">library</span>(textstem)     <span class="co"># word lemmatization</span></code></pre>
 </div>
-<div id="load-data" class="section level1">
-<h1>Load Data</h1>
-<p>The collection of documents I am working with is a sample of documents that appeared on the Reuters newswire in 1987. These data are commonly used for demonstrating text mining applications.</p>
-<p>The first step is to load the raw text documents into the R session. The <code>readr::read_lines()</code> function reads text line by line and converts each line of text to a row in a table. This is the general approach to converting text documents to a familiar tabular data structure.</p>
-<pre class="sourceCode r"><code class="sourceCode r">reuters =<span class="st"> </span><span class="kw">list</span>(
-  <span class="dt">reuters_train =</span> readr<span class="op">::</span><span class="kw">read_lines</span>(<span class="st">&quot;reuters-train&quot;</span>),
-  <span class="dt">reuters_test =</span> readr<span class="op">::</span><span class="kw">read_lines</span>(<span class="st">&quot;reuters-test&quot;</span>)
-) <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">map</span>(., <span class="cf">function</span>(x) tibble<span class="op">::</span><span class="kw">tibble</span>(<span class="dt">txt =</span> x))
-
-reuters</code></pre>
-<pre><code>## $reuters_train
-## # A tibble: 311,980 x 1
-##    txt                                                                     
-##    &lt;chr&gt;                                                                   
-##  1 &quot;&lt;REUTERS TOPICS=\&quot;YES\&quot; LEWISSPLIT=\&quot;TRAIN\&quot; CGISPLIT=\&quot;TRAINING-SET\&quot;~
-##  2 &lt;DATE&gt;26-FEB-1987 15:01:01.79&lt;/DATE&gt;                                    
-##  3 &lt;TOPICS&gt;&lt;D&gt;cocoa&lt;/D&gt;&lt;/TOPICS&gt;                                           
-##  4 &lt;PLACES&gt;&lt;D&gt;el-salvador&lt;/D&gt;&lt;D&gt;usa&lt;/D&gt;&lt;D&gt;uruguay&lt;/D&gt;&lt;/PLACES&gt;             
-##  5 &lt;PEOPLE&gt;&lt;/PEOPLE&gt;                                                       
-##  6 &lt;ORGS&gt;&lt;/ORGS&gt;                                                           
-##  7 &lt;EXCHANGES&gt;&lt;/EXCHANGES&gt;                                                 
-##  8 &lt;COMPANIES&gt;&lt;/COMPANIES&gt;                                                 
-##  9 &quot;&lt;UNKNOWN&gt; &quot;                                                            
-## 10 &amp;#5;&amp;#5;&amp;#5;C T                                                         
-## # ... with 311,970 more rows
-## 
-## $reuters_test
-## # A tibble: 105,392 x 1
-##    txt                                                                     
-##    &lt;chr&gt;                                                                   
-##  1 &quot;&lt;REUTERS TOPICS=\&quot;YES\&quot; LEWISSPLIT=\&quot;TEST\&quot; CGISPLIT=\&quot;TRAINING-SET\&quot; ~
-##  2 &lt;DATE&gt; 8-APR-1987 01:03:47.52&lt;/DATE&gt;                                    
-##  3 &lt;TOPICS&gt;&lt;D&gt;trade&lt;/D&gt;&lt;/TOPICS&gt;                                           
-##  4 &lt;PLACES&gt;&lt;D&gt;hong-kong&lt;/D&gt;&lt;D&gt;usa&lt;/D&gt;&lt;D&gt;japan&lt;/D&gt;&lt;D&gt;taiwan&lt;/D&gt;&lt;D&gt;malaysia&lt;~
-##  5 &lt;PEOPLE&gt;&lt;/PEOPLE&gt;                                                       
-##  6 &lt;ORGS&gt;&lt;/ORGS&gt;                                                           
-##  7 &lt;EXCHANGES&gt;&lt;/EXCHANGES&gt;                                                 
-##  8 &lt;COMPANIES&gt;&lt;/COMPANIES&gt;                                                 
-##  9 &quot;&lt;UNKNOWN&gt; &quot;                                                            
-## 10 &amp;#5;&amp;#5;&amp;#5;RM C                                                        
-## # ... with 105,382 more rows</code></pre>
+<div id="data" class="section level2">
+<h2>Data</h2>
+<pre class="sourceCode r"><code class="sourceCode r">text_df &lt;-<span class="st"> </span><span class="kw">read_csv</span>(<span class="st">&quot;text_clf.csv&quot;</span>) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">sample_frac</span>(<span class="fl">0.1</span>) <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">doc_id =</span> <span class="kw">row_number</span>())</code></pre>
 </div>
-<div id="extract-individual-news-articles" class="section level1">
-<h1>Extract Individual News Articles</h1>
-<p>Our data is currently in the form of one-row-per-line-of-text. For this particular collection of documents, each document begins with a “&lt;/REUTERS” tag. When performing tokenization using the <code>tidytext</code> package, we can specify this pattern to separate individual documents. Futhermore, we will parse each document in search of the body of the text (i.e. the actual article and not the metadata).</p>
-<p>The function below will perform this step in addition to some others, including:</p>
-<ol style="list-style-type: decimal">
-<li>Separate individual documents (i.e. document tokenization)</li>
-<li>Extract text between &lt;body&gt; tags containing the body of the news article</li>
-<li>Remove non-alphabetic characters (e.g. numbers, symbols)</li>
-</ol>
-<pre class="sourceCode r"><code class="sourceCode r">get_document_text =<span class="st"> </span><span class="cf">function</span>(x) {
-  x <span class="op">%&gt;%</span><span class="st"> </span>
-<span class="st">    </span><span class="co"># document tokens</span>
-<span class="st">    </span>tidytext<span class="op">::</span><span class="kw">unnest_tokens</span>(<span class="dt">output =</span> article, 
-                            <span class="dt">input =</span> txt, 
-                            <span class="dt">token =</span> <span class="st">&quot;regex&quot;</span>, 
-                            <span class="dt">pattern =</span> <span class="st">&quot;&lt;/REUTERS&gt;&quot;</span>) <span class="op">%&gt;%</span>
-<span class="st">    </span><span class="co"># id docs</span>
-<span class="st">    </span><span class="kw">mutate</span>(<span class="dt">doc_id =</span> <span class="kw">row_number</span>()) <span class="op">%&gt;%</span>
-<span class="st">    </span><span class="co"># extract text between body tags</span>
-<span class="st">    </span><span class="kw">filter</span>(<span class="kw">str_detect</span>(article, <span class="st">&quot;&lt;body&gt;&quot;</span>)) <span class="op">%&gt;%</span>
-<span class="st">    </span><span class="kw">mutate</span>(<span class="dt">body_text =</span> <span class="kw">sub</span>(<span class="st">&quot;.*&lt;body&gt; *(.*?) *&lt;/body&gt;.*&quot;</span>, <span class="st">&quot;</span><span class="ch">\\</span><span class="st">1&quot;</span>, article)) <span class="op">%&gt;%</span>
-<span class="st">    </span><span class="co"># remove non-alphabetic characters and extra whitespace</span>
-<span class="st">    </span><span class="kw">mutate</span>(<span class="dt">body_text =</span> <span class="kw">str_replace_all</span>(body_text, <span class="st">&quot;[^[:alpha:]]&quot;</span>, <span class="st">&quot; &quot;</span>)) <span class="op">%&gt;%</span>
-<span class="st">    </span><span class="kw">mutate</span>(<span class="dt">body_text =</span> <span class="kw">trimws</span>(body_text)) <span class="op">%&gt;%</span>
-<span class="st">    </span><span class="kw">select</span>(<span class="op">-</span>article) 
-}</code></pre>
-<p>Apply <code>get_document_text()</code> to training and testing sets and return a data structure with one-row-per-document and the body of the article.</p>
-<pre class="sourceCode r"><code class="sourceCode r">document_text =<span class="st"> </span>reuters <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">map</span>(., get_document_text)
-
-document_text</code></pre>
-<pre><code>## $reuters_train
-## # A tibble: 8,762 x 2
-##    doc_id body_text                                                        
-##     &lt;int&gt; &lt;chr&gt;                                                            
-##  1      1 showers continued throughout the week in the bahia cocoa zone  a~
-##  2      2 the u s  agriculture department reported the farmer owned reserv~
-##  3      3 argentine grain board figures show crop registrations of grains ~
-##  4      4 moody s investors service inc said it lowered the debt and prefe~
-##  5      5 champion products inc said its board of directors approved a two~
-##  6      6 computer terminal systems inc said it has completed the sale of ~
-##  7      7 shr    cts vs      dlrs     net         vs               assets ~
-##  8      8 ohio mattress co said its first quarter  ending february     pro~
-##  9      9 oper shr loss two cts vs profit seven cts     oper shr profit   ~
-## 10     10 shr one dlr vs    cts     net      mln vs      mln     revs     ~
-## # ... with 8,752 more rows
-## 
-## $reuters_test
-## # A tibble: 3,009 x 2
-##    doc_id body_text                                                        
-##     &lt;int&gt; &lt;chr&gt;                                                            
-##  1      1 mounting trade friction between the u s  and japan has raised fe~
-##  2      2 a survey of    provinces and seven cities showed vermin consume ~
-##  3      3 the ministry of international trade and industry  miti  will rev~
-##  4      4 thailand s trade deficit widened to     billion baht in the firs~
-##  5      5 indonesia expects crude palm oil  cpo  prices to rise sharply to~
-##  6      7 tug crews in new south wales  nsw   victoria and western austral~
-##  7      8 the indonesian commodity exchange is likely to start trading in ~
-##  8      9 food department officials said the u s  department of agricultur~
-##  9     10 western mining corp holdings ltd  lt wmng s   wmc  said it will ~
-## 10     11 sumitomo bank ltd  lt sumi t  is certain to lose its status as j~
-## # ... with 2,999 more rows</code></pre>
-</div>
-<div id="get-documents-with-topic-earn" class="section level1">
-<h1>Get Documents with Topic “earn”</h1>
-<ol style="list-style-type: decimal">
-<li>Extract text between &lt;TOPICS&gt; tags for each document</li>
-<li>Search &lt;TOPICS&gt; tags for the term “earn.”</li>
-<li>Create a reference table of matching documents</li>
-</ol>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># A function to search documents containing specified tpic</span>
-search_documents_for_topic =<span class="st"> </span><span class="cf">function</span>(topic) {
+<div id="model-function" class="section level2">
+<h2>Model function</h2>
+<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Arguments: training and testing data</span>
+<span class="co"># Returns: AUC of out-of-sample (testing) predictions</span>
+model_function &lt;-<span class="st"> </span><span class="cf">function</span>(train, test) {
   
-  reuters <span class="op">%&gt;%</span>
+  model_dfs &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">train =</span> train, <span class="dt">test =</span> test)
+  
+  <span class="co">############</span>
+  <span class="co"># Tokenize #</span>
+  <span class="co">############</span>
+  
+  tokens &lt;-<span class="st"> </span>model_dfs <span class="op">%&gt;%</span>
 <span class="st">    </span><span class="kw">map</span>(., <span class="cf">function</span>(x) {
       x <span class="op">%&gt;%</span>
-<span class="st">        </span><span class="co"># get text between TOPICS tags</span>
-<span class="st">        </span><span class="kw">filter</span>(<span class="kw">str_detect</span>(txt, <span class="st">&quot;&lt;TOPICS&gt;&quot;</span>)) <span class="op">%&gt;%</span>
-<span class="st">        </span><span class="kw">mutate</span>(<span class="dt">doc_id =</span> <span class="kw">row_number</span>()) <span class="op">%&gt;%</span>
-<span class="st">        </span><span class="co"># retain document with matching topic</span>
-<span class="st">        </span><span class="kw">filter</span>(<span class="kw">str_detect</span>(txt, topic)) <span class="op">%&gt;%</span>
-<span class="st">        </span><span class="kw">mutate</span>(<span class="dt">earn_ind =</span> 1L) <span class="op">%&gt;%</span>
-<span class="st">        </span><span class="kw">select</span>(doc_id, earn_ind)
+<span class="st">        </span>tidytext<span class="op">::</span><span class="kw">unnest_tokens</span>(word, Text) <span class="op">%&gt;%</span>
+<span class="st">        </span><span class="kw">ungroup</span>() <span class="op">%&gt;%</span>
+<span class="st">        </span><span class="co"># remove stopwords</span>
+<span class="st">        </span><span class="kw">anti_join</span>(stop_words, <span class="dt">by =</span> <span class="st">&quot;word&quot;</span>) <span class="op">%&gt;%</span>
+<span class="st">        </span><span class="co"># lemmatize</span>
+<span class="st">        </span><span class="kw">mutate</span>(<span class="dt">word =</span> textstem<span class="op">::</span><span class="kw">lemmatize_words</span>(word)) <span class="op">%&gt;%</span>
+<span class="st">        </span><span class="kw">mutate</span>(<span class="dt">word =</span> <span class="kw">str_replace_all</span>(word, <span class="st">&quot;[^[:alpha:]]&quot;</span>, <span class="st">&quot; &quot;</span>)) <span class="op">%&gt;%</span><span class="st"> </span>
+<span class="st">        </span><span class="kw">mutate</span>(<span class="dt">word =</span> <span class="kw">str_replace</span>(<span class="kw">gsub</span>(<span class="st">&quot;</span><span class="ch">\\</span><span class="st">s+&quot;</span>, <span class="st">&quot; &quot;</span>, <span class="kw">str_trim</span>(word)), <span class="st">&quot;B&quot;</span>, <span class="st">&quot;b&quot;</span>)) <span class="op">%&gt;%</span>
+<span class="st">        </span><span class="co"># obtain the vector of words (tokens) for each training and testing document</span>
+<span class="st">        </span><span class="kw">split</span>(.<span class="op">$</span>doc_id) <span class="op">%&gt;%</span>
+<span class="st">        </span><span class="kw">map</span>(., <span class="cf">function</span>(x) x <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">pull</span>(word))
     })
-}</code></pre>
-<p>Run <code>seach_document_for_topic("earn")</code> to obtain indexed collection of documents containing “earn” in the set of topics.</p>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># create reference table of matching docs</span>
-documents_with_earn =<span class="st"> </span><span class="kw">search_documents_for_topic</span>(<span class="st">&quot;earn&quot;</span>)
-
-documents_with_earn</code></pre>
-<pre><code>## $reuters_train
-## # A tibble: 2,877 x 2
-##    doc_id earn_ind
-##     &lt;int&gt;    &lt;int&gt;
-##  1      5        1
-##  2      7        1
-##  3      8        1
-##  4      9        1
-##  5     10        1
-##  6     11        1
-##  7     15        1
-##  8     16        1
-##  9     18        1
-## 10     22        1
-## # ... with 2,867 more rows
-## 
-## $reuters_test
-## # A tibble: 1,087 x 2
-##    doc_id earn_ind
-##     &lt;int&gt;    &lt;int&gt;
-##  1     21        1
-##  2     22        1
-##  3     31        1
-##  4     32        1
-##  5     33        1
-##  6     34        1
-##  7     50        1
-##  8     54        1
-##  9     58        1
-## 10     67        1
-## # ... with 1,077 more rows</code></pre>
-</div>
-<div id="label-documents" class="section level1">
-<h1>Label Documents</h1>
-<p>Using the reference table of documents containing the topic of “earn,” label all training and testing documents with a binary indicator for the presence (1) or absence (0) of the topic “earn.”</p>
-<pre class="sourceCode r"><code class="sourceCode r">labeled_documents =<span class="st"> </span><span class="kw">map2</span>(document_text, documents_with_earn, <span class="cf">function</span>(x, y) {
-  <span class="kw">left_join</span>(<span class="dt">x =</span> x, 
-            <span class="dt">y =</span> y, 
-            <span class="dt">by =</span> <span class="st">&quot;doc_id&quot;</span>) <span class="op">%&gt;%</span>
-<span class="st">    </span><span class="kw">mutate</span>(<span class="dt">earn_ind =</span> <span class="kw">ifelse</span>(<span class="kw">is.na</span>(earn_ind), <span class="st">&quot;0&quot;</span>, earn_ind)) 
-})
-
-labeled_documents</code></pre>
-<pre><code>## $reuters_train
-## # A tibble: 8,762 x 3
-##    doc_id body_text                                                earn_ind
-##     &lt;int&gt; &lt;chr&gt;                                                    &lt;chr&gt;   
-##  1      1 showers continued throughout the week in the bahia coco~ 0       
-##  2      2 the u s  agriculture department reported the farmer own~ 0       
-##  3      3 argentine grain board figures show crop registrations o~ 0       
-##  4      4 moody s investors service inc said it lowered the debt ~ 0       
-##  5      5 champion products inc said its board of directors appro~ 1       
-##  6      6 computer terminal systems inc said it has completed the~ 0       
-##  7      7 shr    cts vs      dlrs     net         vs             ~ 1       
-##  8      8 ohio mattress co said its first quarter  ending februar~ 1       
-##  9      9 oper shr loss two cts vs profit seven cts     oper shr ~ 1       
-## 10     10 shr one dlr vs    cts     net      mln vs      mln     ~ 1       
-## # ... with 8,752 more rows
-## 
-## $reuters_test
-## # A tibble: 3,009 x 3
-##    doc_id body_text                                                earn_ind
-##     &lt;int&gt; &lt;chr&gt;                                                    &lt;chr&gt;   
-##  1      1 mounting trade friction between the u s  and japan has ~ 0       
-##  2      2 a survey of    provinces and seven cities showed vermin~ 0       
-##  3      3 the ministry of international trade and industry  miti ~ 0       
-##  4      4 thailand s trade deficit widened to     billion baht in~ 0       
-##  5      5 indonesia expects crude palm oil  cpo  prices to rise s~ 0       
-##  6      7 tug crews in new south wales  nsw   victoria and wester~ 0       
-##  7      8 the indonesian commodity exchange is likely to start tr~ 0       
-##  8      9 food department officials said the u s  department of a~ 0       
-##  9     10 western mining corp holdings ltd  lt wmng s   wmc  said~ 0       
-## 10     11 sumitomo bank ltd  lt sumi t  is certain to lose its st~ 0       
-## # ... with 2,999 more rows</code></pre>
-</div>
-<div id="create-word-tokens" class="section level1">
-<h1>Create Word Tokens</h1>
-<p>The labeled data set contains an indexed collection of documents that have been parsed, cleansed, and labeled for classification. The next step</p>
-<ol style="list-style-type: decimal">
-<li>Tokenize documents by word</li>
-<li>Remove stopwords</li>
-<li>Apply lemmatization to standardize and reduce the number of unique terms. Applying lemmatization necessitates that we again eliminate non-alphabetic characters as the lemmatization method converts some words to digits (e.g. “tenth” -&gt; 10).</li>
-<li>Obtain vector of tokens (words) for each document in training and testing sets</li>
-</ol>
-<pre class="sourceCode r"><code class="sourceCode r">tokens =<span class="st"> </span>labeled_documents <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">map</span>(., <span class="cf">function</span>(x) {
-    x <span class="op">%&gt;%</span>
-<span class="st">      </span>tidytext<span class="op">::</span><span class="kw">unnest_tokens</span>(word, body_text) <span class="op">%&gt;%</span>
-<span class="st">      </span><span class="kw">ungroup</span>() <span class="op">%&gt;%</span>
-<span class="st">      </span><span class="co"># remove stopwords</span>
-<span class="st">      </span><span class="kw">anti_join</span>(stop_words, <span class="dt">by =</span> <span class="st">&quot;word&quot;</span>) <span class="op">%&gt;%</span>
-<span class="st">      </span><span class="co"># lemmatize</span>
-<span class="st">      </span><span class="kw">mutate</span>(<span class="dt">word =</span> textstem<span class="op">::</span><span class="kw">lemmatize_words</span>(word)) <span class="op">%&gt;%</span>
-<span class="st">      </span><span class="kw">mutate</span>(<span class="dt">word =</span> <span class="kw">str_replace_all</span>(word, <span class="st">&quot;[^[:alpha:]]&quot;</span>, <span class="st">&quot; &quot;</span>)) <span class="op">%&gt;%</span><span class="st"> </span>
-<span class="st">      </span><span class="kw">mutate</span>(<span class="dt">word =</span> <span class="kw">str_replace</span>(<span class="kw">gsub</span>(<span class="st">&quot;</span><span class="ch">\\</span><span class="st">s+&quot;</span>, <span class="st">&quot; &quot;</span>, <span class="kw">str_trim</span>(word)), <span class="st">&quot;B&quot;</span>, <span class="st">&quot;b&quot;</span>)) <span class="op">%&gt;%</span>
-<span class="st">      </span><span class="co"># obtain the vector of words (tokens) for each training and testing document</span>
-<span class="st">      </span><span class="kw">split</span>(.<span class="op">$</span>doc_id) <span class="op">%&gt;%</span>
-<span class="st">      </span><span class="kw">map</span>(., <span class="cf">function</span>(x) x <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">pull</span>(word))
-  })</code></pre>
-<p>Here is a sample of 10 words from the first document in the training set.</p>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># first ten words found in the first training document</span>
-tokens<span class="op">$</span>reuters_train<span class="op">$</span><span class="st">`</span><span class="dt">1</span><span class="st">`</span>[<span class="dv">1</span><span class="op">:</span><span class="dv">10</span>]</code></pre>
-<pre><code>##  [1] &quot;shower&quot;    &quot;continue&quot;  &quot;week&quot;      &quot;bahia&quot;     &quot;cocoa&quot;    
-##  [6] &quot;zone&quot;      &quot;alleviate&quot; &quot;drought&quot;   &quot;january&quot;   &quot;improve&quot;</code></pre>
-</div>
-<div id="vectorize-vocabulary-from-training-documents" class="section level1">
-<h1>Vectorize Vocabulary from Training Documents</h1>
-<p>Using the set of tokens from the training set, create a training vocaulary that collects unique terms and corresponding statistics. Then transform the vocabulary into the feature vector space for each document.</p>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># collect unique terms and mark with id</span>
-iter_train =<span class="st"> </span>text2vec<span class="op">::</span><span class="kw">itoken</span>(<span class="dt">iterable =</span> tokens<span class="op">$</span>reuters_train, 
-                               <span class="dt">ids =</span> labeled_documents<span class="op">$</span>reuters_train<span class="op">$</span>doc_id,
-                               <span class="dt">progressbar =</span> <span class="ot">FALSE</span>)
-
-vocab =<span class="st"> </span>text2vec<span class="op">::</span><span class="kw">create_vocabulary</span>(iter_train)</code></pre>
-</div>
-<div id="create-document-term-matrix" class="section level1">
-<h1>Create document-term Matrix</h1>
-<p>First we vectorize each training document to generate features and convert the data structure to a sparse matrix. The <code>Matrix</code> package offers a sparse matrix class that has been recommended.</p>
-<pre class="sourceCode r"><code class="sourceCode r">vectorizer =<span class="st"> </span>text2vec<span class="op">::</span><span class="kw">vocab_vectorizer</span>(vocab)
-
-doc_term_train =<span class="st"> </span>text2vec<span class="op">::</span><span class="kw">create_dtm</span>(iter_train, vectorizer)
-
-<span class="kw">head</span>(doc_term_train)</code></pre>
-<pre><code>## 6 x 19014 sparse Matrix of class &quot;dgCMatrix&quot;
-##                                                                       
-## 1 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . ......
-## 2 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . ......
-## 3 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . ......
-## 4 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . ......
-## 5 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . ......
-## 6 . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . ......
-## 
-##  .....suppressing columns in show(); maybe adjust &#39;options(max.print= *, width = *)&#39;
-##  ..............................</code></pre>
-<p>The document-term matrix is a sparse matrix implementation from the Matrix package.</p>
-</div>
-<div id="train-classifier" class="section level1">
-<h1>Train Classifier</h1>
-<p>The author of <code>text2vec</code> demonstrates the effectiveness of the logistic classifier available in the <code>glmnet</code> package. This implementation offers penalization and cross-validation, and it trains relatively quickly. The feature matrix is the document-term matrix created in the previous step. The vector of labels comes come from the collection of labeled documents.</p>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># 4-fold cross validation</span>
-n_folds =<span class="st"> </span><span class="dv">4</span>
-
-glmnet_classifier =<span class="st"> </span>glmnet<span class="op">::</span><span class="kw">cv.glmnet</span>(
-  <span class="dt">x =</span> doc_term_train, 
-  <span class="dt">y =</span> labeled_documents<span class="op">$</span>reuters_train <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">pull</span>(earn_ind),
-  <span class="co"># set binary classification</span>
-  <span class="dt">family =</span> <span class="st">&#39;binomial&#39;</span>, 
-  <span class="co"># L1 penalty</span>
-  <span class="dt">alpha =</span> <span class="dv">1</span>,
-  <span class="co"># interested in the area under ROC curve</span>
-  <span class="dt">type.measure =</span> <span class="st">&quot;auc&quot;</span>,
-  <span class="co"># 5-fold cross-validation</span>
-  <span class="dt">nfolds =</span> n_folds,
-  <span class="co"># high value is less accurate, but has faster training</span>
-  <span class="dt">thresh =</span> <span class="fl">1e-3</span>,
-  <span class="co"># again lower number of iterations for faster training</span>
-  <span class="dt">maxit =</span> <span class="fl">1e3</span>)</code></pre>
-<p>To measure the performance of the classifier, we can look at the AUROC.</p>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">paste</span>(<span class="st">&quot;Maximum AUROC from training:&quot;</span>, 
-      <span class="kw">max</span>(glmnet_classifier<span class="op">$</span>cvm) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">round</span>(., <span class="dv">4</span>))</code></pre>
-<pre><code>## [1] &quot;Maximum AUROC from training: 0.9911&quot;</code></pre>
-</div>
-<div id="predict-test-set" class="section level1">
-<h1>Predict Test Set</h1>
-<p>To make predictions for the test set, we first need to vectorize the documents in the test set using the vectorizer created from the training data. This ensures that all features (words) present in the training vocabulary appear in the vocabulary of the test set.</p>
-<ol start="2" style="list-style-type: decimal">
-<li>Create a document-term matrix from the vocabulary</li>
-</ol>
-<pre class="sourceCode r"><code class="sourceCode r">iter_test =<span class="st"> </span>text2vec<span class="op">::</span><span class="kw">itoken</span>(<span class="dt">iterable =</span> tokens<span class="op">$</span>reuters_test, 
-                             <span class="dt">ids =</span> labeled_documents<span class="op">$</span>reuters_test<span class="op">$</span>doc_id,
-                             <span class="dt">progressbar =</span> <span class="ot">FALSE</span>)
-
-doc_term_test =<span class="st"> </span><span class="kw">create_dtm</span>(iter_test, vectorizer)</code></pre>
-<div id="class-probabilities" class="section level2">
-<h2>Class Probabilities</h2>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># obtain probability of document containing &quot;earn&quot;</span>
-probs =<span class="st"> </span><span class="kw">predict</span>(glmnet_classifier, doc_term_test, <span class="dt">type =</span> <span class="st">&#39;response&#39;</span>)[, <span class="dv">1</span>]
-
-test_auc =<span class="st"> </span>glmnet<span class="op">:::</span><span class="kw">auc</span>(<span class="dt">y =</span> labeled_documents<span class="op">$</span>reuters_test<span class="op">$</span>earn_ind <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">as.integer</span>(),
-                         <span class="dt">prob =</span> probs)
-
-<span class="kw">paste</span>(<span class="st">&quot;AUROC for testing set:&quot;</span>, <span class="kw">round</span>(test_auc, <span class="dv">4</span>))</code></pre>
-<pre><code>## [1] &quot;AUROC for testing set: 0.9941&quot;</code></pre>
-</div>
-<div id="class-labels" class="section level2">
-<h2>Class Labels</h2>
-<p>Alternatively, we can predict the class labels directly. Class labels are determined based on the class with the highest predicted probability.</p>
-<pre class="sourceCode r"><code class="sourceCode r">class_labels =<span class="st"> </span><span class="kw">predict</span>(glmnet_classifier, doc_term_test, <span class="dt">type =</span> <span class="st">&#39;class&#39;</span>) <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">as.factor</span>()
-
-caret<span class="op">::</span><span class="kw">confusionMatrix</span>(<span class="dt">data =</span> class_labels,
-                       <span class="dt">reference =</span> <span class="kw">as.factor</span>(labeled_documents<span class="op">$</span>reuters_test<span class="op">$</span>earn_ind),
-                       <span class="dt">positive =</span> <span class="st">&quot;1&quot;</span>,
-                       <span class="dt">mode =</span> <span class="st">&quot;prec_recall&quot;</span>)</code></pre>
-<pre><code>## Confusion Matrix and Statistics
-## 
-##           Reference
-## Prediction    0    1
-##          0 1942   78
-##          1   23  966
-##                                           
-##                Accuracy : 0.9664          
-##                  95% CI : (0.9594, 0.9726)
-##     No Information Rate : 0.653           
-##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
-##                                           
-##                   Kappa : 0.925           
-##  Mcnemar&#39;s Test P-Value : 7.735e-08       
-##                                           
-##               Precision : 0.9767          
-##                  Recall : 0.9253          
-##                      F1 : 0.9503          
-##              Prevalence : 0.3470          
-##          Detection Rate : 0.3210          
-##    Detection Prevalence : 0.3287          
-##       Balanced Accuracy : 0.9568          
-##                                           
-##        &#39;Positive&#39; Class : 1               
-## </code></pre>
-</div>
-</div>
-<div id="replicate-model-using-pruned-vocabulary" class="section level1">
-<h1>Replicate Model Using Pruned Vocabulary</h1>
-<p>Pruning the vocabulary reduces the size of the vocabulary, leading to faster performance in training and scoring.</p>
-<p>The following function replicate the modeling process that was previously described. The basic procedure is to create document-term matrices from feature vector spaces, train the classifier, and measure the AUROC.</p>
-<pre class="sourceCode r"><code class="sourceCode r">replicate_model =<span class="st"> </span><span class="cf">function</span>(vectorizer) {
   
-  doc_term_train  =<span class="st"> </span><span class="kw">create_dtm</span>(iter_train, vectorizer)
-  doc_term_test   =<span class="st"> </span><span class="kw">create_dtm</span>(iter_test, vectorizer)
+  <span class="co">########################################</span>
+  <span class="co"># Create vocabulary from training data #</span>
+  <span class="co">########################################</span>
   
-  train_labels =<span class="st"> </span>labeled_documents<span class="op">$</span>reuters_train <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">pull</span>(earn_ind)
-  test_labels =<span class="st"> </span>labeled_documents<span class="op">$</span>reuters_test <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">pull</span>(earn_ind)
+  iter_train &lt;-<span class="st"> </span>text2vec<span class="op">::</span><span class="kw">itoken</span>(<span class="dt">iterable =</span> tokens<span class="op">$</span>train, 
+                                 <span class="dt">ids =</span> model_dfs<span class="op">$</span>train<span class="op">$</span>doc_id,
+                                 <span class="dt">progressbar =</span> <span class="ot">FALSE</span>)
   
-  n_folds =<span class="st"> </span><span class="dv">4</span>
+  iter_test &lt;-<span class="st"> </span>text2vec<span class="op">::</span><span class="kw">itoken</span>(<span class="dt">iterable =</span> tokens<span class="op">$</span>test, 
+                                <span class="dt">ids =</span> model_dfs<span class="op">$</span>test<span class="op">$</span>doc_id,
+                                <span class="dt">progressbar =</span> <span class="ot">FALSE</span>)
+  
+  vocab &lt;-<span class="st"> </span>text2vec<span class="op">::</span><span class="kw">create_vocabulary</span>(iter_train)
+  
+  vectorizer &lt;-<span class="st"> </span>text2vec<span class="op">::</span><span class="kw">vocab_vectorizer</span>(vocab)
+  
+  <span class="co">##########################</span>
+  <span class="co"># Document-term matrices #</span>
+  <span class="co">##########################</span>
+  
+  doc_term_train =<span class="st"> </span>text2vec<span class="op">::</span><span class="kw">create_dtm</span>(iter_train, vectorizer)
+  doc_term_test =<span class="st"> </span><span class="kw">create_dtm</span>(iter_test, vectorizer)
+  
+  <span class="co">##########</span>
+  <span class="co"># TF-IDF #</span>
+  <span class="co">##########</span>
+  
+  tf_idf =<span class="st"> </span>TfIdf<span class="op">$</span><span class="kw">new</span>()
+  
+  <span class="co"># fit tf-idf to training data</span>
+  doc_term_train_tfidf =<span class="st"> </span><span class="kw">fit_transform</span>(doc_term_train, tf_idf)
+  
+  <span class="co"># apply pre-trained tf-idf transformation to testing data</span>
+  doc_term_test_tfidf  =<span class="st"> </span><span class="kw">transform</span>(doc_term_test, tf_idf)
+  
+  <span class="co">####################</span>
+  <span class="co"># Train classifier #</span>
+  <span class="co">####################</span>
   
   glmnet_classifier =<span class="st"> </span><span class="kw">cv.glmnet</span>(
-    <span class="dt">x =</span> doc_term_train, 
-    <span class="dt">y =</span> train_labels,
+    <span class="dt">x =</span> doc_term_train_tfidf, 
+    <span class="dt">y =</span> model_dfs<span class="op">$</span>train<span class="op">$</span>Label,
     <span class="dt">family =</span> <span class="st">&#39;binomial&#39;</span>, 
     <span class="dt">alpha =</span> <span class="dv">1</span>,
     <span class="dt">type.measure =</span> <span class="st">&quot;auc&quot;</span>,
-    <span class="dt">nfolds =</span> n_folds,
+    <span class="dt">nfolds =</span> <span class="dv">5</span>,
     <span class="dt">thresh =</span> <span class="fl">1e-3</span>,
-    <span class="dt">maxit =</span> <span class="fl">1e3</span>
+    <span class="dt">maxit =</span> <span class="fl">1e3</span>)
+  
+  probs =<span class="st"> </span><span class="kw">predict</span>(glmnet_classifier, doc_term_test_tfidf, <span class="dt">type =</span> <span class="st">&#39;response&#39;</span>)[, <span class="dv">1</span>]
+  
+  <span class="co">###########################</span>
+  <span class="co"># Measure AUC on test set #</span>
+  <span class="co">###########################</span>
+  
+  test_auc =<span class="st"> </span>glmnet<span class="op">:::</span><span class="kw">auc</span>(
+    <span class="dt">y =</span> model_dfs<span class="op">$</span>test<span class="op">$</span>Label <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">as.integer</span>(),
+    <span class="dt">prob =</span> probs
   )
   
-  probs =<span class="st"> </span><span class="kw">predict</span>(glmnet_classifier, doc_term_test, <span class="dt">type =</span> <span class="st">&#39;response&#39;</span>)[, <span class="dv">1</span>]
-  class_labels =<span class="st"> </span><span class="kw">predict</span>(glmnet_classifier, doc_term_test, <span class="dt">type =</span> <span class="st">&#39;class&#39;</span>)
+  <span class="kw">return</span>(test_auc)
   
-  auc =<span class="st"> </span>glmnet<span class="op">:::</span><span class="kw">auc</span>(<span class="dt">y =</span> test_labels <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">as.integer</span>(),
-                      <span class="dt">prob =</span> probs) 
-  
-  <span class="kw">list</span>(<span class="dt">auc =</span> auc,
-       <span class="dt">predicted_probs =</span> probs,
-       <span class="dt">predicted_labels =</span> class_labels,
-       <span class="dt">true_labels =</span> test_labels) <span class="op">%&gt;%</span>
-<span class="st">    </span><span class="kw">return</span>()
 }</code></pre>
-<p>Here we create the vocabulary from the training data, prune, and vectorize the documents.</p>
-<pre class="sourceCode r"><code class="sourceCode r">vocab =<span class="st"> </span>text2vec<span class="op">::</span><span class="kw">create_vocabulary</span>(iter_train)
-
-pruned_vocab =<span class="st"> </span>text2vec<span class="op">::</span><span class="kw">prune_vocabulary</span>(vocab, 
-                                           <span class="dt">term_count_min =</span> <span class="dv">50</span>, 
-                                           <span class="dt">doc_proportion_max =</span> <span class="fl">0.5</span>,
-                                           <span class="dt">doc_proportion_min =</span> <span class="fl">0.001</span>)
-
-pruned_vectorizer =<span class="st"> </span><span class="kw">vocab_vectorizer</span>(pruned_vocab)</code></pre>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">replicate_model</span>(pruned_vectorizer)<span class="op">$</span>auc</code></pre>
-<pre><code>## [1] 0.9948822</code></pre>
 </div>
-<div id="n-grams" class="section level1">
-<h1>N-grams</h1>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># bi-grams</span>
-bigrams =<span class="st"> </span><span class="kw">create_vocabulary</span>(iter_train, <span class="dt">ngram =</span> <span class="kw">c</span>(1L, 2L))
-bigram_vectorizer =<span class="st"> </span><span class="kw">vocab_vectorizer</span>(bigrams)
+<div id="implement-cross-validation" class="section level2">
+<h2>Implement cross validation</h2>
+<p>Using <code>purrr::map()</code>, run the model function within each cross validation fold.</p>
+<pre class="sourceCode r"><code class="sourceCode r">n_folds &lt;-<span class="st"> </span><span class="dv">5</span>
+n_repeats &lt;-<span class="st"> </span><span class="dv">3</span>
 
-<span class="kw">replicate_model</span>(bigram_vectorizer)<span class="op">$</span>auc</code></pre>
-<pre><code>## [1] 0.9951059</code></pre>
+cv_splits &lt;-<span class="st"> </span>rsample<span class="op">::</span><span class="kw">vfold_cv</span>(text_df, 
+                               <span class="dt">v =</span> n_folds, 
+                               <span class="dt">repeats =</span> n_repeats, 
+                               <span class="dt">strata =</span> <span class="st">&#39;Label&#39;</span>)
+
+cv_models &lt;-<span class="st"> </span><span class="kw">map_dbl</span>(cv_splits<span class="op">$</span>splits, <span class="cf">function</span>(cv) {
+  train &lt;-<span class="st"> </span>rsample<span class="op">::</span><span class="kw">training</span>(cv)
+  test &lt;-<span class="st"> </span>rsample<span class="op">::</span><span class="kw">testing</span>(cv)
+  <span class="kw">model_function</span>(<span class="dt">train =</span> train, <span class="dt">test =</span> test)
+})</code></pre>
 </div>
-<div id="feature-hashing" class="section level1">
-<h1>Feature Hashing</h1>
-<pre class="sourceCode r"><code class="sourceCode r">hash_vectorizer =<span class="st"> </span><span class="kw">hash_vectorizer</span>(<span class="dt">hash_size =</span> <span class="dv">2</span> <span class="op">^</span><span class="st"> </span><span class="dv">14</span>, <span class="dt">ngram =</span> <span class="kw">c</span>(1L, 2L))
-
-<span class="kw">replicate_model</span>(hash_vectorizer)<span class="op">$</span>auc</code></pre>
-<pre><code>## [1] 0.9960145</code></pre>
-</div>
-<div id="tf-idf" class="section level1">
-<h1>TF-IDF</h1>
-<p>Term frequency - inverse document frequency (TF-IDF) is a measure used to identify terms that make each document unique. This degree of uniqueness for a word in a document is used as a weight to normalize the documents. Common terms are given less weight, and rare terms are given more weight.</p>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># create vocabulary from training data</span>
-vocab =<span class="st"> </span><span class="kw">create_vocabulary</span>(iter_train)
-
-<span class="co"># vectorize documents and create DTM from training data</span>
-vectorizer =<span class="st"> </span><span class="kw">vocab_vectorizer</span>(vocab)
-doc_term_train =<span class="st"> </span><span class="kw">create_dtm</span>(iter_train, vectorizer)
-
-<span class="co"># define tf-idf model</span>
-tf_idf =<span class="st"> </span>TfIdf<span class="op">$</span><span class="kw">new</span>()
-
-<span class="co"># fit tf-idf to training data</span>
-doc_term_train_tfidf =<span class="st"> </span><span class="kw">fit_transform</span>(doc_term_train, tf_idf)
-
-<span class="co"># apply pre-trained tf-idf transformation to testing data</span>
-doc_term_test_tfidf  =<span class="st"> </span><span class="kw">create_dtm</span>(iter_test, vectorizer) <span class="op">%&gt;%</span><span class="st"> </span>
-<span class="st">  </span><span class="kw">transform</span>(tf_idf)
-
-<span class="co"># build classifier using tf-idf normalized documents as features</span>
-glmnet_classifier =<span class="st"> </span><span class="kw">cv.glmnet</span>(
-  <span class="dt">x =</span> doc_term_train_tfidf, 
-  <span class="dt">y =</span> labeled_documents<span class="op">$</span>reuters_train <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">pull</span>(earn_ind),
-  <span class="dt">family =</span> <span class="st">&#39;binomial&#39;</span>, 
-  <span class="dt">alpha =</span> <span class="dv">1</span>,
-  <span class="dt">type.measure =</span> <span class="st">&quot;auc&quot;</span>,
-  <span class="dt">nfolds =</span> n_folds,
-  <span class="dt">thresh =</span> <span class="fl">1e-3</span>,
-  <span class="dt">maxit =</span> <span class="fl">1e3</span>)
-
-<span class="co"># AUROC from training </span>
-<span class="kw">paste</span>(<span class="st">&quot;Maximum AUROC from training:&quot;</span>, 
-      <span class="kw">max</span>(glmnet_classifier<span class="op">$</span>cvm) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">round</span>(., <span class="dv">4</span>))</code></pre>
-<pre><code>## [1] &quot;Maximum AUROC from training: 0.9941&quot;</code></pre>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># class probabilities for documents in testing set</span>
-probs =<span class="st"> </span><span class="kw">predict</span>(glmnet_classifier, doc_term_test_tfidf, <span class="dt">type =</span> <span class="st">&#39;response&#39;</span>)[,<span class="dv">1</span>]
-
-<span class="co"># AUROc from testing </span>
-labeled_documents<span class="op">$</span>reuters_test<span class="op">$</span>earn_ind <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">as.integer</span>() <span class="op">%&gt;%</span>
-<span class="st">  </span>glmnet<span class="op">::</span><span class="kw">auc</span>(., <span class="dt">prob =</span> probs)</code></pre>
-<pre><code>## [1] 0.9971713</code></pre>
-</div>
-<div id="xgboost" class="section level1">
-<h1>XGBoost</h1>
-<p>The XGBoost algorithm is a tree-based method used for classification. An ensemble technique, it combines the output from several independent decision trees and creates an aggregate score (or label). Each tree is designed to learn from the errors produced by the previous tree and grow smarter.</p>
-<pre class="sourceCode r"><code class="sourceCode r">xgb =<span class="st"> </span>xgboost<span class="op">::</span><span class="kw">xgboost</span>(
-  <span class="dt">data =</span> doc_term_train_tfidf, 
-  <span class="dt">label =</span> labeled_documents<span class="op">$</span>reuters_train[[<span class="st">&#39;earn_ind&#39;</span>]], 
-  <span class="dt">nrounds =</span> <span class="dv">100</span>,
-  <span class="dt">objective =</span> <span class="st">&quot;binary:logistic&quot;</span>)</code></pre>
-<pre><code>## [1]  train-error:0.031386 
-## [2]  train-error:0.027848 
-## [3]  train-error:0.024652 
-## [4]  train-error:0.023967 
-## [5]  train-error:0.018375 
-## [6]  train-error:0.016891 
-## [7]  train-error:0.015636 
-## [8]  train-error:0.014152 
-## [9]  train-error:0.013125 
-## [10] train-error:0.012782 
-## [11] train-error:0.012098 
-## [12] train-error:0.010728 
-## [13] train-error:0.010386 
-## [14] train-error:0.010386 
-## [15] train-error:0.009587 
-## [16] train-error:0.009244 
-## [17] train-error:0.007875 
-## [18] train-error:0.007190 
-## [19] train-error:0.007190 
-## [20] train-error:0.006505 
-## [21] train-error:0.006505 
-## [22] train-error:0.005592 
-## [23] train-error:0.005592 
-## [24] train-error:0.005136 
-## [25] train-error:0.004908 
-## [26] train-error:0.004565 
-## [27] train-error:0.003880 
-## [28] train-error:0.003766 
-## [29] train-error:0.003538 
-## [30] train-error:0.003424 
-## [31] train-error:0.003310 
-## [32] train-error:0.003081 
-## [33] train-error:0.002853 
-## [34] train-error:0.002967 
-## [35] train-error:0.002967 
-## [36] train-error:0.002739 
-## [37] train-error:0.002625 
-## [38] train-error:0.002511 
-## [39] train-error:0.002168 
-## [40] train-error:0.001940 
-## [41] train-error:0.002168 
-## [42] train-error:0.002054 
-## [43] train-error:0.002054 
-## [44] train-error:0.001712 
-## [45] train-error:0.001598 
-## [46] train-error:0.001484 
-## [47] train-error:0.001484 
-## [48] train-error:0.001370 
-## [49] train-error:0.001370 
-## [50] train-error:0.001141 
-## [51] train-error:0.001027 
-## [52] train-error:0.001027 
-## [53] train-error:0.000913 
-## [54] train-error:0.000913 
-## [55] train-error:0.000913 
-## [56] train-error:0.000799 
-## [57] train-error:0.000799 
-## [58] train-error:0.000685 
-## [59] train-error:0.000571 
-## [60] train-error:0.000685 
-## [61] train-error:0.000799 
-## [62] train-error:0.000571 
-## [63] train-error:0.000457 
-## [64] train-error:0.000457 
-## [65] train-error:0.000342 
-## [66] train-error:0.000342 
-## [67] train-error:0.000228 
-## [68] train-error:0.000228 
-## [69] train-error:0.000228 
-## [70] train-error:0.000342 
-## [71] train-error:0.000228 
-## [72] train-error:0.000228 
-## [73] train-error:0.000228 
-## [74] train-error:0.000228 
-## [75] train-error:0.000228 
-## [76] train-error:0.000228 
-## [77] train-error:0.000228 
-## [78] train-error:0.000228 
-## [79] train-error:0.000228 
-## [80] train-error:0.000228 
-## [81] train-error:0.000228 
-## [82] train-error:0.000228 
-## [83] train-error:0.000228 
-## [84] train-error:0.000228 
-## [85] train-error:0.000228 
-## [86] train-error:0.000228 
-## [87] train-error:0.000228 
-## [88] train-error:0.000228 
-## [89] train-error:0.000228 
-## [90] train-error:0.000228 
-## [91] train-error:0.000228 
-## [92] train-error:0.000228 
-## [93] train-error:0.000228 
-## [94] train-error:0.000228 
-## [95] train-error:0.000228 
-## [96] train-error:0.000228 
-## [97] train-error:0.000228 
-## [98] train-error:0.000228 
-## [99] train-error:0.000228 
-## [100]    train-error:0.000228</code></pre>
-<pre class="sourceCode r"><code class="sourceCode r">xgb<span class="op">$</span>evaluation_log <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">as_tibble</span>() <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> iter, <span class="dt">y =</span> train_error)) <span class="op">+</span>
-<span class="st">  </span><span class="kw">geom_line</span>() <span class="op">+</span>
-<span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;XGBoost Training Error&quot;</span>)</code></pre>
-<p><img src="/post/2019-02-17-text-classification-using-text2vec_files/figure-html/unnamed-chunk-25-1.png" width="672" /></p>
-<pre class="sourceCode r"><code class="sourceCode r">xgb_probs =<span class="st"> </span><span class="kw">predict</span>(xgb, doc_term_test_tfidf, <span class="dt">type =</span> <span class="st">&#39;response&#39;</span>)
-
-labeled_documents<span class="op">$</span>reuters_test<span class="op">$</span>earn_ind <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">as.integer</span>() <span class="op">%&gt;%</span>
-<span class="st">  </span>glmnet<span class="op">::</span><span class="kw">auc</span>(., <span class="dt">prob =</span> xgb_probs)</code></pre>
-<pre><code>## [1] 0.9988267</code></pre>
+<div id="evaluate-cv-results" class="section level2">
+<h2>Evaluate CV results</h2>
+<p>Evaluate performance of the classifier by looking at the distribution of AUC across all cross validation folds.</p>
+<pre class="sourceCode r"><code class="sourceCode r">cv_models <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">enframe</span>() <span class="op">%&gt;%</span>
+<span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> value)) <span class="op">+</span>
+<span class="st">  </span><span class="kw">geom_density</span>() <span class="op">+</span>
+<span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Distribution of AUC across all cross validation folds&quot;</span>,
+       <span class="dt">subtitle =</span> <span class="kw">paste</span>(<span class="st">&quot;N models = &quot;</span>, <span class="kw">length</span>(cv_splits<span class="op">$</span>splits)),
+       <span class="dt">x =</span> <span class="st">&quot;AUC&quot;</span>) <span class="op">+</span>
+<span class="st">  </span><span class="kw">scale_x_continuous</span>(<span class="dt">breaks =</span> scales<span class="op">::</span><span class="kw">pretty_breaks</span>(<span class="dt">n=</span><span class="dv">10</span>)) <span class="op">+</span>
+<span class="st">  </span><span class="kw">theme_bw</span>()</code></pre>
+<p><img src="/post/2019-02-17-text-classification-using-text2vec_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
 </div>

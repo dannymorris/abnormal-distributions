@@ -1,0 +1,156 @@
+---
+title: Evaluating forecasting models using rolling origin cross validation
+author: Danny Morris
+date: '`r Sys.Date()`'
+output: 
+  blogdown::html_page:
+    toc: true
+    highlight: pygments
+slug: forecast-evaluation-on-a-rolling-origin
+categories:
+  - R
+  - Forecasting
+  - Time Series
+tags:
+  - R
+  - Time Series
+  - Forecasting
+editor_options: 
+  chunk_output_type: console
+---
+
+## Overview
+
+This post shows how to implement rolling origin cross validation (ROCV) to evaluate time series forecasting models. ROCV starts by training a model using a specified amount of training data (e.g. 80%) and a specified forecast horizon (e.g. 3 observations in the future). Error metrics are computed on the forecasts. For each training iteration that follows, the training data increases by a single observation and the forecast origin shifts forward by a single observation. Error metrics on the forecasts are stored for each training iteration for further analysis. This strategy repeats until all available data is exhausted.
+
+Reference: https://otexts.com/fpp2/accuracy.html
+
+```{r, include=F}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
+## Packages
+
+```{r}
+library(tidyverse)
+library(forecast)
+library(lubridate)
+library(blscrapeR)
+library(plotly)
+```
+
+## Data
+
+```{r}
+unemp <- blscrapeR::bls_api(
+  "LNS14000000",
+  startyear = 2015,
+  endyear = 2019
+) %>%
+  dateCast() %>%
+  arrange(date) %>%
+  mutate(Unemp_Change = value - lag(value)) %>%
+  select(date, Unemp_Change) %>%
+  drop_na()
+
+y <- ts(unemp$Unemp_Change, start = 2015, frequency = 12)
+
+ggplotly(
+  autoplot(y, main = "Monthly changes in unemployment, 2015-2019") +
+    theme_bw()
+) 
+```
+
+## Define forecast origins and forecast horizon
+
+```{r}
+get_origins <- function(y, first_origin, shift_by, fcast_horizon) {
+  origins <- seq(
+    from = floor(length(y)*0.8), 
+    to = length(y) - (fcast_horizon + 1), 
+    by = shift_by
+  )
+  
+  list(origins = origins,
+       horizon = fcast_horizon) %>%
+    return()
+}
+
+origins <- get_origins(
+  y = y,
+  first_origin = floor(length(y)*0.8),
+  shift_by = 1,
+  fcast_horizon = 3
+)
+```
+
+## Training
+
+```{r}
+cv_models <- map2(origins$origins, origins$horizon, function(i, h) {
+  
+  # training/testing ts objects
+  train_ts <- subset(y, start = 1, end = i)
+  test_ts <- subset(y, start = i+1, end = i+h)
+  
+  # ARIMA
+  arima_fit <- auto.arima(train_ts)
+  arima_fcast <- forecast(arima_fit, h = length(test_ts))
+  arima_metrics <- forecast::accuracy(arima_fcast, test_ts)
+  
+  # ETS
+  ets_fit <- ets(train_ts)
+  ets_fcast <- forecast(ets_fit, h = length(test_ts))
+  ets_metrics <- forecast::accuracy(ets_fcast, test_ts)
+  
+  # STL
+  stl_fit <- stl(train_ts, t.window=13, s.window="periodic",
+                 robust=TRUE)
+  stl_fcast <- forecast(stl_fit, h = length(test_ts))
+  stl_metrics <- forecast::accuracy(stl_fcast, test_ts)
+  
+  # TSLM
+  tslm_fit <- tslm(train_ts ~ trend + season)
+  tslm_fcast <- forecast(tslm_fit, h = length(test_ts))
+  tslm_metrics <- forecast::accuracy(tslm_fcast, test_ts)
+  
+  # Metrics table
+  model_metrics <- list(arima = arima_metrics,
+                        ets = ets_metrics,
+                        stl = stl_metrics,
+                        tslm = tslm_metrics) %>%
+    map2(., names(.), function(model, nm) {
+      model %>%
+        as_tibble() %>%
+        select(RMSE) %>%
+        mutate(Model = nm,
+               Split = c("Training", "Testing"),
+               length_train = length(train_ts),
+               length_test = length(test_ts))
+    }) %>%
+    bind_rows()
+  
+  return(model_metrics)
+}) %>%
+  bind_rows()
+```
+
+## Results
+
+```{r}
+cv_results <- cv_models %>%
+  gather(key, value, -Model, -Split, -length_train, -length_test) %>%
+  ggplot(aes(x = length_train, y = value)) +
+  facet_grid(key~Split, scales = "free_y") +
+  geom_line(aes(color = Model, group = Model)) +
+  labs(title = "Rolling origin cross validation RMSE",
+       x = "Origin",
+       y = "") +
+  theme_bw()
+
+ggplotly(cv_results)
+```
+
+## Observations
+
+Rolling origin cross validation gives some good insight into the behaviors of various models in the context of the chosen time series data. In this example, the Arima model performs quite well on the training data but does not generalize well to unseen testing data. The ETS model appears to generalize well to unseen testing data despite having consistently higher RMSE on the training data.

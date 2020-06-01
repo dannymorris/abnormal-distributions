@@ -1,5 +1,5 @@
 ---
-title: Deploying a Shiny App with Shiny Server on an AWS EC2 Instance
+title: Deploying a Shiny app using Shiny Server on an AWS EC2 instance
 author: Danny Morris
 date: '2019-07-06'
 output: 
@@ -167,4 +167,4 @@ sudo /opt/shiny-server/bin/deploy-example default
 sudo cp -r /home/rstudio/ShinyApps/sample-apps/basic-app/ /srv/shiny-server/sample-apps/
 ```
 
-4. Open the app at http://ec2-18-224-95-116.us-east-2.compute.amazonaws.com:3838/sample-apps/basic-app/
+4. Open the app at http://ec2-<ip-address>.us-east-2.compute.amazonaws.com:3838/sample-apps/basic-app/
