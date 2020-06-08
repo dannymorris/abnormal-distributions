@@ -1,5 +1,5 @@
 ---
-title: Training an imbalanced classification model using data-centric ensembling
+title: A strategy for rare class learning using data-centric ensembling
 author: Danny Morris
 date: "`r Sys.Date()`"
 output: 
