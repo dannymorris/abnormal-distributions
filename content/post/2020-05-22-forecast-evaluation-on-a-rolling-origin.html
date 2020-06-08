@@ -1,7 +1,7 @@
 ---
-title: Evaluating forecasting models using rolling origin cross validation
+title: Evaluating forecasting models using rolling origin cross validation and the tidyverts framework
 author: Danny Morris
-date: '2020-05-31'
+date: '2020-06-07'
 output: 
   blogdown::html_page:
     toc: true
@@ -19,14 +19,6 @@ editor_options:
   chunk_output_type: console
 ---
 
-<script src="/rmarkdown-libs/htmlwidgets/htmlwidgets.js"></script>
-<script src="/rmarkdown-libs/plotly-binding/plotly.js"></script>
-<script src="/rmarkdown-libs/typedarray/typedarray.min.js"></script>
-<script src="/rmarkdown-libs/jquery/jquery.min.js"></script>
-<link href="/rmarkdown-libs/crosstalk/css/crosstalk.css" rel="stylesheet" />
-<script src="/rmarkdown-libs/crosstalk/js/crosstalk.min.js"></script>
-<link href="/rmarkdown-libs/plotly-htmlwidgets-css/plotly-htmlwidgets.css" rel="stylesheet" />
-<script src="/rmarkdown-libs/plotly-main/plotly-latest.min.js"></script>
 <style type="text/css">
 a.sourceLine { display: inline-block; line-height: 1.25; }
 a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
@@ -96,8 +88,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li><a href="#overview">Overview</a></li>
 <li><a href="#packages">Packages</a></li>
 <li><a href="#data">Data</a></li>
-<li><a href="#define-forecast-origins-and-forecast-horizon">Define forecast origins and forecast horizon</a></li>
-<li><a href="#training">Training</a></li>
+<li><a href="#initial-training-and-testing-splits">Initial training and testing splits</a></li>
+<li><a href="#objective">Objective</a></li>
+<li><a href="#rocv-function">ROCV function</a></li>
+<li><a href="#run-rocv">Run ROCV</a></li>
 <li><a href="#results">Results</a></li>
 <li><a href="#observations">Observations</a></li>
 </ul>
@@ -105,126 +99,169 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 <div id="overview" class="section level2">
 <h2>Overview</h2>
-<p>This post shows how to implement rolling origin cross validation (ROCV) to evaluate time series forecasting models. ROCV starts by training a model using a specified amount of training data (e.g. 80%) and a specified forecast horizon (e.g. 3 observations in the future). Error metrics are computed on the forecasts. For each training iteration that follows, the training data increases by a single observation and the forecast origin shifts forward by a single observation. Error metrics on the forecasts are stored for each training iteration for further analysis. This strategy repeats until all available data is exhausted.</p>
-<p>Reference: <a href="https://otexts.com/fpp2/accuracy.html" class="uri">https://otexts.com/fpp2/accuracy.html</a></p>
+<p>This post shows how to implement rolling origin cross validation (ROCV) to evaluate time series forecasting models. This idea is discussed in <a href="https://otexts.com/fpp2/accuracy.html">Forecasting: Principles and Practice</a>. ROCV starts by training a model using an initial training split (e.g. 80% of available data). The remainder is the initial testing split. A forecast horizon is chosen by the user. In the first ROCV iteration, model training is performed on the initial training split and accuracy metrics are computed on the forecast horizon. For each subsequent ROCV iteration, the training data increases by a chosen length (e.g. 1 additional observation), and the testing set shifts forward by the same length. Accuracy metrics on the forecasts are stored for each ROCV iteration for further analysis. This strategy repeats until all available data is exhausted.</p>
+<p>This strategy is applicable to any forecasting model. Examples include demand forecasting, workforce planning, sales, etc. It allows for very flexible and robust training and evaluation. Both are essential to producing a valid, high quality predictive model.</p>
 </div>
 <div id="packages" class="section level2">
 <h2>Packages</h2>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(tidyverse)
-<span class="kw">library</span>(forecast)
-<span class="kw">library</span>(lubridate)
-<span class="kw">library</span>(blscrapeR)
-<span class="kw">library</span>(plotly)</code></pre>
+<p>The <a href="https://tidyverts.org/">tidyverts</a> framework is used. This framework offers an API for forecasting using tidy programming concepts. This framework is the next generation of the excellent <a href="https://otexts.com/fpp2/the-forecast-package-in-r.html">forecast</a> package written by Rob Hyndman. Many of the classic forecasting algorithms are implemented in the <a href="http://fable.tidyverts.org/">fable</a> package, such as Arima, Exponential Smoothing, Regression, and Fourier series. Single-layer, autoregressive neural networks are currently available as well. These algorithms work well across a range of forecasting problems, and they have the nice feature of being highly explainable.</p>
+<p>At the time of this writing, the <code>tidyverts</code> framework is powerful but not very mature. I experienced installation issues on a Windows machine due to the complexity of the package dependencies. Still, the framework is worth learning and has a lot of potential.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" title="1"><span class="co"># tidyverse</span></a>
+<a class="sourceLine" id="cb1-2" title="2"><span class="kw">library</span>(tidyverse)</a>
+<a class="sourceLine" id="cb1-3" title="3"></a>
+<a class="sourceLine" id="cb1-4" title="4"><span class="co"># tidyverts</span></a>
+<a class="sourceLine" id="cb1-5" title="5"><span class="kw">library</span>(tsibble)</a>
+<a class="sourceLine" id="cb1-6" title="6"><span class="kw">library</span>(tsibbledata)</a>
+<a class="sourceLine" id="cb1-7" title="7"><span class="kw">library</span>(fable)</a>
+<a class="sourceLine" id="cb1-8" title="8"><span class="kw">library</span>(fabletools)</a>
+<a class="sourceLine" id="cb1-9" title="9"><span class="kw">library</span>(feasts)</a>
+<a class="sourceLine" id="cb1-10" title="10"></a>
+<a class="sourceLine" id="cb1-11" title="11"><span class="co"># misc</span></a>
+<a class="sourceLine" id="cb1-12" title="12"><span class="kw">library</span>(urca)</a>
+<a class="sourceLine" id="cb1-13" title="13"><span class="kw">library</span>(plotly)</a></code></pre></div>
 </div>
 <div id="data" class="section level2">
 <h2>Data</h2>
-<pre class="sourceCode r"><code class="sourceCode r">unemp &lt;-<span class="st"> </span>blscrapeR<span class="op">::</span><span class="kw">bls_api</span>(
-  <span class="st">&quot;LNS14000000&quot;</span>,
-  <span class="dt">startyear =</span> <span class="dv">2015</span>,
-  <span class="dt">endyear =</span> <span class="dv">2019</span>
-) <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">dateCast</span>() <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">arrange</span>(date) <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Unemp_Change =</span> value <span class="op">-</span><span class="st"> </span><span class="kw">lag</span>(value)) <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">select</span>(date, Unemp_Change) <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">drop_na</span>()
-
-y &lt;-<span class="st"> </span><span class="kw">ts</span>(unemp<span class="op">$</span>Unemp_Change, <span class="dt">start =</span> <span class="dv">2015</span>, <span class="dt">frequency =</span> <span class="dv">12</span>)
-
-<span class="kw">ggplotly</span>(
-  <span class="kw">autoplot</span>(y, <span class="dt">main =</span> <span class="st">&quot;Monthly changes in unemployment, 2015-2019&quot;</span>) <span class="op">+</span>
-<span class="st">    </span><span class="kw">theme_bw</span>()
-) </code></pre>
-<div id="htmlwidget-1" style="width:672px;height:480px;" class="plotly html-widget"></div>
-<script type="application/json" data-for="htmlwidget-1">{"x":{"data":[{"x":[2015,2015.08333333333,2015.16666666667,2015.25,2015.33333333333,2015.41666666667,2015.5,2015.58333333333,2015.66666666667,2015.75,2015.83333333333,2015.91666666667,2016,2016.08333333333,2016.16666666667,2016.25,2016.33333333333,2016.41666666667,2016.5,2016.58333333333,2016.66666666667,2016.75,2016.83333333333,2016.91666666667,2017,2017.08333333333,2017.16666666667,2017.25,2017.33333333333,2017.41666666667,2017.5,2017.58333333333,2017.66666666667,2017.75,2017.83333333333,2017.91666666667,2018,2018.08333333333,2018.16666666667,2018.25,2018.33333333333,2018.41666666667,2018.5,2018.58333333333,2018.66666666667,2018.75,2018.83333333333,2018.91666666667,2019,2019.08333333333,2019.16666666667,2019.25,2019.33333333333,2019.41666666667,2019.5,2019.58333333333,2019.66666666667,2019.75,2019.83333333333],"y":[-0.2,-0.0999999999999996,0,0.199999999999999,-0.3,-0.0999999999999996,-0.100000000000001,-0.0999999999999996,0,0.0999999999999996,-0.0999999999999996,-0.0999999999999996,0,0.0999999999999996,0,-0.2,0.100000000000001,-0.100000000000001,0.100000000000001,0.0999999999999996,-0.0999999999999996,-0.2,0,0,-0.100000000000001,-0.199999999999999,0,0,-0.100000000000001,0,0.100000000000001,-0.2,-0.100000000000001,0.100000000000001,-0.100000000000001,0,0,-0.0999999999999996,0,-0.2,0.2,-0.2,0,-0.0999999999999996,0.0999999999999996,-0.0999999999999996,0.2,0.1,-0.2,0,-0.2,0,0.1,0,0,-0.2,0.1,-0.1,0],"text":["x: 2015.000<br />y: -0.2","x: 2015.083<br />y: -0.1","x: 2015.167<br />y:  0.0","x: 2015.250<br />y:  0.2","x: 2015.333<br />y: -0.3","x: 2015.417<br />y: -0.1","x: 2015.500<br />y: -0.1","x: 2015.583<br />y: -0.1","x: 2015.667<br />y:  0.0","x: 2015.750<br />y:  0.1","x: 2015.833<br />y: -0.1","x: 2015.917<br />y: -0.1","x: 2016.000<br />y:  0.0","x: 2016.083<br />y:  0.1","x: 2016.167<br />y:  0.0","x: 2016.250<br />y: -0.2","x: 2016.333<br />y:  0.1","x: 2016.417<br />y: -0.1","x: 2016.500<br />y:  0.1","x: 2016.583<br />y:  0.1","x: 2016.667<br />y: -0.1","x: 2016.750<br />y: -0.2","x: 2016.833<br />y:  0.0","x: 2016.917<br />y:  0.0","x: 2017.000<br />y: -0.1","x: 2017.083<br />y: -0.2","x: 2017.167<br />y:  0.0","x: 2017.250<br />y:  0.0","x: 2017.333<br />y: -0.1","x: 2017.417<br />y:  0.0","x: 2017.500<br />y:  0.1","x: 2017.583<br />y: -0.2","x: 2017.667<br />y: -0.1","x: 2017.750<br />y:  0.1","x: 2017.833<br />y: -0.1","x: 2017.917<br />y:  0.0","x: 2018.000<br />y:  0.0","x: 2018.083<br />y: -0.1","x: 2018.167<br />y:  0.0","x: 2018.250<br />y: -0.2","x: 2018.333<br />y:  0.2","x: 2018.417<br />y: -0.2","x: 2018.500<br />y:  0.0","x: 2018.583<br />y: -0.1","x: 2018.667<br />y:  0.1","x: 2018.750<br />y: -0.1","x: 2018.833<br />y:  0.2","x: 2018.917<br />y:  0.1","x: 2019.000<br />y: -0.2","x: 2019.083<br />y:  0.0","x: 2019.167<br />y: -0.2","x: 2019.250<br />y:  0.0","x: 2019.333<br />y:  0.1","x: 2019.417<br />y:  0.0","x: 2019.500<br />y:  0.0","x: 2019.583<br />y: -0.2","x: 2019.667<br />y:  0.1","x: 2019.750<br />y: -0.1","x: 2019.833<br />y:  0.0"],"type":"scatter","mode":"lines","line":{"width":1.88976377952756,"color":"rgba(0,0,0,1)","dash":"solid"},"hoveron":"points","showlegend":false,"xaxis":"x","yaxis":"y","hoverinfo":"text","frame":null}],"layout":{"margin":{"t":43.7625570776256,"r":7.30593607305936,"b":40.1826484018265,"l":48.9497716894977},"plot_bgcolor":"rgba(255,255,255,1)","paper_bgcolor":"rgba(255,255,255,1)","font":{"color":"rgba(0,0,0,1)","family":"","size":14.6118721461187},"title":{"text":"Monthly changes in unemployment, 2015-2019","font":{"color":"rgba(0,0,0,1)","family":"","size":17.5342465753425},"x":0,"xref":"paper"},"xaxis":{"domain":[0,1],"automargin":true,"type":"linear","autorange":false,"range":[2014.75833333333,2020.075],"tickmode":"array","ticktext":["2015","2016","2017","2018","2019","2020"],"tickvals":[2015,2016,2017,2018,2019,2020],"categoryorder":"array","categoryarray":["2015","2016","2017","2018","2019","2020"],"nticks":null,"ticks":"outside","tickcolor":"rgba(51,51,51,1)","ticklen":3.65296803652968,"tickwidth":0.66417600664176,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":11.689497716895},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"gridcolor":"rgba(235,235,235,1)","gridwidth":0.66417600664176,"zeroline":false,"anchor":"y","title":{"text":"Time","font":{"color":"rgba(0,0,0,1)","family":"","size":14.6118721461187}},"hoverformat":".2f"},"yaxis":{"domain":[0,1],"automargin":true,"type":"linear","autorange":false,"range":[-0.325,0.225],"tickmode":"array","ticktext":["-0.3","-0.2","-0.1","0.0","0.1","0.2"],"tickvals":[-0.3,-0.2,-0.1,0,0.1,0.2],"categoryorder":"array","categoryarray":["-0.3","-0.2","-0.1","0.0","0.1","0.2"],"nticks":null,"ticks":"outside","tickcolor":"rgba(51,51,51,1)","ticklen":3.65296803652968,"tickwidth":0.66417600664176,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":11.689497716895},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"gridcolor":"rgba(235,235,235,1)","gridwidth":0.66417600664176,"zeroline":false,"anchor":"x","title":{"text":"y","font":{"color":"rgba(0,0,0,1)","family":"","size":14.6118721461187}},"hoverformat":".2f"},"shapes":[{"type":"rect","fillcolor":"transparent","line":{"color":"rgba(51,51,51,1)","width":0.66417600664176,"linetype":"solid"},"yref":"paper","xref":"paper","x0":0,"x1":1,"y0":0,"y1":1}],"showlegend":false,"legend":{"bgcolor":"rgba(255,255,255,1)","bordercolor":"transparent","borderwidth":1.88976377952756,"font":{"color":"rgba(0,0,0,1)","family":"","size":11.689497716895}},"hovermode":"closest","barmode":"relative"},"config":{"doubleClick":"reset","showSendToCloud":false},"source":"A","attrs":{"8d87d867e82":{"x":{},"y":{},"type":"scatter"}},"cur_data":"8d87d867e82","visdat":{"8d87d867e82":["function (y) ","x"]},"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.2,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+<p>The data reflect liquor <a href="https://www.mbi-geodata.com/en/purchasing-power/retail-turnover/">retail turnover</a> in Victoria, Australia. Simply put, it’s a reflection of liquor sales in the area. A log transformation is applied to make the variance stable over time.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" title="1">model_tsibble &lt;-<span class="st"> </span>tsibbledata<span class="op">::</span>aus_retail <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb2-2" title="2"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Turnover =</span> <span class="kw">log</span>(Turnover)) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb2-3" title="3"><span class="st">  </span><span class="kw">filter</span>(State <span class="op">==</span><span class="st"> &quot;Victoria&quot;</span>,</a>
+<a class="sourceLine" id="cb2-4" title="4">         Industry <span class="op">==</span><span class="st"> &quot;Liquor retailing&quot;</span>) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb2-5" title="5"><span class="st">  </span><span class="kw">filter_index</span>(<span class="st">&quot;2005-01-01&quot;</span> <span class="op">~</span><span class="st"> </span>.)</a></code></pre></div>
 </div>
-<div id="define-forecast-origins-and-forecast-horizon" class="section level2">
-<h2>Define forecast origins and forecast horizon</h2>
-<pre class="sourceCode r"><code class="sourceCode r">get_origins &lt;-<span class="st"> </span><span class="cf">function</span>(y, first_origin, shift_by, fcast_horizon) {
-  origins &lt;-<span class="st"> </span><span class="kw">seq</span>(
-    <span class="dt">from =</span> <span class="kw">floor</span>(<span class="kw">length</span>(y)<span class="op">*</span><span class="fl">0.8</span>), 
-    <span class="dt">to =</span> <span class="kw">length</span>(y) <span class="op">-</span><span class="st"> </span>(fcast_horizon <span class="op">+</span><span class="st"> </span><span class="dv">1</span>), 
-    <span class="dt">by =</span> shift_by
-  )
-  
-  <span class="kw">list</span>(<span class="dt">origins =</span> origins,
-       <span class="dt">horizon =</span> fcast_horizon) <span class="op">%&gt;%</span>
-<span class="st">    </span><span class="kw">return</span>()
-}
-
-origins &lt;-<span class="st"> </span><span class="kw">get_origins</span>(
-  <span class="dt">y =</span> y,
-  <span class="dt">first_origin =</span> <span class="kw">floor</span>(<span class="kw">length</span>(y)<span class="op">*</span><span class="fl">0.8</span>),
-  <span class="dt">shift_by =</span> <span class="dv">1</span>,
-  <span class="dt">fcast_horizon =</span> <span class="dv">3</span>
-)</code></pre>
+<div id="initial-training-and-testing-splits" class="section level2">
+<h2>Initial training and testing splits</h2>
+<p>Choose an initial training and initial testing set. These data sets are the starting points for ROCV.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" title="1"><span class="co"># training</span></a>
+<a class="sourceLine" id="cb3-2" title="2">initial_train &lt;-<span class="st"> </span>model_tsibble <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb3-3" title="3"><span class="st">  </span><span class="kw">filter_index</span>(<span class="st">&quot;2005-01-01&quot;</span> <span class="op">~</span><span class="st"> &quot;2013-12-01&quot;</span>) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb3-4" title="4"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Split =</span> <span class="st">&quot;Initial Training&quot;</span>)</a>
+<a class="sourceLine" id="cb3-5" title="5"></a>
+<a class="sourceLine" id="cb3-6" title="6"><span class="co"># testing</span></a>
+<a class="sourceLine" id="cb3-7" title="7">initial_test &lt;-<span class="st"> </span>model_tsibble <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb3-8" title="8"><span class="st">  </span><span class="kw">filter_index</span>(<span class="st">&quot;2014-01-01&quot;</span> <span class="op">~</span><span class="st"> </span>.) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb3-9" title="9"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Split =</span> <span class="st">&quot;Initial Testing&quot;</span>)</a></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" title="1"><span class="kw">bind_rows</span>(initial_train, initial_test) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb4-2" title="2"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Month, <span class="dt">y =</span> Turnover)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-3" title="3"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">color =</span> Split)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-4" title="4"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Monthly liquor retail turnover in Victoria, Australia (log scale)&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-5" title="5"><span class="st">  </span><span class="kw">theme_bw</span>()</a></code></pre></div>
+<p><img src="/post/2020-05-22-forecast-evaluation-on-a-rolling-origin_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
 </div>
-<div id="training" class="section level2">
-<h2>Training</h2>
-<pre class="sourceCode r"><code class="sourceCode r">cv_models &lt;-<span class="st"> </span><span class="kw">map2</span>(origins<span class="op">$</span>origins, origins<span class="op">$</span>horizon, <span class="cf">function</span>(i, h) {
-  
-  <span class="co"># training/testing ts objects</span>
-  train_ts &lt;-<span class="st"> </span><span class="kw">subset</span>(y, <span class="dt">start =</span> <span class="dv">1</span>, <span class="dt">end =</span> i)
-  test_ts &lt;-<span class="st"> </span><span class="kw">subset</span>(y, <span class="dt">start =</span> i<span class="op">+</span><span class="dv">1</span>, <span class="dt">end =</span> i<span class="op">+</span>h)
-  
-  <span class="co"># ARIMA</span>
-  arima_fit &lt;-<span class="st"> </span><span class="kw">auto.arima</span>(train_ts)
-  arima_fcast &lt;-<span class="st"> </span><span class="kw">forecast</span>(arima_fit, <span class="dt">h =</span> <span class="kw">length</span>(test_ts))
-  arima_metrics &lt;-<span class="st"> </span>forecast<span class="op">::</span><span class="kw">accuracy</span>(arima_fcast, test_ts)
-  
-  <span class="co"># ETS</span>
-  ets_fit &lt;-<span class="st"> </span><span class="kw">ets</span>(train_ts)
-  ets_fcast &lt;-<span class="st"> </span><span class="kw">forecast</span>(ets_fit, <span class="dt">h =</span> <span class="kw">length</span>(test_ts))
-  ets_metrics &lt;-<span class="st"> </span>forecast<span class="op">::</span><span class="kw">accuracy</span>(ets_fcast, test_ts)
-  
-  <span class="co"># STL</span>
-  stl_fit &lt;-<span class="st"> </span><span class="kw">stl</span>(train_ts, <span class="dt">t.window=</span><span class="dv">13</span>, <span class="dt">s.window=</span><span class="st">&quot;periodic&quot;</span>,
-                 <span class="dt">robust=</span><span class="ot">TRUE</span>)
-  stl_fcast &lt;-<span class="st"> </span><span class="kw">forecast</span>(stl_fit, <span class="dt">h =</span> <span class="kw">length</span>(test_ts))
-  stl_metrics &lt;-<span class="st"> </span>forecast<span class="op">::</span><span class="kw">accuracy</span>(stl_fcast, test_ts)
-  
-  <span class="co"># TSLM</span>
-  tslm_fit &lt;-<span class="st"> </span><span class="kw">tslm</span>(train_ts <span class="op">~</span><span class="st"> </span>trend <span class="op">+</span><span class="st"> </span>season)
-  tslm_fcast &lt;-<span class="st"> </span><span class="kw">forecast</span>(tslm_fit, <span class="dt">h =</span> <span class="kw">length</span>(test_ts))
-  tslm_metrics &lt;-<span class="st"> </span>forecast<span class="op">::</span><span class="kw">accuracy</span>(tslm_fcast, test_ts)
-  
-  <span class="co"># Metrics table</span>
-  model_metrics &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">arima =</span> arima_metrics,
-                        <span class="dt">ets =</span> ets_metrics,
-                        <span class="dt">stl =</span> stl_metrics,
-                        <span class="dt">tslm =</span> tslm_metrics) <span class="op">%&gt;%</span>
-<span class="st">    </span><span class="kw">map2</span>(., <span class="kw">names</span>(.), <span class="cf">function</span>(model, nm) {
-      model <span class="op">%&gt;%</span>
-<span class="st">        </span><span class="kw">as_tibble</span>() <span class="op">%&gt;%</span>
-<span class="st">        </span><span class="kw">select</span>(RMSE) <span class="op">%&gt;%</span>
-<span class="st">        </span><span class="kw">mutate</span>(<span class="dt">Model =</span> nm,
-               <span class="dt">Split =</span> <span class="kw">c</span>(<span class="st">&quot;Training&quot;</span>, <span class="st">&quot;Testing&quot;</span>),
-               <span class="dt">length_train =</span> <span class="kw">length</span>(train_ts),
-               <span class="dt">length_test =</span> <span class="kw">length</span>(test_ts))
-    }) <span class="op">%&gt;%</span>
-<span class="st">    </span><span class="kw">bind_rows</span>()
-  
-  <span class="kw">return</span>(model_metrics)
-}) <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">bind_rows</span>()</code></pre>
+<div id="objective" class="section level2">
+<h2>Objective</h2>
+<p>The objective in this example is to test a range of forecasting models and choose one that performs well at producing 12-month forecasts, one for each month in the calendar year. This scenario is common in annual budget forecasting. Models are evaluated for point accuracy (e.g. RMSE) and interval accuracy. Each of these error types are important to consider in selecting an appropriate model.</p>
+</div>
+<div id="rocv-function" class="section level2">
+<h2>ROCV function</h2>
+<p>The function steps include:</p>
+<ol style="list-style-type: decimal">
+<li><p>Configure the CV parameters by specifiying the forecast horizon origin shift amount. For 12-month forecasting where each new forecast is generated at the beginning of a new calendar year, set both the horizon and the shift to 12.</p></li>
+<li><p>Iterate over the CV folds (using <code>purrr::map()</code>), apply functions for subsetting data, fitting models, generating forecasts, and calculating error metrics.</p></li>
+<li><p>Combine the results for further analysis and visualization.</p></li>
+</ol>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" title="1"><span class="co"># Inputs:</span></a>
+<a class="sourceLine" id="cb5-2" title="2"><span class="co"># - initial training set</span></a>
+<a class="sourceLine" id="cb5-3" title="3"><span class="co"># - initial testing set</span></a>
+<a class="sourceLine" id="cb5-4" title="4"><span class="co"># - desired horizon</span></a>
+<a class="sourceLine" id="cb5-5" title="5"><span class="co"># - desired shift (the number of observations to add to training data)</span></a>
+<a class="sourceLine" id="cb5-6" title="6"></a>
+<a class="sourceLine" id="cb5-7" title="7"><span class="co"># Output:</span></a>
+<a class="sourceLine" id="cb5-8" title="8"><span class="co"># - Tibble containing error metrics for each iterations</span></a>
+<a class="sourceLine" id="cb5-9" title="9"></a>
+<a class="sourceLine" id="cb5-10" title="10">rocv &lt;-<span class="st"> </span><span class="cf">function</span>(initial_train, </a>
+<a class="sourceLine" id="cb5-11" title="11">                 initial_test, </a>
+<a class="sourceLine" id="cb5-12" title="12">                 horizon, </a>
+<a class="sourceLine" id="cb5-13" title="13">                 shift) {</a>
+<a class="sourceLine" id="cb5-14" title="14">  </a>
+<a class="sourceLine" id="cb5-15" title="15">  <span class="co"># determine number of CV iterations based on horizon and shift</span></a>
+<a class="sourceLine" id="cb5-16" title="16">  n_iterations &lt;-<span class="st"> </span><span class="kw">nrow</span>(initial_test) <span class="op">-</span><span class="st"> </span>horizon</a>
+<a class="sourceLine" id="cb5-17" title="17">  iterations_idx &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv">0</span>, n_iterations, shift)</a>
+<a class="sourceLine" id="cb5-18" title="18">  </a>
+<a class="sourceLine" id="cb5-19" title="19">  <span class="co"># apply ROCV</span></a>
+<a class="sourceLine" id="cb5-20" title="20">  <span class="kw">map</span>(iterations_idx, <span class="cf">function</span>(i) {</a>
+<a class="sourceLine" id="cb5-21" title="21">    </a>
+<a class="sourceLine" id="cb5-22" title="22">    <span class="co"># construct training data</span></a>
+<a class="sourceLine" id="cb5-23" title="23">    new_train &lt;-<span class="st"> </span><span class="kw">bind_rows</span>(</a>
+<a class="sourceLine" id="cb5-24" title="24">      initial_train,</a>
+<a class="sourceLine" id="cb5-25" title="25">      initial_test <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">slice</span>(<span class="kw">seq</span>(<span class="dv">0</span>, i, <span class="dv">1</span>))</a>
+<a class="sourceLine" id="cb5-26" title="26">    )</a>
+<a class="sourceLine" id="cb5-27" title="27">    </a>
+<a class="sourceLine" id="cb5-28" title="28">    <span class="co"># construct testing data</span></a>
+<a class="sourceLine" id="cb5-29" title="29">    new_test &lt;-<span class="st"> </span>initial_test <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb5-30" title="30"><span class="st">      </span><span class="kw">slice</span>(<span class="kw">seq</span>(i<span class="op">+</span><span class="dv">1</span>, i<span class="op">+</span>horizon, <span class="dv">1</span>))</a>
+<a class="sourceLine" id="cb5-31" title="31">    </a>
+<a class="sourceLine" id="cb5-32" title="32">    <span class="co"># fit models to training data</span></a>
+<a class="sourceLine" id="cb5-33" title="33">    models &lt;-<span class="st"> </span>new_train <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-34" title="34"><span class="st">      </span><span class="kw">model</span>(</a>
+<a class="sourceLine" id="cb5-35" title="35">        <span class="dt">ARIMA =</span> <span class="kw">ARIMA</span>(Turnover),</a>
+<a class="sourceLine" id="cb5-36" title="36">        <span class="dt">ETS =</span> <span class="kw">ETS</span>(Turnover),</a>
+<a class="sourceLine" id="cb5-37" title="37">        <span class="dt">TS_LM =</span> <span class="kw">TSLM</span>(Turnover <span class="op">~</span><span class="st"> </span><span class="kw">trend</span>() <span class="op">+</span><span class="st"> </span><span class="kw">season</span>()),</a>
+<a class="sourceLine" id="cb5-38" title="38">        <span class="dt">DECOMP =</span><span class="kw">decomposition_model</span>(</a>
+<a class="sourceLine" id="cb5-39" title="39">          <span class="kw">STL</span>(<span class="kw">log</span>(Turnover) <span class="op">~</span><span class="st"> </span><span class="kw">season</span>(<span class="dt">window =</span> <span class="ot">Inf</span>)),</a>
+<a class="sourceLine" id="cb5-40" title="40">          <span class="kw">ETS</span>(season_adjust <span class="op">~</span><span class="st"> </span><span class="kw">season</span>(<span class="st">&quot;N&quot;</span>)),</a>
+<a class="sourceLine" id="cb5-41" title="41">          <span class="kw">SNAIVE</span>(season_year)</a>
+<a class="sourceLine" id="cb5-42" title="42">        )</a>
+<a class="sourceLine" id="cb5-43" title="43">      )</a>
+<a class="sourceLine" id="cb5-44" title="44">    </a>
+<a class="sourceLine" id="cb5-45" title="45">    <span class="co"># generate forecasts</span></a>
+<a class="sourceLine" id="cb5-46" title="46">    forecasts &lt;-<span class="st"> </span>models <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-47" title="47"><span class="st">      </span><span class="kw">forecast</span>(<span class="dt">new_data =</span> new_test)</a>
+<a class="sourceLine" id="cb5-48" title="48">    </a>
+<a class="sourceLine" id="cb5-49" title="49">    <span class="co"># evaluate accuracy on testing data</span></a>
+<a class="sourceLine" id="cb5-50" title="50">    metrics_list &lt;-<span class="st"> </span><span class="kw">list</span>(interval_accuracy_measures,</a>
+<a class="sourceLine" id="cb5-51" title="51">                         point_accuracy_measures)</a>
+<a class="sourceLine" id="cb5-52" title="52">    </a>
+<a class="sourceLine" id="cb5-53" title="53">    metrics &lt;-<span class="st"> </span>forecasts <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-54" title="54"><span class="st">      </span>fabletools<span class="op">::</span><span class="kw">accuracy</span>(</a>
+<a class="sourceLine" id="cb5-55" title="55">        <span class="dt">data =</span> new_test,</a>
+<a class="sourceLine" id="cb5-56" title="56">        <span class="dt">measures =</span> metrics_list</a>
+<a class="sourceLine" id="cb5-57" title="57">      ) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-58" title="58"><span class="st">      </span><span class="kw">mutate</span>(<span class="dt">Origin =</span> i)</a>
+<a class="sourceLine" id="cb5-59" title="59">    </a>
+<a class="sourceLine" id="cb5-60" title="60">    <span class="kw">return</span>(metrics)</a>
+<a class="sourceLine" id="cb5-61" title="61">    </a>
+<a class="sourceLine" id="cb5-62" title="62">  }) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-63" title="63"><span class="st">    </span><span class="kw">bind_rows</span>()</a>
+<a class="sourceLine" id="cb5-64" title="64">}</a></code></pre></div>
+</div>
+<div id="run-rocv" class="section level2">
+<h2>Run ROCV</h2>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" title="1">rocv_results &lt;-<span class="st"> </span><span class="kw">rocv</span>(</a>
+<a class="sourceLine" id="cb6-2" title="2">  <span class="dt">initial_train =</span> initial_train,</a>
+<a class="sourceLine" id="cb6-3" title="3">  <span class="dt">initial_test =</span> initial_test,</a>
+<a class="sourceLine" id="cb6-4" title="4">  <span class="dt">horizon =</span> <span class="dv">12</span>,</a>
+<a class="sourceLine" id="cb6-5" title="5">  <span class="dt">shift =</span> <span class="dv">12</span></a>
+<a class="sourceLine" id="cb6-6" title="6">)</a></code></pre></div>
 </div>
 <div id="results" class="section level2">
 <h2>Results</h2>
-<pre class="sourceCode r"><code class="sourceCode r">cv_results &lt;-<span class="st"> </span>cv_models <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">gather</span>(key, value, <span class="op">-</span>Model, <span class="op">-</span>Split, <span class="op">-</span>length_train, <span class="op">-</span>length_test) <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> length_train, <span class="dt">y =</span> value)) <span class="op">+</span>
-<span class="st">  </span><span class="kw">facet_grid</span>(key<span class="op">~</span>Split, <span class="dt">scales =</span> <span class="st">&quot;free_y&quot;</span>) <span class="op">+</span>
-<span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">color =</span> Model, <span class="dt">group =</span> Model)) <span class="op">+</span>
-<span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Rolling origin cross validation RMSE&quot;</span>,
-       <span class="dt">x =</span> <span class="st">&quot;Origin&quot;</span>,
-       <span class="dt">y =</span> <span class="st">&quot;&quot;</span>) <span class="op">+</span>
-<span class="st">  </span><span class="kw">theme_bw</span>()
-
-<span class="kw">ggplotly</span>(cv_results)</code></pre>
-<div id="htmlwidget-2" style="width:672px;height:480px;" class="plotly html-widget"></div>
-<script type="application/json" data-for="htmlwidget-2">{"x":{"data":[{"x":[47,48,49,50,51,52,53,54,55],"y":[0.190634779532805,0.0913939030188466,0.0885707661449875,0.173957312415046,0.164149011366609,0.130507592975169,0.118117689489887,0.162318974485859,0.151921876882096],"text":["Model: arima<br />Model: arima<br />length_train: 47<br />value: 0.19063478","Model: arima<br />Model: arima<br />length_train: 48<br />value: 0.09139390","Model: arima<br />Model: arima<br />length_train: 49<br />value: 0.08857077","Model: arima<br />Model: arima<br />length_train: 50<br />value: 0.17395731","Model: arima<br />Model: arima<br />length_train: 51<br />value: 0.16414901","Model: arima<br />Model: arima<br />length_train: 52<br />value: 0.13050759","Model: arima<br />Model: arima<br />length_train: 53<br />value: 0.11811769","Model: arima<br />Model: arima<br />length_train: 54<br />value: 0.16231897","Model: arima<br />Model: arima<br />length_train: 55<br />value: 0.15192188"],"type":"scatter","mode":"lines","line":{"width":1.88976377952756,"color":"rgba(248,118,109,1)","dash":"solid"},"hoveron":"points","name":"arima","legendgroup":"arima","showlegend":true,"xaxis":"x","yaxis":"y","hoverinfo":"text","frame":null},{"x":[47,48,49,50,51,52,53,54,55],"y":[0.0906513359013715,0.0983148233126052,0.0974686736622183,0.0964772078101557,0.09775797272987,0.0983301423704498,0.10197617599516,0.101245609144193,0.100868060116495],"text":["Model: arima<br />Model: arima<br />length_train: 47<br />value: 0.09065134","Model: arima<br />Model: arima<br />length_train: 48<br />value: 0.09831482","Model: arima<br />Model: arima<br />length_train: 49<br />value: 0.09746867","Model: arima<br />Model: arima<br />length_train: 50<br />value: 0.09647721","Model: arima<br />Model: arima<br />length_train: 51<br />value: 0.09775797","Model: arima<br />Model: arima<br />length_train: 52<br />value: 0.09833014","Model: arima<br />Model: arima<br />length_train: 53<br />value: 0.10197618","Model: arima<br />Model: arima<br />length_train: 54<br />value: 0.10124561","Model: arima<br />Model: arima<br />length_train: 55<br />value: 0.10086806"],"type":"scatter","mode":"lines","line":{"width":1.88976377952756,"color":"rgba(248,118,109,1)","dash":"solid"},"hoveron":"points","name":"arima","legendgroup":"arima","showlegend":false,"xaxis":"x2","yaxis":"y","hoverinfo":"text","frame":null},{"x":[47,48,49,50,51,52,53,54,55],"y":[0.124821043963101,0.135928372182808,0.0983186096319262,0.124809239803863,0.0881689390941903,0.087501124730662,0.0986142329983584,0.124776953685349,0.128324724704174],"text":["Model: ets<br />Model: ets<br />length_train: 47<br />value: 0.12482104","Model: ets<br />Model: ets<br />length_train: 48<br />value: 0.13592837","Model: ets<br />Model: ets<br />length_train: 49<br />value: 0.09831861","Model: ets<br />Model: ets<br />length_train: 50<br />value: 0.12480924","Model: ets<br />Model: ets<br />length_train: 51<br />value: 0.08816894","Model: ets<br />Model: ets<br />length_train: 52<br />value: 0.08750112","Model: ets<br />Model: ets<br />length_train: 53<br />value: 0.09861423","Model: ets<br />Model: ets<br />length_train: 54<br />value: 0.12477695","Model: ets<br />Model: ets<br />length_train: 55<br />value: 0.12832472"],"type":"scatter","mode":"lines","line":{"width":1.88976377952756,"color":"rgba(124,174,0,1)","dash":"solid"},"hoveron":"points","name":"ets","legendgroup":"ets","showlegend":true,"xaxis":"x","yaxis":"y","hoverinfo":"text","frame":null},{"x":[47,48,49,50,51,52,53,54,55],"y":[0.117702195532313,0.118132924031717,0.119214790538737,0.118141420367661,0.119114523580848,0.118099112489026,0.118528935490588,0.117536479230163,0.116568207325181],"text":["Model: ets<br />Model: ets<br />length_train: 47<br />value: 0.11770220","Model: ets<br />Model: ets<br />length_train: 48<br />value: 0.11813292","Model: ets<br />Model: ets<br />length_train: 49<br />value: 0.11921479","Model: ets<br />Model: ets<br />length_train: 50<br />value: 0.11814142","Model: ets<br />Model: ets<br />length_train: 51<br />value: 0.11911452","Model: ets<br />Model: ets<br />length_train: 52<br />value: 0.11809911","Model: ets<br />Model: ets<br />length_train: 53<br />value: 0.11852894","Model: ets<br />Model: ets<br />length_train: 54<br />value: 0.11753648","Model: ets<br />Model: ets<br />length_train: 55<br />value: 0.11656821"],"type":"scatter","mode":"lines","line":{"width":1.88976377952756,"color":"rgba(124,174,0,1)","dash":"solid"},"hoveron":"points","name":"ets","legendgroup":"ets","showlegend":false,"xaxis":"x2","yaxis":"y","hoverinfo":"text","frame":null},{"x":[47,48,49,50,51,52,53,54,55],"y":[0.11982466811523,0.16585057884557,0.150053936139069,0.15214964398069,0.121311075137015,0.0913614194392068,0.0891493976425778,0.102123354242819,0.109060287505852],"text":["Model: stl<br />Model: stl<br />length_train: 47<br />value: 0.11982467","Model: stl<br />Model: stl<br />length_train: 48<br />value: 0.16585058","Model: stl<br />Model: stl<br />length_train: 49<br />value: 0.15005394","Model: stl<br />Model: stl<br />length_train: 50<br />value: 0.15214964","Model: stl<br />Model: stl<br />length_train: 51<br />value: 0.12131108","Model: stl<br />Model: stl<br />length_train: 52<br />value: 0.09136142","Model: stl<br />Model: stl<br />length_train: 53<br />value: 0.08914940","Model: stl<br />Model: stl<br />length_train: 54<br />value: 0.10212335","Model: stl<br />Model: stl<br />length_train: 55<br />value: 0.10906029"],"type":"scatter","mode":"lines","line":{"width":1.88976377952756,"color":"rgba(0,191,196,1)","dash":"solid"},"hoveron":"points","name":"stl","legendgroup":"stl","showlegend":true,"xaxis":"x","yaxis":"y","hoverinfo":"text","frame":null},{"x":[47,48,49,50,51,52,53,54,55],"y":[0.116878288310609,0.116977289710521,0.115120227377199,0.112380342575711,0.116083138152642,0.112733400879849,0.113693166006915,0.113254802058876,0.112333790740418],"text":["Model: stl<br />Model: stl<br />length_train: 47<br />value: 0.11687829","Model: stl<br />Model: stl<br />length_train: 48<br />value: 0.11697729","Model: stl<br />Model: stl<br />length_train: 49<br />value: 0.11512023","Model: stl<br />Model: stl<br />length_train: 50<br />value: 0.11238034","Model: stl<br />Model: stl<br />length_train: 51<br />value: 0.11608314","Model: stl<br />Model: stl<br />length_train: 52<br />value: 0.11273340","Model: stl<br />Model: stl<br />length_train: 53<br />value: 0.11369317","Model: stl<br />Model: stl<br />length_train: 54<br />value: 0.11325480","Model: stl<br />Model: stl<br />length_train: 55<br />value: 0.11233379"],"type":"scatter","mode":"lines","line":{"width":1.88976377952756,"color":"rgba(0,191,196,1)","dash":"solid"},"hoveron":"points","name":"stl","legendgroup":"stl","showlegend":false,"xaxis":"x2","yaxis":"y","hoverinfo":"text","frame":null},{"x":[47,48,49,50,51,52,53,54,55],"y":[0.11246102114195,0.16605355979991,0.133146750614542,0.143314001623095,0.0858616458159418,0.0840996665049869,0.0992982877109666,0.108012344973465,0.117942502854934],"text":["Model: tslm<br />Model: tslm<br />length_train: 47<br />value: 0.11246102","Model: tslm<br />Model: tslm<br />length_train: 48<br />value: 0.16605356","Model: tslm<br />Model: tslm<br />length_train: 49<br />value: 0.13314675","Model: tslm<br />Model: tslm<br />length_train: 50<br />value: 0.14331400","Model: tslm<br />Model: tslm<br />length_train: 51<br />value: 0.08586165","Model: tslm<br />Model: tslm<br />length_train: 52<br />value: 0.08409967","Model: tslm<br />Model: tslm<br />length_train: 53<br />value: 0.09929829","Model: tslm<br />Model: tslm<br />length_train: 54<br />value: 0.10801234","Model: tslm<br />Model: tslm<br />length_train: 55<br />value: 0.11794250"],"type":"scatter","mode":"lines","line":{"width":1.88976377952756,"color":"rgba(199,124,255,1)","dash":"solid"},"hoveron":"points","name":"tslm","legendgroup":"tslm","showlegend":true,"xaxis":"x","yaxis":"y","hoverinfo":"text","frame":null},{"x":[47,48,49,50,51,52,53,54,55],"y":[0.111255349951679,0.110910843824117,0.111525739544052,0.110586100909136,0.112882610087341,0.111886682888056,0.11161213957421,0.11097213530799,0.110115207177186],"text":["Model: tslm<br />Model: tslm<br />length_train: 47<br />value: 0.11125535","Model: tslm<br />Model: tslm<br />length_train: 48<br />value: 0.11091084","Model: tslm<br />Model: tslm<br />length_train: 49<br />value: 0.11152574","Model: tslm<br />Model: tslm<br />length_train: 50<br />value: 0.11058610","Model: tslm<br />Model: tslm<br />length_train: 51<br />value: 0.11288261","Model: tslm<br />Model: tslm<br />length_train: 52<br />value: 0.11188668","Model: tslm<br />Model: tslm<br />length_train: 53<br />value: 0.11161214","Model: tslm<br />Model: tslm<br />length_train: 54<br />value: 0.11097214","Model: tslm<br />Model: tslm<br />length_train: 55<br />value: 0.11011521"],"type":"scatter","mode":"lines","line":{"width":1.88976377952756,"color":"rgba(199,124,255,1)","dash":"solid"},"hoveron":"points","name":"tslm","legendgroup":"tslm","showlegend":false,"xaxis":"x2","yaxis":"y","hoverinfo":"text","frame":null}],"layout":{"margin":{"t":55.4520547945205,"r":18.9954337899543,"b":40.1826484018265,"l":40.1826484018265},"plot_bgcolor":"rgba(255,255,255,1)","paper_bgcolor":"rgba(255,255,255,1)","font":{"color":"rgba(0,0,0,1)","family":"","size":14.6118721461187},"title":{"text":"Rolling origin cross validation RMSE","font":{"color":"rgba(0,0,0,1)","family":"","size":17.5342465753425},"x":0,"xref":"paper"},"xaxis":{"domain":[0,0.495923026744945],"automargin":true,"type":"linear","autorange":false,"range":[46.6,55.4],"tickmode":"array","ticktext":["48","50","52","54"],"tickvals":[48,50,52,54],"categoryorder":"array","categoryarray":["48","50","52","54"],"nticks":null,"ticks":"outside","tickcolor":"rgba(51,51,51,1)","ticklen":3.65296803652968,"tickwidth":0.66417600664176,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":11.689497716895},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"gridcolor":"rgba(235,235,235,1)","gridwidth":0.66417600664176,"zeroline":false,"anchor":"y","title":"","hoverformat":".2f"},"annotations":[{"text":"Origin","x":0.5,"y":-0.0176940639269406,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(0,0,0,1)","family":"","size":14.6118721461187},"xref":"paper","yref":"paper","textangle":-0,"xanchor":"center","yanchor":"top","annotationType":"axis"},{"text":"Testing","x":0.247961513372472,"y":1,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(26,26,26,1)","family":"","size":11.689497716895},"xref":"paper","yref":"paper","textangle":-0,"xanchor":"center","yanchor":"bottom"},{"text":"Training","x":0.752038486627528,"y":1,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(26,26,26,1)","family":"","size":11.689497716895},"xref":"paper","yref":"paper","textangle":-0,"xanchor":"center","yanchor":"bottom"},{"text":"RMSE","x":1,"y":0.5,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(26,26,26,1)","family":"","size":11.689497716895},"xref":"paper","yref":"paper","textangle":90,"xanchor":"left","yanchor":"middle"},{"text":"Model","x":1.02,"y":1,"showarrow":false,"ax":0,"ay":0,"font":{"color":"rgba(0,0,0,1)","family":"","size":14.6118721461187},"xref":"paper","yref":"paper","textangle":-0,"xanchor":"left","yanchor":"bottom","legendTitle":true}],"yaxis":{"domain":[0,1],"automargin":true,"type":"linear","autorange":false,"range":[0.078772910853596,0.195961535184196],"tickmode":"array","ticktext":["0.100","0.125","0.150","0.175"],"tickvals":[0.1,0.125,0.15,0.175],"categoryorder":"array","categoryarray":["0.100","0.125","0.150","0.175"],"nticks":null,"ticks":"outside","tickcolor":"rgba(51,51,51,1)","ticklen":3.65296803652968,"tickwidth":0.66417600664176,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":11.689497716895},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"gridcolor":"rgba(235,235,235,1)","gridwidth":0.66417600664176,"zeroline":false,"anchor":"x","title":"","hoverformat":".2f"},"shapes":[{"type":"rect","fillcolor":"transparent","line":{"color":"rgba(51,51,51,1)","width":0.66417600664176,"linetype":"solid"},"yref":"paper","xref":"paper","x0":0,"x1":0.495923026744945,"y0":0,"y1":1},{"type":"rect","fillcolor":"rgba(217,217,217,1)","line":{"color":"rgba(51,51,51,1)","width":0.66417600664176,"linetype":"solid"},"yref":"paper","xref":"paper","x0":0,"x1":0.495923026744945,"y0":0,"y1":23.37899543379,"yanchor":1,"ysizemode":"pixel"},{"type":"rect","fillcolor":"transparent","line":{"color":"rgba(51,51,51,1)","width":0.66417600664176,"linetype":"solid"},"yref":"paper","xref":"paper","x0":0.504076973255055,"x1":1,"y0":0,"y1":1},{"type":"rect","fillcolor":"rgba(217,217,217,1)","line":{"color":"rgba(51,51,51,1)","width":0.66417600664176,"linetype":"solid"},"yref":"paper","xref":"paper","x0":0.504076973255055,"x1":1,"y0":0,"y1":23.37899543379,"yanchor":1,"ysizemode":"pixel"},{"type":"rect","fillcolor":"rgba(217,217,217,1)","line":{"color":"rgba(51,51,51,1)","width":0.66417600664176,"linetype":"solid"},"yref":"paper","xref":"paper","y0":0,"y1":1,"x0":0,"x1":23.37899543379,"xanchor":1,"xsizemode":"pixel"}],"xaxis2":{"type":"linear","autorange":false,"range":[46.6,55.4],"tickmode":"array","ticktext":["48","50","52","54"],"tickvals":[48,50,52,54],"categoryorder":"array","categoryarray":["48","50","52","54"],"nticks":null,"ticks":"outside","tickcolor":"rgba(51,51,51,1)","ticklen":3.65296803652968,"tickwidth":0.66417600664176,"showticklabels":true,"tickfont":{"color":"rgba(77,77,77,1)","family":"","size":11.689497716895},"tickangle":-0,"showline":false,"linecolor":null,"linewidth":0,"showgrid":true,"domain":[0.504076973255055,1],"gridcolor":"rgba(235,235,235,1)","gridwidth":0.66417600664176,"zeroline":false,"anchor":"y","title":"","hoverformat":".2f"},"showlegend":true,"legend":{"bgcolor":"rgba(255,255,255,1)","bordercolor":"transparent","borderwidth":1.88976377952756,"font":{"color":"rgba(0,0,0,1)","family":"","size":11.689497716895},"y":0.96751968503937},"hovermode":"closest","barmode":"relative"},"config":{"doubleClick":"reset","showSendToCloud":false},"source":"A","attrs":{"8d839cc3b0d":{"colour":{},"x":{},"y":{},"type":"scatter"}},"cur_data":"8d839cc3b0d","visdat":{"8d839cc3b0d":["function (y) ","x"]},"highlight":{"on":"plotly_click","persistent":false,"dynamic":false,"selectize":false,"opacityDim":0.2,"selected":{"opacity":1},"debounce":0},"shinyEvents":["plotly_hover","plotly_click","plotly_selected","plotly_relayout","plotly_brushed","plotly_brushing","plotly_clickannotation","plotly_doubleclick","plotly_deselect","plotly_afterplot"],"base_url":"https://plot.ly"},"evals":[],"jsHooks":[]}</script>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb7-1" title="1">rocv_results <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb7-2" title="2"><span class="st">  </span><span class="kw">select</span>(Origin, .model, RMSE, winkler) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb7-3" title="3"><span class="st">  </span><span class="kw">gather</span>(Metric, Value, <span class="op">-</span>Origin, <span class="op">-</span>.model) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb7-4" title="4"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Origin, <span class="dt">y =</span> Value)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb7-5" title="5"><span class="st">  </span><span class="kw">facet_wrap</span>(<span class="op">~</span>Metric) <span class="op">+</span></a>
+<a class="sourceLine" id="cb7-6" title="6"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">group =</span> .model, <span class="dt">color =</span> .model)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb7-7" title="7"><span class="st">  </span><span class="kw">geom_point</span>(<span class="kw">aes</span>(<span class="dt">color =</span> .model)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb7-8" title="8"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;ROCV metrics (RMSE and Winkler score)&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb7-9" title="9"><span class="st">  </span><span class="kw">theme_bw</span>()</a></code></pre></div>
+<p><img src="/post/2020-05-22-forecast-evaluation-on-a-rolling-origin_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" title="1">rocv_results <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb8-2" title="2"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> MAPE, <span class="dt">y =</span> winkler)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb8-3" title="3"><span class="st">  </span><span class="kw">geom_point</span>(<span class="kw">aes</span>(<span class="dt">color =</span> .model, <span class="dt">shape =</span> .model)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb8-4" title="4"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;ROCV iteration metrics&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb8-5" title="5"><span class="st">  </span><span class="kw">theme_bw</span>()</a></code></pre></div>
+<p><img src="/post/2020-05-22-forecast-evaluation-on-a-rolling-origin_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb9-1" title="1">rocv_results <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb9-2" title="2"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> MAPE, <span class="dt">y =</span> winkler)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb9-3" title="3"><span class="st">  </span><span class="kw">geom_point</span>(<span class="dt">size =</span> <span class="dv">1</span>, <span class="dt">color =</span> <span class="st">&#39;gray70&#39;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb9-4" title="4"><span class="st">  </span><span class="kw">geom_hline</span>(<span class="kw">aes</span>(<span class="dt">yintercept =</span> <span class="kw">mean</span>(winkler)), <span class="dt">color =</span> <span class="st">&#39;gray70&#39;</span>, <span class="dt">lwd =</span> <span class="dv">2</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb9-5" title="5"><span class="st">  </span><span class="kw">geom_vline</span>(<span class="kw">aes</span>(<span class="dt">xintercept =</span> <span class="kw">mean</span>(MAPE)), <span class="dt">color =</span> <span class="st">&#39;gray70&#39;</span>, <span class="dt">lwd =</span> <span class="dv">2</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb9-6" title="6"><span class="st">  </span><span class="kw">annotate</span>(<span class="st">&quot;text&quot;</span>, <span class="dt">x =</span> <span class="fl">0.65</span>, <span class="dt">y =</span> <span class="fl">0.3</span>, <span class="dt">label =</span> <span class="st">&#39;Ideal zone&#39;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb9-7" title="7"><span class="st">  </span><span class="kw">theme_bw</span>()</a></code></pre></div>
+<p><img src="/post/2020-05-22-forecast-evaluation-on-a-rolling-origin_files/figure-html/unnamed-chunk-9-2.png" width="672" /></p>
 </div>
 <div id="observations" class="section level2">
 <h2>Observations</h2>
-<p>Rolling origin cross validation gives some good insight into the behaviors of various models in the context of the chosen time series data. In this example, the Arima model performs quite well on the training data but does not generalize well to unseen testing data. The ETS model appears to generalize well to unseen testing data despite having consistently higher RMSE on the training data.</p>
+<p>ROCV is a great strategy for testing many forecasting models under different circumstances. In this example, it appears that the ARIMA model is most appropriate due to its superior performance and stability.</p>
 </div>

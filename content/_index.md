@@ -6,7 +6,7 @@ title: Home
 
 # Abnormal Distributions
 
-This is the homepage and personal website of Danny Morris. I am a Data Scientist focused on building practical, testable, and reproducible models to deliver business solutions and answer questions. I love writing tidy R code (Python is just okay), and I love writing about interesting things that I'm learning. 
+This is the homepage and personal website of Danny Morris. I am a Data Scientist focused on building practical, testable, and scalable predictive and statistical models. The purpose of my site is to document some modeling strategies that I believe to be highly effective towards building valid, high quality models. I really enjoy writing tidy R code, so much of this documentation is written in R. 
 
 This site is built with [blogdown](https://github.com/rstudio/blogdown) and deployed with [Netlify](https://www.netlify.com/)
 

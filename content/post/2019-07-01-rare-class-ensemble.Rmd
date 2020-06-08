@@ -1,7 +1,7 @@
 ---
-title: A strategy for rare class learning using data-centric ensembling
+title: Training an imbalanced classification model using data-centric ensembling
 author: Danny Morris
-date: 2019-07-01
+date: "`r Sys.Date()`"
 output: 
   blogdown::html_page:
     toc: true
@@ -23,17 +23,33 @@ knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
 
 ## Overview
 
-This post demonstrates a strategy for predicting out-of-sample cases using a binary classification ensemble when the training data contains imbalanced classes. This strategy is described by [Charu Aggarwal](http://charuaggarwal.net/) in section 7.2 of his book [Outlier Analysis](https://www.amazon.com/Outlier-Analysis-Charu-C-Aggarwal/dp/3319475770/ref=pd_cp_14_1?pd_rd_w=8M3qy&pf_rd_p=ef4dc990-a9ca-4945-ae0b-f8d549198ed6&pf_rd_r=3TGSZZ1H5HYKMT0G80Q8&pd_rd_r=f1e3c156-9e78-11e9-801d-cdc96cae2e7b&pd_rd_wg=DXbV0&pd_rd_i=3319475770&psc=1&refRID=3TGSZZ1H5HYKMT0G80Q8). 
+This post demonstrates a strategy for rare class learning whereby out-of-sample predictions are made using a data-centric ensembling. This strategy is described by [Charu Aggarwal](http://charuaggarwal.net/) in section 7.2 of his book [Outlier Analysis](https://www.amazon.com/Outlier-Analysis-Charu-C-Aggarwal/dp/3319475770/ref=pd_cp_14_1?pd_rd_w=8M3qy&pf_rd_p=ef4dc990-a9ca-4945-ae0b-f8d549198ed6&pf_rd_r=3TGSZZ1H5HYKMT0G80Q8&pd_rd_r=f1e3c156-9e78-11e9-801d-cdc96cae2e7b&pd_rd_wg=DXbV0&pd_rd_i=3319475770&psc=1&refRID=3TGSZZ1H5HYKMT0G80Q8). 
 
-This ensemble strategy aims to reduce the overall variance of the classification model by fitting several models to different subsamples of the training data, generating predictions for out-of-sample cases using the parameter estimates from each model, then combining the predictions for each out-of-sample case to arrive at a final prediction for each out-of-sample case. It is a useful strategy when the outcome being modeled is rare, e.g. unexpected health crisis.
+## A little bit about ensembling
+
+The basic idea behing ensembling is to make predictions on out-of-sample data by combining the predictions from many models. There are two general approaches to ensembling: model-centric and data-centric. Model-centric ensembling combines predictions from several distinct algorithms (e.g. random forest, logistic regression, etc.). Data-centric ensembling combines predictions from the same algorithm trained on several distinct subsets of the training data. Of course model-centric and data-centric ensembling can be combined through the use of several algorithms trained on several subsets of the training data. In general, ensembling is a robust modeling strategy that reduces prediction variance and improves accuracy. One drawback to ensembling is that training, testing, and deploying an ensemble of models can be complex and time consuming. Another drawback is reduced interpretability since each model in the ensemble may be interpreted differently.
+
+## Defining the strategy
+
+The strategy shown in this post is an example of data-centric ensembling applied to binary classification where the classes are imbalanced. The goal is to make accurate out-of-sample predictions by combining predictions from several rounds of training (e.g. 25 rounds). Prior to training, a dedicated out-of-sample testing set is drawn from the available data. The remainder is used for training. In each round of training, a balanced training subsample (subset of the training data) is created by downsampling the negative class to match the size of entire positive class. Predictions are made on the dedicated out-of-sample testing set. Once the training rounds are complete, the predictions from each round are combined by averaging the predicted probabilities for each case in the dedicated out-of-sample testing set. 
+
+This strategy is very efficient due to the use of downsampling, leading to training data sets that are very manageable in size. As a result, this strategy can be repeated many times without being too computationally expensive.
+
+## Testing the strategy
+
+It is useful to think about the training strategy as a single data point. One should not draw any grand conclusions about a single data point. Instead, multiple data points are sought to gain a more complete understanding of the data. Likewise, any training strategy should be repeated several times to gain a more complete picture of how the final implementation is expected to work. This is why techniques such as repeated K-fold cross validation exist (to *repeat* the basic K-fold CV strategy).
+
+For this reason, we do not want to draw conclusions about a single model, nor should we draw conclusions from a single implementation of the ensemble strategy. Instead, the ensemble strategy in this post is repeated several times (N=100). The outcomes across all repitions are then visualized to better understand how this strategy would be expected to work in a live setting.
 
 ## Packages
+
+A selection of pacakges from the [tidymodels](https://rviews.rstudio.com/2019/06/19/a-gentle-intro-to-tidymodels/) framework are used throughout. The tidymodels framework represents the next step in the evolution of the excellent [caret](http://topepo.github.io/caret/index.html) package written by Max Kuhn.
 
 ```{r}
 library(tidyverse) 
 library(rsample)   
-library(ranger) 
-library(imbalance)
+library(recipes) 
+library(parsnip)
 library(yardstick)
 
 options(yardstick.event_first = F)
@@ -42,99 +58,180 @@ options(yardstick.event_first = F)
 ## Data
 
 ```{r}
-sample_df <- imbalance::banana %>%
-  as_tibble()
+data_url <- "https://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/breast-cancer-wisconsin.data"
+
+sample_df <- read_csv(data_url, col_names = F) %>%
+  rename(Class = X11) %>%
+  mutate(Class = ifelse(Class == 2, "benign", "malignant")) %>%
+  mutate_at(vars(X1:X10), list(as.numeric)) %>%
+  drop_na() %>%
+  select(-X1) %>%
+  select(Class, everything())
 ```
 
-Class distribution.
+For demonstration purposes, the number of positive cases is reduced such that is represents about 10% of the available data.
 
 ```{r}
-sample_df %>%
-  count(Class) %>%
-  mutate(pct_n = n/sum(n))
+negative_class <- sample_df %>%
+  filter(Class == "benign")
+
+positive_class <- sample_df %>%
+  filter(Class == "malignant") %>%
+  sample_frac(0.2)
+
+model_df <- bind_rows(negative_class, positive_class)
+
+model_df
 ```
 
-## Training and out-of-sample splits
+## Ensemble function
+
+The data-centric ensemble strategy uses vanilla logistic regression via `glm()`. 
 
 ```{r}
-split_pct <- 0.8
+# Inputs:
+# - X_tbl: features
+# - y_tbl: target
+# - train_split: amount of data allocated for training
+# - subsamples: number of subsamples in ensemble
 
-set.seed(9560)
+# Returns:
+# - F1 score on out-of-sample data
 
-split_idx <- rsample::initial_split(
-  data = sample_df, 
-  prop = split_pct,
-  strata = "Class"
-)
-```
-
-```{r}
-train <- rsample::training(split_idx)
-
-out_of_sample <- rsample::assessment(split_idx)
-```
-
-## Generate subsamples from training data
-
-```{r}
-# determine the number of rows to which the negative class is down-sampled
-# by default, set to the number of positive cases
-downsample_level <- train %>%
-  dplyr::filter(Class == "positive") %>%
-  nrow()
-
-subsample_idx <- seq(1,  25, 1)
-
-subsamples <- purrr::map(subsample_idx, function(idx) {
-  train %>%
-    dplyr::group_by(Class) %>%
-    sample_n(size = downsample_level) %>%
-    ungroup()
-}) 
-```
-
-## Fit ensemble of models
-
-```{r}
-models <- map(subsamples, function(idx) {
-  ranger_model <- ranger::ranger(
-    formula = as.factor(Class) ~ .,
-    data = idx,
-    probability = T
+glm_ensemble <- function(X_tbl,
+                         y_tbl,
+                         train_split = 0.7, 
+                         subsamples = 25) {
+  
+  # build tibble from X and y
+  Xy_tbl <- bind_cols(
+    X_tbl,
+    y_tbl %>% setNames(., nm = "Class")
   )
-})
-```
-
-## Predicted labels via ensemble
-
-```{r}
-probs <- map(models, function(idx) {
-  predict(idx, data = out_of_sample)$predictions[, "positive"]
-}) 
-
-avg_prob <- probs %>%
-  bind_cols() %>%
-  apply(., 1., mean)
-
-pred_label <- ifelse(avg_prob >= 0.5, "positive", "negative")
+  
+  # configure initial training and out-of-sample splits
+  train_test_split <- rsample::initial_split(
+    data = Xy_tbl, 
+    prop = train_split,
+    strata = "Class"
+  )
+  
+  train <- rsample::training(train_test_split)
+  out_of_sample <- rsample::assessment(train_test_split)
+  
+  # configure number of subsamples (training rounds)
+  subsample_idx <- seq(1, subsamples, 1)
+  
+  # training rounds
+  training_rounds <- map(subsample_idx, function(split) {
+    
+    # recipe to downsample training data and scale predictors (optional)
+    data_prep_recipe <- recipes::recipe(Class ~ ., data = train) %>%
+      step_downsample(Class) %>%
+      step_center(all_predictors()) %>%
+      step_scale(all_predictors()) %>%
+      prep(training = train, retain = T)
+    
+    # apply recipe to transform  training and out-of-sample sets
+    new_train <- juice(data_prep_recipe)
+    out_of_sample <- bake(data_prep_recipe, out_of_sample)
+    
+    # configure random forest classifier
+    model_spec <- parsnip::logistic_reg() %>%
+      parsnip::set_engine("glm") %>%
+      parsnip::set_mode("classification")
+    
+    # fit model to training data
+    model_fit <- model_spec %>%
+      parsnip::fit(Class ~ ., data = new_train)
+    
+    # generate predictions on out-of-sample data
+    predictions <- predict(model_fit, 
+                           out_of_sample,
+                           type = 'prob') %>%
+      select(.pred_malignant)
+    
+    colnames(predictions) <- paste("malignant", split, sep = "_")
+    
+    return(predictions)
+  })
+  
+  # average the predicted probabilities across training rounds
+  avg_prob <- bind_cols(training_rounds) %>%
+    apply(., 1., mean)
+  
+  # simple decision boundary of 0.5 to produce final predicted labels
+  final_pred <- ifelse(avg_prob >= 0.5, "malignant", "benign")
+  
+  # measure and report F1 score
+  ensemble_f1 <- f_meas_vec(
+    factor(out_of_sample$Class), 
+    factor(final_pred)
+  )
+  
+  return(ensemble_f1)
+}
 ```
 
 ## Results
 
-```{r}
-ensemble_f1 <- f_meas_vec(out_of_sample$Class, factor(pred_label))
+### No ensembling
 
-map_dbl(probs, function(prob) {
-  label <- ifelse(prob >= 0.5, "positive", "negative")
-  yardstick::f_meas_vec(out_of_sample$Class, factor(label))
-}) %>%
-  enframe(name = "Subsample", value = "Subsample_F1") %>%
-  mutate(Ensemble_F1 = ensemble_f1) %>%
-  gather(Metric, Value, -Subsample) %>%
-  ggplot(aes(x = Subsample, y = Value)) +
-  geom_line(aes(group = Metric, color = Metric), lwd = 1) +
-  scale_color_manual(values = c("blue", "gray80")) +
-  labs(title = "F1 across 25 subsamples",
-       subtitle = "The ensemble reduces variation and improves accuracy.") +
+As a baseline, an experiment which ignores the ensembling component is run. This baseline strategy is repeated 50 times. Within each repitition, the out-of-sample predictions are made from a single training round (i.e. no ensemble).
+
+```{r, cache = T}
+repetitions <- seq(1, 50, 1)
+
+X <- model_df %>% select(-Class)
+y <- model_df %>% select(Class)
+
+no_ensemble <- map_dbl(repetitions, function(i) {
+  glm_ensemble(X_tbl = X,
+               y_tbl = y,
+               subsamples = 1)
+})
+```
+
+### With ensembling
+
+To test the ensemble strategy, we repeat it 50 times and compare it to the baseline strategy. Within each repition, the out-of-sample predictions are made from an ensemble of 25 models. Note that the only difference between this experiment and the baseline experiment is the ensembling, so the comparisons are valid. 
+
+```{r, cache = T}
+with_ensemble <- map_dbl(repetitions, function(i) {
+  glm_ensemble(X_tbl = X,
+               y_tbl = y,
+               subsamples = 25)
+})
+```
+
+### Analysis
+
+```{r}
+bind_cols(
+  No_Ensemble = no_ensemble,
+  With_Ensemble = with_ensemble
+) %>%
+  gather(key, value) %>%
+  ggplot(aes(x = value)) +
+  geom_density(aes(fill = key), alpha = 0.5) +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
+  labs(title = "Distributions of F1 scores for baseline and ensemble experiments",
+       subtitle = "Each experiment repeated 50 times",
+       x = "Distribution of out-of-sample F1 scores",
+       y = "Density") +
   theme_bw()
 ```
+
+The F1 density curves for each experiment reveal the ensembling strategy to be effective at reducing the variance and improving the accuracy of out-of-sample predictions compared to the baseline strategy.
+
+### Significance test
+
+A simple t-test to test the statistical significance of the difference in means between the two experiments.
+
+```{r}
+t.test(no_ensemble, with_ensemble)
+```
+
+## Conclusion
+
+Analysis of the experiments reveals that inserting an ensemble strategy into classification training should, on average, reduce variance and improve accuracy of out-of-sample predictions. The particular ensembling strategy shown in this post is intended for classification problems where the number of positive examples is small. 

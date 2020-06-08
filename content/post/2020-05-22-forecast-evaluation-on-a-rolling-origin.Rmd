@@ -1,5 +1,5 @@
 ---
-title: Evaluating forecasting models using rolling origin cross validation
+title: Evaluating forecasting models using rolling origin cross validation and the tidyverts framework
 author: Danny Morris
 date: '`r Sys.Date()`'
 output: 
@@ -21,9 +21,9 @@ editor_options:
 
 ## Overview
 
-This post shows how to implement rolling origin cross validation (ROCV) to evaluate time series forecasting models. ROCV starts by training a model using a specified amount of training data (e.g. 80%) and a specified forecast horizon (e.g. 3 observations in the future). Error metrics are computed on the forecasts. For each training iteration that follows, the training data increases by a single observation and the forecast origin shifts forward by a single observation. Error metrics on the forecasts are stored for each training iteration for further analysis. This strategy repeats until all available data is exhausted.
+This post shows how to implement rolling origin cross validation (ROCV) to evaluate time series forecasting models. This idea is discussed in [Forecasting: Principles and Practice](https://otexts.com/fpp2/accuracy.html). ROCV starts by training a model using an initial training split (e.g. 80% of available data). The remainder is the initial testing split. A forecast horizon is chosen by the user. In the first ROCV iteration, model training is performed on the initial training split and accuracy metrics are computed on the forecast horizon. For each subsequent ROCV iteration, the training data increases by a chosen length (e.g. 1 additional observation), and the testing set shifts forward by the same length. Accuracy metrics on the forecasts are stored for each ROCV iteration for further analysis. This strategy repeats until all available data is exhausted.
 
-Reference: https://otexts.com/fpp2/accuracy.html
+This strategy is applicable to any forecasting model. Examples include demand forecasting, workforce planning, sales, etc. It allows for very flexible and robust training and evaluation. Both are essential to producing a valid, high quality predictive model.
 
 ```{r, include=F}
 knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
@@ -31,126 +31,185 @@ knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
 
 ## Packages
 
+The [tidyverts](https://tidyverts.org/) framework is used. This framework offers an API for forecasting using tidy programming concepts. This framework is the next generation of the excellent [forecast](https://otexts.com/fpp2/the-forecast-package-in-r.html) package written by Rob Hyndman. Many of the classic forecasting algorithms are implemented in the [fable](http://fable.tidyverts.org/) package, such as Arima, Exponential Smoothing, Regression, and Fourier series. Single-layer, autoregressive neural networks are currently available as well. These algorithms work well across a range of forecasting problems, and they have the nice feature of being highly explainable. 
+
+At the time of this writing, the `tidyverts` framework is powerful but not very mature. I experienced installation issues on a Windows machine due to the complexity of the package dependencies. Still, the framework is worth learning and has a lot of potential.
+
 ```{r}
+# tidyverse
 library(tidyverse)
-library(forecast)
-library(lubridate)
-library(blscrapeR)
+
+# tidyverts
+library(tsibble)
+library(tsibbledata)
+library(fable)
+library(fabletools)
+library(feasts)
+
+# misc
+library(urca)
 library(plotly)
 ```
 
 ## Data
 
+The data reflect liquor [retail turnover](https://www.mbi-geodata.com/en/purchasing-power/retail-turnover/) in Victoria, Australia. Simply put, it's a reflection of liquor sales in the area. A log transformation is applied to make the variance stable over time.
+
 ```{r}
-unemp <- blscrapeR::bls_api(
-  "LNS14000000",
-  startyear = 2015,
-  endyear = 2019
-) %>%
-  dateCast() %>%
-  arrange(date) %>%
-  mutate(Unemp_Change = value - lag(value)) %>%
-  select(date, Unemp_Change) %>%
-  drop_na()
-
-y <- ts(unemp$Unemp_Change, start = 2015, frequency = 12)
-
-ggplotly(
-  autoplot(y, main = "Monthly changes in unemployment, 2015-2019") +
-    theme_bw()
-) 
+model_tsibble <- tsibbledata::aus_retail %>% 
+  mutate(Turnover = log(Turnover)) %>%
+  filter(State == "Victoria",
+         Industry == "Liquor retailing") %>%
+  filter_index("2005-01-01" ~ .)
 ```
 
-## Define forecast origins and forecast horizon
+## Initial training and testing splits
+
+Choose an initial training and initial testing set. These data sets are the starting points for ROCV.
 
 ```{r}
-get_origins <- function(y, first_origin, shift_by, fcast_horizon) {
-  origins <- seq(
-    from = floor(length(y)*0.8), 
-    to = length(y) - (fcast_horizon + 1), 
-    by = shift_by
-  )
-  
-  list(origins = origins,
-       horizon = fcast_horizon) %>%
-    return()
-}
+# training
+initial_train <- model_tsibble %>%
+  filter_index("2005-01-01" ~ "2013-12-01") %>%
+  mutate(Split = "Initial Training")
 
-origins <- get_origins(
-  y = y,
-  first_origin = floor(length(y)*0.8),
-  shift_by = 1,
-  fcast_horizon = 3
-)
+# testing
+initial_test <- model_tsibble %>%
+  filter_index("2014-01-01" ~ .) %>%
+  mutate(Split = "Initial Testing")
 ```
 
-## Training
+```{r}
+bind_rows(initial_train, initial_test) %>%
+  ggplot(aes(x = Month, y = Turnover)) +
+  geom_line(aes(color = Split)) +
+  labs(title = "Monthly liquor retail turnover in Victoria, Australia (log scale)") +
+  theme_bw()
+```
+
+## Objective
+
+The objective in this example is to test a range of forecasting models and choose one that performs well at producing 12-month forecasts, one for each month in the calendar year. This scenario is common in annual budget forecasting. Models are evaluated for point accuracy (e.g. RMSE) and interval accuracy. Each of these error types are important to consider in selecting an appropriate model.
+
+## ROCV function
+
+The function steps include:
+
+1. Configure the CV parameters by specifiying the forecast horizon origin shift amount. For 12-month forecasting where each new forecast is generated at the beginning of a new calendar year, set both the horizon and the shift to 12.
+
+2. Iterate over the CV folds (using `purrr::map()`), apply functions for subsetting data, fitting models, generating forecasts, and calculating error metrics.
+
+3. Combine the results for further analysis and visualization.
 
 ```{r}
-cv_models <- map2(origins$origins, origins$horizon, function(i, h) {
+# Inputs:
+# - initial training set
+# - initial testing set
+# - desired horizon
+# - desired shift (the number of observations to add to training data)
+
+# Output:
+# - Tibble containing error metrics for each iterations
+
+rocv <- function(initial_train, 
+                 initial_test, 
+                 horizon, 
+                 shift) {
   
-  # training/testing ts objects
-  train_ts <- subset(y, start = 1, end = i)
-  test_ts <- subset(y, start = i+1, end = i+h)
+  # determine number of CV iterations based on horizon and shift
+  n_iterations <- nrow(initial_test) - horizon
+  iterations_idx <- seq(0, n_iterations, shift)
   
-  # ARIMA
-  arima_fit <- auto.arima(train_ts)
-  arima_fcast <- forecast(arima_fit, h = length(test_ts))
-  arima_metrics <- forecast::accuracy(arima_fcast, test_ts)
-  
-  # ETS
-  ets_fit <- ets(train_ts)
-  ets_fcast <- forecast(ets_fit, h = length(test_ts))
-  ets_metrics <- forecast::accuracy(ets_fcast, test_ts)
-  
-  # STL
-  stl_fit <- stl(train_ts, t.window=13, s.window="periodic",
-                 robust=TRUE)
-  stl_fcast <- forecast(stl_fit, h = length(test_ts))
-  stl_metrics <- forecast::accuracy(stl_fcast, test_ts)
-  
-  # TSLM
-  tslm_fit <- tslm(train_ts ~ trend + season)
-  tslm_fcast <- forecast(tslm_fit, h = length(test_ts))
-  tslm_metrics <- forecast::accuracy(tslm_fcast, test_ts)
-  
-  # Metrics table
-  model_metrics <- list(arima = arima_metrics,
-                        ets = ets_metrics,
-                        stl = stl_metrics,
-                        tslm = tslm_metrics) %>%
-    map2(., names(.), function(model, nm) {
-      model %>%
-        as_tibble() %>%
-        select(RMSE) %>%
-        mutate(Model = nm,
-               Split = c("Training", "Testing"),
-               length_train = length(train_ts),
-               length_test = length(test_ts))
-    }) %>%
+  # apply ROCV
+  map(iterations_idx, function(i) {
+    
+    # construct training data
+    new_train <- bind_rows(
+      initial_train,
+      initial_test %>% slice(seq(0, i, 1))
+    )
+    
+    # construct testing data
+    new_test <- initial_test %>% 
+      slice(seq(i+1, i+horizon, 1))
+    
+    # fit models to training data
+    models <- new_train %>%
+      model(
+        ARIMA = ARIMA(Turnover),
+        ETS = ETS(Turnover),
+        TS_LM = TSLM(Turnover ~ trend() + season()),
+        DECOMP =decomposition_model(
+          STL(log(Turnover) ~ season(window = Inf)),
+          ETS(season_adjust ~ season("N")),
+          SNAIVE(season_year)
+        )
+      )
+    
+    # generate forecasts
+    forecasts <- models %>%
+      forecast(new_data = new_test)
+    
+    # evaluate accuracy on testing data
+    metrics_list <- list(interval_accuracy_measures,
+                         point_accuracy_measures)
+    
+    metrics <- forecasts %>%
+      fabletools::accuracy(
+        data = new_test,
+        measures = metrics_list
+      ) %>%
+      mutate(Origin = i)
+    
+    return(metrics)
+    
+  }) %>%
     bind_rows()
-  
-  return(model_metrics)
-}) %>%
-  bind_rows()
+}
+```
+
+## Run ROCV
+
+```{r, cache = T}
+rocv_results <- rocv(
+  initial_train = initial_train,
+  initial_test = initial_test,
+  horizon = 12,
+  shift = 12
+)
 ```
 
 ## Results
 
 ```{r}
-cv_results <- cv_models %>%
-  gather(key, value, -Model, -Split, -length_train, -length_test) %>%
-  ggplot(aes(x = length_train, y = value)) +
-  facet_grid(key~Split, scales = "free_y") +
-  geom_line(aes(color = Model, group = Model)) +
-  labs(title = "Rolling origin cross validation RMSE",
-       x = "Origin",
-       y = "") +
+rocv_results %>%
+  select(Origin, .model, RMSE, winkler) %>%
+  gather(Metric, Value, -Origin, -.model) %>%
+  ggplot(aes(x = Origin, y = Value)) +
+  facet_wrap(~Metric) +
+  geom_line(aes(group = .model, color = .model)) +
+  geom_point(aes(color = .model)) +
+  labs(title = "ROCV metrics (RMSE and Winkler score)") +
+  theme_bw()
+```
+
+```{r}
+rocv_results %>%
+  ggplot(aes(x = MAPE, y = winkler)) +
+  geom_point(aes(color = .model, shape = .model)) +
+  labs(title = "ROCV iteration metrics") +
   theme_bw()
 
-ggplotly(cv_results)
+rocv_results %>%
+  ggplot(aes(x = MAPE, y = winkler)) +
+  geom_point(size = 1, color = 'gray70') +
+  geom_hline(aes(yintercept = mean(winkler)), color = 'gray70', lwd = 2) +
+  geom_vline(aes(xintercept = mean(MAPE)), color = 'gray70', lwd = 2) +
+  annotate("text", x = 0.65, y = 0.3, label = 'Ideal zone') +
+  theme_bw()
 ```
 
 ## Observations
 
-Rolling origin cross validation gives some good insight into the behaviors of various models in the context of the chosen time series data. In this example, the Arima model performs quite well on the training data but does not generalize well to unseen testing data. The ETS model appears to generalize well to unseen testing data despite having consistently higher RMSE on the training data.
+ROCV is a great strategy for testing many forecasting models under different circumstances. In this example, it appears that the ARIMA model is most appropriate due to its superior performance and stability.
+

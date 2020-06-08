@@ -1,7 +1,7 @@
 ---
-title: A strategy for rare class learning using data-centric ensembling
+title: Training an imbalanced classification model using data-centric ensembling
 author: Danny Morris
-date: 2019-07-01
+date: "2020-06-07"
 output: 
   blogdown::html_page:
     toc: true
@@ -84,115 +84,235 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div id="TOC">
 <ul>
 <li><a href="#overview">Overview</a></li>
+<li><a href="#a-little-bit-about-ensembling">A little bit about ensembling</a></li>
+<li><a href="#defining-the-strategy">Defining the strategy</a></li>
+<li><a href="#testing-the-strategy">Testing the strategy</a></li>
 <li><a href="#packages">Packages</a></li>
 <li><a href="#data">Data</a></li>
-<li><a href="#training-and-out-of-sample-splits">Training and out-of-sample splits</a></li>
-<li><a href="#generate-subsamples-from-training-data">Generate subsamples from training data</a></li>
-<li><a href="#fit-ensemble-of-models">Fit ensemble of models</a></li>
-<li><a href="#predicted-labels-via-ensemble">Predicted labels via ensemble</a></li>
-<li><a href="#results">Results</a></li>
+<li><a href="#ensemble-function">Ensemble function</a></li>
+<li><a href="#results">Results</a><ul>
+<li><a href="#no-ensembling">No ensembling</a></li>
+<li><a href="#with-ensembling">With ensembling</a></li>
+<li><a href="#analysis">Analysis</a></li>
+<li><a href="#significance-test">Significance test</a></li>
+</ul></li>
+<li><a href="#conclusion">Conclusion</a></li>
 </ul>
 </div>
 
 <div id="overview" class="section level2">
 <h2>Overview</h2>
-<p>This post demonstrates a strategy for predicting out-of-sample cases using a binary classification ensemble when the training data contains imbalanced classes. This strategy is described by <a href="http://charuaggarwal.net/">Charu Aggarwal</a> in section 7.2 of his book <a href="https://www.amazon.com/Outlier-Analysis-Charu-C-Aggarwal/dp/3319475770/ref=pd_cp_14_1?pd_rd_w=8M3qy&amp;pf_rd_p=ef4dc990-a9ca-4945-ae0b-f8d549198ed6&amp;pf_rd_r=3TGSZZ1H5HYKMT0G80Q8&amp;pd_rd_r=f1e3c156-9e78-11e9-801d-cdc96cae2e7b&amp;pd_rd_wg=DXbV0&amp;pd_rd_i=3319475770&amp;psc=1&amp;refRID=3TGSZZ1H5HYKMT0G80Q8">Outlier Analysis</a>.</p>
-<p>This ensemble strategy aims to reduce the overall variance of the classification model by fitting several models to different subsamples of the training data, generating predictions for out-of-sample cases using the parameter estimates from each model, then combining the predictions for each out-of-sample case to arrive at a final prediction for each out-of-sample case. It is a useful strategy when the outcome being modeled is rare, e.g. unexpected health crisis.</p>
+<p>This post demonstrates a strategy for rare class learning whereby out-of-sample predictions are made using a data-centric ensembling. This strategy is described by <a href="http://charuaggarwal.net/">Charu Aggarwal</a> in section 7.2 of his book <a href="https://www.amazon.com/Outlier-Analysis-Charu-C-Aggarwal/dp/3319475770/ref=pd_cp_14_1?pd_rd_w=8M3qy&amp;pf_rd_p=ef4dc990-a9ca-4945-ae0b-f8d549198ed6&amp;pf_rd_r=3TGSZZ1H5HYKMT0G80Q8&amp;pd_rd_r=f1e3c156-9e78-11e9-801d-cdc96cae2e7b&amp;pd_rd_wg=DXbV0&amp;pd_rd_i=3319475770&amp;psc=1&amp;refRID=3TGSZZ1H5HYKMT0G80Q8">Outlier Analysis</a>.</p>
+</div>
+<div id="a-little-bit-about-ensembling" class="section level2">
+<h2>A little bit about ensembling</h2>
+<p>The basic idea behing ensembling is to make predictions on out-of-sample data by combining the predictions from many models. There are two general approaches to ensembling: model-centric and data-centric. Model-centric ensembling combines predictions from several distinct algorithms (e.g. random forest, logistic regression, etc.). Data-centric ensembling combines predictions from the same algorithm trained on several distinct subsets of the training data. Of course model-centric and data-centric ensembling can be combined through the use of several algorithms trained on several subsets of the training data. In general, ensembling is a robust modeling strategy that reduces prediction variance and improves accuracy. One drawback to ensembling is that training, testing, and deploying an ensemble of models can be complex and time consuming. Another drawback is reduced interpretability since each model in the ensemble may be interpreted differently.</p>
+</div>
+<div id="defining-the-strategy" class="section level2">
+<h2>Defining the strategy</h2>
+<p>The strategy shown in this post is an example of data-centric ensembling applied to binary classification where the classes are imbalanced. The goal is to make accurate out-of-sample predictions by combining predictions from several rounds of training (e.g. 25 rounds). Prior to training, a dedicated out-of-sample testing set is drawn from the available data. The remainder is used for training. In each round of training, a balanced training subsample (subset of the training data) is created by downsampling the negative class to match the size of entire positive class. Predictions are made on the dedicated out-of-sample testing set. Once the training rounds are complete, the predictions from each round are combined by averaging the predicted probabilities for each case in the dedicated out-of-sample testing set.</p>
+<p>This strategy is very efficient due to the use of downsampling, leading to training data sets that are very manageable in size. As a result, this strategy can be repeated many times without being too computationally expensive.</p>
+</div>
+<div id="testing-the-strategy" class="section level2">
+<h2>Testing the strategy</h2>
+<p>It is useful to think about the training strategy as a single data point. One should not draw any grand conclusions about a single data point. Instead, multiple data points are sought to gain a more complete understanding of the data. Likewise, any training strategy should be repeated several times to gain a more complete picture of how the final implementation is expected to work. This is why techniques such as repeated K-fold cross validation exist (to <em>repeat</em> the basic K-fold CV strategy).</p>
+<p>For this reason, we do not want to draw conclusions about a single model, nor should we draw conclusions from a single implementation of the ensemble strategy. Instead, the ensemble strategy in this post is repeated several times (N=100). The outcomes across all repitions are then visualized to better understand how this strategy would be expected to work in a live setting.</p>
 </div>
 <div id="packages" class="section level2">
 <h2>Packages</h2>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(tidyverse) 
-<span class="kw">library</span>(rsample)   
-<span class="kw">library</span>(ranger) 
-<span class="kw">library</span>(imbalance)
-<span class="kw">library</span>(yardstick)
-
-<span class="kw">options</span>(<span class="dt">yardstick.event_first =</span> F)</code></pre>
+<p>A selection of pacakges from the <a href="https://rviews.rstudio.com/2019/06/19/a-gentle-intro-to-tidymodels/">tidymodels</a> framework are used throughout. The tidymodels framework represents the next step in the evolution of the excellent <a href="http://topepo.github.io/caret/index.html">caret</a> package written by Max Kuhn.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" title="1"><span class="kw">library</span>(tidyverse) </a>
+<a class="sourceLine" id="cb1-2" title="2"><span class="kw">library</span>(rsample)   </a>
+<a class="sourceLine" id="cb1-3" title="3"><span class="kw">library</span>(recipes) </a>
+<a class="sourceLine" id="cb1-4" title="4"><span class="kw">library</span>(parsnip)</a>
+<a class="sourceLine" id="cb1-5" title="5"><span class="kw">library</span>(yardstick)</a>
+<a class="sourceLine" id="cb1-6" title="6"></a>
+<a class="sourceLine" id="cb1-7" title="7"><span class="kw">options</span>(<span class="dt">yardstick.event_first =</span> F)</a></code></pre></div>
 </div>
 <div id="data" class="section level2">
 <h2>Data</h2>
-<pre class="sourceCode r"><code class="sourceCode r">sample_df &lt;-<span class="st"> </span>imbalance<span class="op">::</span>banana <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">as_tibble</span>()</code></pre>
-<p>Class distribution.</p>
-<pre class="sourceCode r"><code class="sourceCode r">sample_df <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">count</span>(Class) <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">pct_n =</span> n<span class="op">/</span><span class="kw">sum</span>(n))</code></pre>
-<pre><code>## # A tibble: 2 x 3
-##   Class        n pct_n
-##   &lt;fct&gt;    &lt;int&gt; &lt;dbl&gt;
-## 1 negative  2376   0.9
-## 2 positive   264   0.1</code></pre>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" title="1">data_url &lt;-<span class="st"> &quot;https://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/breast-cancer-wisconsin.data&quot;</span></a>
+<a class="sourceLine" id="cb2-2" title="2"></a>
+<a class="sourceLine" id="cb2-3" title="3">sample_df &lt;-<span class="st"> </span><span class="kw">read_csv</span>(data_url, <span class="dt">col_names =</span> F) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb2-4" title="4"><span class="st">  </span><span class="kw">rename</span>(<span class="dt">Class =</span> X11) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb2-5" title="5"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Class =</span> <span class="kw">ifelse</span>(Class <span class="op">==</span><span class="st"> </span><span class="dv">2</span>, <span class="st">&quot;benign&quot;</span>, <span class="st">&quot;malignant&quot;</span>)) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb2-6" title="6"><span class="st">  </span><span class="kw">mutate_at</span>(<span class="kw">vars</span>(X1<span class="op">:</span>X10), <span class="kw">list</span>(as.numeric)) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb2-7" title="7"><span class="st">  </span><span class="kw">drop_na</span>() <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb2-8" title="8"><span class="st">  </span><span class="kw">select</span>(<span class="op">-</span>X1) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb2-9" title="9"><span class="st">  </span><span class="kw">select</span>(Class, <span class="kw">everything</span>())</a></code></pre></div>
+<p>For demonstration purposes, the number of positive cases is reduced such that is represents about 10% of the available data.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" title="1">negative_class &lt;-<span class="st"> </span>sample_df <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb3-2" title="2"><span class="st">  </span><span class="kw">filter</span>(Class <span class="op">==</span><span class="st"> &quot;benign&quot;</span>)</a>
+<a class="sourceLine" id="cb3-3" title="3"></a>
+<a class="sourceLine" id="cb3-4" title="4">positive_class &lt;-<span class="st"> </span>sample_df <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb3-5" title="5"><span class="st">  </span><span class="kw">filter</span>(Class <span class="op">==</span><span class="st"> &quot;malignant&quot;</span>) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb3-6" title="6"><span class="st">  </span><span class="kw">sample_frac</span>(<span class="fl">0.2</span>)</a>
+<a class="sourceLine" id="cb3-7" title="7"></a>
+<a class="sourceLine" id="cb3-8" title="8">model_df &lt;-<span class="st"> </span><span class="kw">bind_rows</span>(negative_class, positive_class)</a>
+<a class="sourceLine" id="cb3-9" title="9"></a>
+<a class="sourceLine" id="cb3-10" title="10">model_df</a></code></pre></div>
+<pre><code>## # A tibble: 492 x 10
+##    Class     X2    X3    X4    X5    X6    X7    X8    X9   X10
+##    &lt;chr&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+##  1 benign     5     1     1     1     2     1     3     1     1
+##  2 benign     5     4     4     5     7    10     3     2     1
+##  3 benign     3     1     1     1     2     2     3     1     1
+##  4 benign     6     8     8     1     3     4     3     7     1
+##  5 benign     4     1     1     3     2     1     3     1     1
+##  6 benign     1     1     1     1     2    10     3     1     1
+##  7 benign     2     1     2     1     2     1     3     1     1
+##  8 benign     2     1     1     1     2     1     1     1     5
+##  9 benign     4     2     1     1     2     1     2     1     1
+## 10 benign     1     1     1     1     1     1     3     1     1
+## # ... with 482 more rows</code></pre>
 </div>
-<div id="training-and-out-of-sample-splits" class="section level2">
-<h2>Training and out-of-sample splits</h2>
-<pre class="sourceCode r"><code class="sourceCode r">split_pct &lt;-<span class="st"> </span><span class="fl">0.8</span>
-
-<span class="kw">set.seed</span>(<span class="dv">9560</span>)
-
-split_idx &lt;-<span class="st"> </span>rsample<span class="op">::</span><span class="kw">initial_split</span>(
-  <span class="dt">data =</span> sample_df, 
-  <span class="dt">prop =</span> split_pct,
-  <span class="dt">strata =</span> <span class="st">&quot;Class&quot;</span>
-)</code></pre>
-<pre class="sourceCode r"><code class="sourceCode r">train &lt;-<span class="st"> </span>rsample<span class="op">::</span><span class="kw">training</span>(split_idx)
-
-out_of_sample &lt;-<span class="st"> </span>rsample<span class="op">::</span><span class="kw">assessment</span>(split_idx)</code></pre>
-</div>
-<div id="generate-subsamples-from-training-data" class="section level2">
-<h2>Generate subsamples from training data</h2>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># determine the number of rows to which the negative class is down-sampled</span>
-<span class="co"># by default, set to the number of positive cases</span>
-downsample_level &lt;-<span class="st"> </span>train <span class="op">%&gt;%</span>
-<span class="st">  </span>dplyr<span class="op">::</span><span class="kw">filter</span>(Class <span class="op">==</span><span class="st"> &quot;positive&quot;</span>) <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">nrow</span>()
-
-subsample_idx &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv">1</span>,  <span class="dv">25</span>, <span class="dv">1</span>)
-
-subsamples &lt;-<span class="st"> </span>purrr<span class="op">::</span><span class="kw">map</span>(subsample_idx, <span class="cf">function</span>(idx) {
-  train <span class="op">%&gt;%</span>
-<span class="st">    </span>dplyr<span class="op">::</span><span class="kw">group_by</span>(Class) <span class="op">%&gt;%</span>
-<span class="st">    </span><span class="kw">sample_n</span>(<span class="dt">size =</span> downsample_level) <span class="op">%&gt;%</span>
-<span class="st">    </span><span class="kw">ungroup</span>()
-}) </code></pre>
-</div>
-<div id="fit-ensemble-of-models" class="section level2">
-<h2>Fit ensemble of models</h2>
-<pre class="sourceCode r"><code class="sourceCode r">models &lt;-<span class="st"> </span><span class="kw">map</span>(subsamples, <span class="cf">function</span>(idx) {
-  ranger_model &lt;-<span class="st"> </span>ranger<span class="op">::</span><span class="kw">ranger</span>(
-    <span class="dt">formula =</span> <span class="kw">as.factor</span>(Class) <span class="op">~</span><span class="st"> </span>.,
-    <span class="dt">data =</span> idx,
-    <span class="dt">probability =</span> T
-  )
-})</code></pre>
-</div>
-<div id="predicted-labels-via-ensemble" class="section level2">
-<h2>Predicted labels via ensemble</h2>
-<pre class="sourceCode r"><code class="sourceCode r">probs &lt;-<span class="st"> </span><span class="kw">map</span>(models, <span class="cf">function</span>(idx) {
-  <span class="kw">predict</span>(idx, <span class="dt">data =</span> out_of_sample)<span class="op">$</span>predictions[, <span class="st">&quot;positive&quot;</span>]
-}) 
-
-avg_prob &lt;-<span class="st"> </span>probs <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">bind_cols</span>() <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">apply</span>(., <span class="fl">1.</span>, mean)
-
-pred_label &lt;-<span class="st"> </span><span class="kw">ifelse</span>(avg_prob <span class="op">&gt;=</span><span class="st"> </span><span class="fl">0.5</span>, <span class="st">&quot;positive&quot;</span>, <span class="st">&quot;negative&quot;</span>)</code></pre>
+<div id="ensemble-function" class="section level2">
+<h2>Ensemble function</h2>
+<p>The data-centric ensemble strategy uses vanilla logistic regression via <code>glm()</code>.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" title="1"><span class="co"># Inputs:</span></a>
+<a class="sourceLine" id="cb5-2" title="2"><span class="co"># - X_tbl: features</span></a>
+<a class="sourceLine" id="cb5-3" title="3"><span class="co"># - y_tbl: target</span></a>
+<a class="sourceLine" id="cb5-4" title="4"><span class="co"># - train_split: amount of data allocated for training</span></a>
+<a class="sourceLine" id="cb5-5" title="5"><span class="co"># - subsamples: number of subsamples in ensemble</span></a>
+<a class="sourceLine" id="cb5-6" title="6"></a>
+<a class="sourceLine" id="cb5-7" title="7"><span class="co"># Returns:</span></a>
+<a class="sourceLine" id="cb5-8" title="8"><span class="co"># - F1 score on out-of-sample data</span></a>
+<a class="sourceLine" id="cb5-9" title="9"></a>
+<a class="sourceLine" id="cb5-10" title="10">glm_ensemble &lt;-<span class="st"> </span><span class="cf">function</span>(X_tbl,</a>
+<a class="sourceLine" id="cb5-11" title="11">                         y_tbl,</a>
+<a class="sourceLine" id="cb5-12" title="12">                         <span class="dt">train_split =</span> <span class="fl">0.7</span>, </a>
+<a class="sourceLine" id="cb5-13" title="13">                         <span class="dt">subsamples =</span> <span class="dv">25</span>) {</a>
+<a class="sourceLine" id="cb5-14" title="14">  </a>
+<a class="sourceLine" id="cb5-15" title="15">  <span class="co"># build tibble from X and y</span></a>
+<a class="sourceLine" id="cb5-16" title="16">  Xy_tbl &lt;-<span class="st"> </span><span class="kw">bind_cols</span>(</a>
+<a class="sourceLine" id="cb5-17" title="17">    X_tbl,</a>
+<a class="sourceLine" id="cb5-18" title="18">    y_tbl <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">setNames</span>(., <span class="dt">nm =</span> <span class="st">&quot;Class&quot;</span>)</a>
+<a class="sourceLine" id="cb5-19" title="19">  )</a>
+<a class="sourceLine" id="cb5-20" title="20">  </a>
+<a class="sourceLine" id="cb5-21" title="21">  <span class="co"># configure initial training and out-of-sample splits</span></a>
+<a class="sourceLine" id="cb5-22" title="22">  train_test_split &lt;-<span class="st"> </span>rsample<span class="op">::</span><span class="kw">initial_split</span>(</a>
+<a class="sourceLine" id="cb5-23" title="23">    <span class="dt">data =</span> Xy_tbl, </a>
+<a class="sourceLine" id="cb5-24" title="24">    <span class="dt">prop =</span> train_split,</a>
+<a class="sourceLine" id="cb5-25" title="25">    <span class="dt">strata =</span> <span class="st">&quot;Class&quot;</span></a>
+<a class="sourceLine" id="cb5-26" title="26">  )</a>
+<a class="sourceLine" id="cb5-27" title="27">  </a>
+<a class="sourceLine" id="cb5-28" title="28">  train &lt;-<span class="st"> </span>rsample<span class="op">::</span><span class="kw">training</span>(train_test_split)</a>
+<a class="sourceLine" id="cb5-29" title="29">  out_of_sample &lt;-<span class="st"> </span>rsample<span class="op">::</span><span class="kw">assessment</span>(train_test_split)</a>
+<a class="sourceLine" id="cb5-30" title="30">  </a>
+<a class="sourceLine" id="cb5-31" title="31">  <span class="co"># configure number of subsamples (training rounds)</span></a>
+<a class="sourceLine" id="cb5-32" title="32">  subsample_idx &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv">1</span>, subsamples, <span class="dv">1</span>)</a>
+<a class="sourceLine" id="cb5-33" title="33">  </a>
+<a class="sourceLine" id="cb5-34" title="34">  <span class="co"># training rounds</span></a>
+<a class="sourceLine" id="cb5-35" title="35">  training_rounds &lt;-<span class="st"> </span><span class="kw">map</span>(subsample_idx, <span class="cf">function</span>(split) {</a>
+<a class="sourceLine" id="cb5-36" title="36">    </a>
+<a class="sourceLine" id="cb5-37" title="37">    <span class="co"># recipe to downsample training data and scale predictors (optional)</span></a>
+<a class="sourceLine" id="cb5-38" title="38">    data_prep_recipe &lt;-<span class="st"> </span>recipes<span class="op">::</span><span class="kw">recipe</span>(Class <span class="op">~</span><span class="st"> </span>., <span class="dt">data =</span> train) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-39" title="39"><span class="st">      </span><span class="kw">step_downsample</span>(Class) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-40" title="40"><span class="st">      </span><span class="kw">step_center</span>(<span class="kw">all_predictors</span>()) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-41" title="41"><span class="st">      </span><span class="kw">step_scale</span>(<span class="kw">all_predictors</span>()) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-42" title="42"><span class="st">      </span><span class="kw">prep</span>(<span class="dt">training =</span> train, <span class="dt">retain =</span> T)</a>
+<a class="sourceLine" id="cb5-43" title="43">    </a>
+<a class="sourceLine" id="cb5-44" title="44">    <span class="co"># apply recipe to transform  training and out-of-sample sets</span></a>
+<a class="sourceLine" id="cb5-45" title="45">    new_train &lt;-<span class="st"> </span><span class="kw">juice</span>(data_prep_recipe)</a>
+<a class="sourceLine" id="cb5-46" title="46">    out_of_sample &lt;-<span class="st"> </span><span class="kw">bake</span>(data_prep_recipe, out_of_sample)</a>
+<a class="sourceLine" id="cb5-47" title="47">    </a>
+<a class="sourceLine" id="cb5-48" title="48">    <span class="co"># configure random forest classifier</span></a>
+<a class="sourceLine" id="cb5-49" title="49">    model_spec &lt;-<span class="st"> </span>parsnip<span class="op">::</span><span class="kw">logistic_reg</span>() <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-50" title="50"><span class="st">      </span>parsnip<span class="op">::</span><span class="kw">set_engine</span>(<span class="st">&quot;glm&quot;</span>) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-51" title="51"><span class="st">      </span>parsnip<span class="op">::</span><span class="kw">set_mode</span>(<span class="st">&quot;classification&quot;</span>)</a>
+<a class="sourceLine" id="cb5-52" title="52">    </a>
+<a class="sourceLine" id="cb5-53" title="53">    <span class="co"># fit model to training data</span></a>
+<a class="sourceLine" id="cb5-54" title="54">    model_fit &lt;-<span class="st"> </span>model_spec <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-55" title="55"><span class="st">      </span>parsnip<span class="op">::</span><span class="kw">fit</span>(Class <span class="op">~</span><span class="st"> </span>., <span class="dt">data =</span> new_train)</a>
+<a class="sourceLine" id="cb5-56" title="56">    </a>
+<a class="sourceLine" id="cb5-57" title="57">    <span class="co"># generate predictions on out-of-sample data</span></a>
+<a class="sourceLine" id="cb5-58" title="58">    predictions &lt;-<span class="st"> </span><span class="kw">predict</span>(model_fit, </a>
+<a class="sourceLine" id="cb5-59" title="59">                           out_of_sample,</a>
+<a class="sourceLine" id="cb5-60" title="60">                           <span class="dt">type =</span> <span class="st">&#39;prob&#39;</span>) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-61" title="61"><span class="st">      </span><span class="kw">select</span>(.pred_malignant)</a>
+<a class="sourceLine" id="cb5-62" title="62">    </a>
+<a class="sourceLine" id="cb5-63" title="63">    <span class="kw">colnames</span>(predictions) &lt;-<span class="st"> </span><span class="kw">paste</span>(<span class="st">&quot;malignant&quot;</span>, split, <span class="dt">sep =</span> <span class="st">&quot;_&quot;</span>)</a>
+<a class="sourceLine" id="cb5-64" title="64">    </a>
+<a class="sourceLine" id="cb5-65" title="65">    <span class="kw">return</span>(predictions)</a>
+<a class="sourceLine" id="cb5-66" title="66">  })</a>
+<a class="sourceLine" id="cb5-67" title="67">  </a>
+<a class="sourceLine" id="cb5-68" title="68">  <span class="co"># average the predicted probabilities across training rounds</span></a>
+<a class="sourceLine" id="cb5-69" title="69">  avg_prob &lt;-<span class="st"> </span><span class="kw">bind_cols</span>(training_rounds) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-70" title="70"><span class="st">    </span><span class="kw">apply</span>(., <span class="fl">1.</span>, mean)</a>
+<a class="sourceLine" id="cb5-71" title="71">  </a>
+<a class="sourceLine" id="cb5-72" title="72">  <span class="co"># simple decision boundary of 0.5 to produce final predicted labels</span></a>
+<a class="sourceLine" id="cb5-73" title="73">  final_pred &lt;-<span class="st"> </span><span class="kw">ifelse</span>(avg_prob <span class="op">&gt;=</span><span class="st"> </span><span class="fl">0.5</span>, <span class="st">&quot;malignant&quot;</span>, <span class="st">&quot;benign&quot;</span>)</a>
+<a class="sourceLine" id="cb5-74" title="74">  </a>
+<a class="sourceLine" id="cb5-75" title="75">  <span class="co"># measure and report F1 score</span></a>
+<a class="sourceLine" id="cb5-76" title="76">  ensemble_f1 &lt;-<span class="st"> </span><span class="kw">f_meas_vec</span>(</a>
+<a class="sourceLine" id="cb5-77" title="77">    <span class="kw">factor</span>(out_of_sample<span class="op">$</span>Class), </a>
+<a class="sourceLine" id="cb5-78" title="78">    <span class="kw">factor</span>(final_pred)</a>
+<a class="sourceLine" id="cb5-79" title="79">  )</a>
+<a class="sourceLine" id="cb5-80" title="80">  </a>
+<a class="sourceLine" id="cb5-81" title="81">  <span class="kw">return</span>(ensemble_f1)</a>
+<a class="sourceLine" id="cb5-82" title="82">}</a></code></pre></div>
 </div>
 <div id="results" class="section level2">
 <h2>Results</h2>
-<pre class="sourceCode r"><code class="sourceCode r">ensemble_f1 &lt;-<span class="st"> </span><span class="kw">f_meas_vec</span>(out_of_sample<span class="op">$</span>Class, <span class="kw">factor</span>(pred_label))
-
-<span class="kw">map_dbl</span>(probs, <span class="cf">function</span>(prob) {
-  label &lt;-<span class="st"> </span><span class="kw">ifelse</span>(prob <span class="op">&gt;=</span><span class="st"> </span><span class="fl">0.5</span>, <span class="st">&quot;positive&quot;</span>, <span class="st">&quot;negative&quot;</span>)
-  yardstick<span class="op">::</span><span class="kw">f_meas_vec</span>(out_of_sample<span class="op">$</span>Class, <span class="kw">factor</span>(label))
-}) <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">enframe</span>(<span class="dt">name =</span> <span class="st">&quot;Subsample&quot;</span>, <span class="dt">value =</span> <span class="st">&quot;Subsample_F1&quot;</span>) <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Ensemble_F1 =</span> ensemble_f1) <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">gather</span>(Metric, Value, <span class="op">-</span>Subsample) <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Subsample, <span class="dt">y =</span> Value)) <span class="op">+</span>
-<span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">group =</span> Metric, <span class="dt">color =</span> Metric), <span class="dt">lwd =</span> <span class="dv">1</span>) <span class="op">+</span>
-<span class="st">  </span><span class="kw">scale_color_manual</span>(<span class="dt">values =</span> <span class="kw">c</span>(<span class="st">&quot;blue&quot;</span>, <span class="st">&quot;gray80&quot;</span>)) <span class="op">+</span>
-<span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;F1 across 25 subsamples&quot;</span>,
-       <span class="dt">subtitle =</span> <span class="st">&quot;The ensemble reduces variation and improves accuracy.&quot;</span>) <span class="op">+</span>
-<span class="st">  </span><span class="kw">theme_bw</span>()</code></pre>
-<p><img src="/post/2019-07-01-rare-class-ensemble_files/figure-html/unnamed-chunk-10-1.png" width="672" /></p>
+<div id="no-ensembling" class="section level3">
+<h3>No ensembling</h3>
+<p>As a baseline, an experiment which ignores the ensembling component is run. This baseline strategy is repeated 50 times. Within each repitition, the out-of-sample predictions are made from a single training round (i.e. no ensemble).</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" title="1">repetitions &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv">1</span>, <span class="dv">50</span>, <span class="dv">1</span>)</a>
+<a class="sourceLine" id="cb6-2" title="2"></a>
+<a class="sourceLine" id="cb6-3" title="3">X &lt;-<span class="st"> </span>model_df <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">select</span>(<span class="op">-</span>Class)</a>
+<a class="sourceLine" id="cb6-4" title="4">y &lt;-<span class="st"> </span>model_df <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">select</span>(Class)</a>
+<a class="sourceLine" id="cb6-5" title="5"></a>
+<a class="sourceLine" id="cb6-6" title="6">no_ensemble &lt;-<span class="st"> </span><span class="kw">map_dbl</span>(repetitions, <span class="cf">function</span>(i) {</a>
+<a class="sourceLine" id="cb6-7" title="7">  <span class="kw">glm_ensemble</span>(<span class="dt">X_tbl =</span> X,</a>
+<a class="sourceLine" id="cb6-8" title="8">               <span class="dt">y_tbl =</span> y,</a>
+<a class="sourceLine" id="cb6-9" title="9">               <span class="dt">subsamples =</span> <span class="dv">1</span>)</a>
+<a class="sourceLine" id="cb6-10" title="10">})</a></code></pre></div>
+</div>
+<div id="with-ensembling" class="section level3">
+<h3>With ensembling</h3>
+<p>To test the ensemble strategy, we repeat it 50 times and compare it to the baseline strategy. Within each repition, the out-of-sample predictions are made from an ensemble of 25 models. Note that the only difference between this experiment and the baseline experiment is the ensembling, so the comparisons are valid.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb7-1" title="1">with_ensemble &lt;-<span class="st"> </span><span class="kw">map_dbl</span>(repetitions, <span class="cf">function</span>(i) {</a>
+<a class="sourceLine" id="cb7-2" title="2">  <span class="kw">glm_ensemble</span>(<span class="dt">X_tbl =</span> X,</a>
+<a class="sourceLine" id="cb7-3" title="3">               <span class="dt">y_tbl =</span> y,</a>
+<a class="sourceLine" id="cb7-4" title="4">               <span class="dt">subsamples =</span> <span class="dv">25</span>)</a>
+<a class="sourceLine" id="cb7-5" title="5">})</a></code></pre></div>
+</div>
+<div id="analysis" class="section level3">
+<h3>Analysis</h3>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" title="1"><span class="kw">bind_cols</span>(</a>
+<a class="sourceLine" id="cb8-2" title="2">  <span class="dt">No_Ensemble =</span> no_ensemble,</a>
+<a class="sourceLine" id="cb8-3" title="3">  <span class="dt">With_Ensemble =</span> with_ensemble</a>
+<a class="sourceLine" id="cb8-4" title="4">) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb8-5" title="5"><span class="st">  </span><span class="kw">gather</span>(key, value) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb8-6" title="6"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> value)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb8-7" title="7"><span class="st">  </span><span class="kw">geom_density</span>(<span class="kw">aes</span>(<span class="dt">fill =</span> key), <span class="dt">alpha =</span> <span class="fl">0.5</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb8-8" title="8"><span class="st">  </span><span class="kw">scale_x_continuous</span>(<span class="dt">breaks =</span> scales<span class="op">::</span><span class="kw">pretty_breaks</span>(<span class="dt">n =</span> <span class="dv">10</span>)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb8-9" title="9"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Distributions of F1 scores for baseline and ensemble experiments&quot;</span>,</a>
+<a class="sourceLine" id="cb8-10" title="10">       <span class="dt">subtitle =</span> <span class="st">&quot;Each experiment repeated 50 times&quot;</span>,</a>
+<a class="sourceLine" id="cb8-11" title="11">       <span class="dt">x =</span> <span class="st">&quot;Distribution of out-of-sample F1 scores&quot;</span>,</a>
+<a class="sourceLine" id="cb8-12" title="12">       <span class="dt">y =</span> <span class="st">&quot;Density&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb8-13" title="13"><span class="st">  </span><span class="kw">theme_bw</span>()</a></code></pre></div>
+<p><img src="/post/2019-07-01-rare-class-ensemble_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+<p>The F1 density curves for each experiment reveal the ensembling strategy to be effective at reducing the variance and improving the accuracy of out-of-sample predictions compared to the baseline strategy.</p>
+</div>
+<div id="significance-test" class="section level3">
+<h3>Significance test</h3>
+<p>A simple t-test to test the statistical significance of the difference in means between the two experiments.</p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb9-1" title="1"><span class="kw">t.test</span>(no_ensemble, with_ensemble)</a></code></pre></div>
+<pre><code>## 
+##  Welch Two Sample t-test
+## 
+## data:  no_ensemble and with_ensemble
+## t = -2.9169, df = 91.246, p-value = 0.004449
+## alternative hypothesis: true difference in means is not equal to 0
+## 95 percent confidence interval:
+##  -0.06860030 -0.01302009
+## sample estimates:
+## mean of x mean of y 
+## 0.7619683 0.8027785</code></pre>
+</div>
+</div>
+<div id="conclusion" class="section level2">
+<h2>Conclusion</h2>
+<p>Analysis of the experiments reveals that inserting an ensemble strategy into classification training should, on average, reduce variance and improve accuracy of out-of-sample predictions. The particular ensembling strategy shown in this post is intended for classification problems where the number of positive examples is small.</p>
 </div>
