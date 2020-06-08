@@ -23,7 +23,7 @@ knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
 
 ## Overview
 
-This post demonstrates a strategy for rare class learning whereby out-of-sample predictions are made using a data-centric ensembling. This strategy is described by [Charu Aggarwal](http://charuaggarwal.net/) in section 7.2 of his book [Outlier Analysis](https://www.amazon.com/Outlier-Analysis-Charu-C-Aggarwal/dp/3319475770/ref=pd_cp_14_1?pd_rd_w=8M3qy&pf_rd_p=ef4dc990-a9ca-4945-ae0b-f8d549198ed6&pf_rd_r=3TGSZZ1H5HYKMT0G80Q8&pd_rd_r=f1e3c156-9e78-11e9-801d-cdc96cae2e7b&pd_rd_wg=DXbV0&pd_rd_i=3319475770&psc=1&refRID=3TGSZZ1H5HYKMT0G80Q8). 
+This post demonstrates a strategy for rare class learning whereby out-of-sample predictions are made using data-centric ensembling. This strategy is described by [Charu Aggarwal](http://charuaggarwal.net/) in section 7.2 of his book [Outlier Analysis](https://www.amazon.com/Outlier-Analysis-Charu-C-Aggarwal/dp/3319475770/ref=pd_cp_14_1?pd_rd_w=8M3qy&pf_rd_p=ef4dc990-a9ca-4945-ae0b-f8d549198ed6&pf_rd_r=3TGSZZ1H5HYKMT0G80Q8&pd_rd_r=f1e3c156-9e78-11e9-801d-cdc96cae2e7b&pd_rd_wg=DXbV0&pd_rd_i=3319475770&psc=1&refRID=3TGSZZ1H5HYKMT0G80Q8). This is an excellent book that presents a ton of interesting material on statistics and modeling in a very readable way.
 
 ## A little bit about ensembling
 
@@ -39,7 +39,7 @@ This strategy is very efficient due to the use of downsampling, leading to train
 
 It is useful to think about the training strategy as a single data point. One should not draw any grand conclusions about a single data point. Instead, multiple data points are sought to gain a more complete understanding of the data. Likewise, any training strategy should be repeated several times to gain a more complete picture of how the final implementation is expected to work. This is why techniques such as repeated K-fold cross validation exist (to *repeat* the basic K-fold CV strategy).
 
-For this reason, we do not want to draw conclusions about a single model, nor should we draw conclusions from a single implementation of the ensemble strategy. Instead, the ensemble strategy in this post is repeated several times (N=100). The outcomes across all repitions are then visualized to better understand how this strategy would be expected to work in a live setting.
+For this reason, we do not want to draw conclusions about a single model, nor should we draw conclusions from a single implementation of the ensemble strategy. Instead, the ensemble strategy in this post is repeated several times in experimental fashion. Another experiment is run that tests a simple, baseline strategy which ignores the ensemble component. The outcomes across all repitions for each experiment are then visualized to better understand how the ensemble strategy would be expected to work in a live setting.
 
 ## Packages
 
@@ -56,6 +56,8 @@ options(yardstick.event_first = F)
 ```
 
 ## Data
+
+The [Breast Cancer Wisconsin (Diagnostic) Data Set](https://archive.ics.uci.edu/ml/datasets/Breast+Cancer+Wisconsin+(Diagnostic)) is used.
 
 ```{r}
 data_url <- "https://archive.ics.uci.edu/ml/machine-learning-databases/breast-cancer-wisconsin/breast-cancer-wisconsin.data"
@@ -86,7 +88,17 @@ model_df
 
 ## Ensemble function
 
-The data-centric ensemble strategy uses vanilla logistic regression via `glm()`. 
+The data-centric ensemble strategy uses vanilla logistic regression via `glm()`. The ensemble function performs the following steps:
+
+1. Allocate a portion of the available data for training. The remainder becomes the out-of-sample set.
+
+2. Generate subsamples from the training data using downsampling. The default number of subsamples if 25. Each subsample uses all positive cases and a random downsample of negative cases.
+
+3. Apply the model pipeline to each subsample. The pipeline includes data pre-processing, model fitting, and generating out-of-sample predicted probabilites.
+
+4. Average the out-of-sample predicted probabilities across all models in the ensemble.
+
+5. Calculate and return the F1 score.
 
 ```{r}
 # Inputs:
