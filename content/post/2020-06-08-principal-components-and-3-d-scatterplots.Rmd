@@ -55,6 +55,8 @@ states_tbl <- state.x77 %>%
 
 ## Principal components analysis
 
+PCA is run here, though no attempt is made to interpret the meaning of each component. That is beyond the scope of this post.
+
 Vanilla principal components analysis shows the first three components explain $\approx$ 80% of the variance in the original data.
 
 ```{r}
