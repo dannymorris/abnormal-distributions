@@ -86,7 +86,7 @@ plotly::plot_ly(data = pca_scores,
                 x = ~Comp.1,
                 y = ~Comp.2,
                 z = ~Comp.3,
-                shape = ~Region,
+                color = ~Region,
                 text = ~State) %>%
   layout(title = "First three principal components")
 ```
