@@ -1,0 +1,176 @@
+---
+title: Scalable forecasting in R approach using the split-apply-combine technique
+author: Danny Morris
+date: "`r Sys.Date()`"
+output: 
+  blogdown::html_page:
+    toc: true
+    highlight: pygments
+slug: scalable-forecasting-in-r-approach-using-the-split-apply-combine-technique
+categories:
+  - R
+  - Forecasting
+  - Big Data
+tags:
+  - Big Data
+  - R
+  - Forecasting
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include=F}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
+## About split-apply-combine
+
+This document contains an example of the [split-apply-combine programming strategy](https://www.jstatsoft.org/article/view/v040i01/v40i01.pdf) applied to time series forecasting using [Prophet](https://facebook.github.io/prophet/). The focus is on showing the value of the technique in general and not on the specific use case.
+
+Split-apply-combine involves splitting the data into meaningful groups. applying the same function to each group, then combining the results. This technique is very useful in data science. Good use cases include:
+
+- automatically train separate and independent models for each group (as shown here)
+
+- any of the common variants of cross validation
+
+- parallel processing
+
+## R packages
+
+```{r}
+library(tidyverse)
+library(fable)
+library(fabletools)
+library(feasts)
+library(tsibble)
+library(tsibbledata)
+library(furrr)
+```
+
+## Data
+
+```{r}
+model_tsibble <- tsibbledata::aus_retail %>%
+  filter_index("2010-01-01" ~ .) %>%
+  mutate(Turnover = log(Turnover))
+
+model_tsibble
+```
+
+
+
+## Objective
+
+The objective is to build a forecasting model for industry in each state. The issue is that there are `model_df %>% count(State, Industry) %>% nrow()` industry-state combinations represented in the data. It would impractical to build and maintain models for each combination. A generalized forecasting procedure applied to each group automatically is far more effecient and repeatable. 
+
+```{r, fig.width = 10, fig.height = 10}
+model_tsibble %>%
+  ggplot(aes(x = Month, y = Turnover)) +
+  facet_wrap(~State, scales = "free_y") +
+  geom_line(aes(color = Industry, group = Industry), show.legend = T) +
+  labs(title = "152 state-industry combinations") +
+  theme_bw()
+```
+
+## Split-apply-combine
+
+### Split
+
+```{r}
+# Splitting results in a list of tibbles
+tsibble_splits <- model_tsibble %>%
+  group_by(State, Industry) %>%
+  group_split()
+
+rows_per_split <- map_dbl(tsibble_splits, nrow)
+
+tsibble_splits <- tsibble_splits[rows_per_split >= 12]
+```
+
+### Apply training and cross validation
+
+```{r}
+rocv <- function(initial_train, 
+                 initial_test, 
+                 horizon, 
+                 shift) {
+  
+  if (nrow(initial_train) < 12) {
+    placeholder <- 999
+    return(placeholder)
+  }
+  
+  # determine number of CV iterations based on horizon and shift
+  n_iterations <- nrow(initial_test) - horizon
+  iterations_idx <- seq(0, n_iterations, shift)
+  
+  # apply ROCV
+  map(iterations_idx, function(i) {
+    
+    # construct training data
+    new_train <- bind_rows(
+      initial_train,
+      initial_test %>% slice(seq(0, i, 1))
+    )
+    
+    # construct testing data
+    new_test <- initial_test %>% 
+      slice(seq(i+1, i+horizon, 1))
+    
+    # fit models to training data
+    models <- new_train %>%
+      model(
+        #ARIMA = ARIMA(Turnover),
+        #ETS = ETS(Turnover),
+        TS_LM = TSLM(Turnover ~ trend() + season()),
+        # DECOMP =decomposition_model(
+        #   STL(log(Turnover) ~ season(window = Inf)),
+        #   ETS(season_adjust ~ season("N")),
+        #   SNAIVE(season_year)
+        # )
+      )
+    
+    # generate forecasts
+    forecasts <- models %>%
+      forecast(new_data = new_test)
+    
+    # evaluate accuracy on testing data
+    metrics_list <- list(interval_accuracy_measures,
+                         point_accuracy_measures)
+    
+    metrics <- forecasts %>%
+      fabletools::accuracy(
+        data = new_test,
+        measures = metrics_list
+      ) %>%
+      mutate(Origin = i)
+    
+    return(metrics)
+    
+  }) %>%
+    bind_rows()
+}
+```
+
+```{r}
+plan(multiprocess)
+
+models_rmse <- tsibble_splits %>%
+  future_map(., function(df) {
+    
+    # training
+    initial_train <- df %>%
+      filter_index(. ~ "2016-01-01")
+    
+    # testing
+    initial_test <- df %>%
+      filter_index("2017-01-01" ~ .)
+    
+    rocv(initial_train = initial_train,
+         initial_test = initial_test,
+         horizon = 3,
+         shift = 4)
+
+  })
+
+```
