@@ -1,5 +1,5 @@
 ---
-title: Predicting monthly insurance claims using effective days and day of week ratios
+title: Applying calendar adjustments to improve monthly health insurance claims forecasts
 author: Danny Morris
 date: "`r Sys.Date()`"
 output: 
@@ -25,7 +25,7 @@ knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
 
 ## Overview
 
-This post describes a simple yet effective technique for improving the accuracy of monthly forecasting using calendar adjustments derived from daily data. The example data set covers health insurance claims, however this technique generalizes to any other domain where monthly forecasts are required and daily data is available for calculating calendar adjustments. Later in the post, the performance of this technique is compared to a baseline technique to show the value in a forecasting scenario.
+This post describes a simple yet effective technique for improving the accuracy of monthly forecasting using calendar adjustments derived from daily data. The example data set covers health insurance claims, however this technique generalizes to any other domain where monthly forecasts are required and daily data is available for calculating calendar adjustments. Later in the post, the performance of this technique is compared to a baseline technique to show the value in a predictive forecasting scenario.
 
 People typically seek healthcare treatment (e.g. routine check-ups, specialist treatments, etc.) during the normal business week while reserving the weekends for more interesting activities. In a given month, the total number of insurance claims may be relatively high if there are many days in the month relative to the average month. Claims could also be relatively high if there are more weekdays relative to the average month. Taking this concept a step further, some weekdays tend to produce more insurance claims than others. For example, Mondays are a relatively high volume day while Fridays are relatively low volume (though not as low as a Saturday or Sunday). All in the all, the "month composition" (i.e. the total number of days, the number of Monday, Tuesdays, etc.) is a good predictor of the expected number of insurance claims.
 
@@ -34,6 +34,8 @@ In a forecasting scenario, quantifying the month composition can improve the acc
 By applying this calendar adjustment to the outcome of interest, the variance in the outcome (i.e. claims) caused by the month composition is removed. This adjustment combined with a population adjustment is likely to have a significantly positive effect on the final forecast model.
 
 ## R packages
+
+When working with dates, I highly recommend  [lubridate](https://lubridate.tidyverse.org/) and of course [dplyr](https://dplyr.tidyverse.org/). For time series forecasting, I am intrigued by the [tidyverts](https://tidyverts.org/) framework. This framework offers an API for forecasting using tidy programming concepts. It has a lot of potential but is currently a bit immature. 
 
 ```{r}
 library(tidyverse)
@@ -45,15 +47,21 @@ library(tsibble)
 
 ## Data
 
-The sample data can be downloaded [here](./sample_claims.csv). It is a generic data set curated for the purpose of this post.
+The sample data can be downloaded [here](/files/sample_claims.csv). It is a generic data set curated for the purpose of this post.
+
+### Daily claims
+
+The original data contains daily claim counts. In order to calculate the calendar adjustments, daily data is required.
 
 ```{r}
 claims <- read_csv("sample_claims.csv")
 
-claims
+claims 
 ```
 
-## Monthly claims
+### Monthly claims
+
+Since the ultimate goal is to forecast monthly claims, the daily data is aggregated to monthly data.
 
 ```{r}
 monthly_claims <- claims %>%
@@ -63,16 +71,41 @@ monthly_claims <- claims %>%
     Population = mean(Population)
   ) %>%
   ungroup()
+
+monthly_claims
 ```
 
 ## Quantifying month composition
 
-The boxplot below shows the distribution of claims for each weekday.
+Quantifying month composition involves the following steps:
+
+1. For each month in the data, count the number of occurences of each weekday
+
+2. For each month, assign a relative weight to each weekday based on the typical claims volume observed for each weekday
+
+3. For each month, calculate "effective days" by multiplying the weekday occurences by the weekday relative values. Sum these products to arrive at the final effective days calculation
+
+### Weekday occurences per month
+
+```{r}
+weekday_counts <- claims %>%
+  group_by(Inc_Month, Inc_Year, DOW_Name, DOW) %>%
+  summarise(
+    Total_Claims = sum(Claims),
+    Occurences = n_distinct(Date)
+  ) %>%
+  ungroup()
+
+weekday_counts
+```
+
+### Weekday relative values per month
+
+Different weekdays produce different levels of claims volume. Mondays tend to produce the highest volume while Sundays tend to produce the lowest.  The boxplot below shows the distribution of claims for each weekday.
 
 ```{r}
 claims %>%
   ggplot(aes(x = as.character(DOW), y = Claims)) +
-  facet_wrap(~Inc_Year) +
   geom_boxplot() +
   labs(title = "Claims distribution by day of week",
        subtitle = "Claims volume is highest on Monday and declines over the course of a week",
@@ -80,72 +113,59 @@ claims %>%
   theme_bw()
 ```
 
-### Count of each weekday per month
+To calculate the weekday relative values, apply the following steps:
+
+1. For each month, calculate the weekday average for each weekday by dividing the total number of claims by the number of occurences. Example: 100 claims spread across 4 Mondays would be a weekday avearge of 25.
+
+2. Convert the weekday average to a ratio by dividing the weekday average by the average of weekday averages for the same year. 
 
 ```{r}
-dow_counts <- claims %>%
-  group_by(Inc_Month, Inc_Year, DOW_Name) %>%
-  summarise(
-    Total_Claims = sum(Claims),
-    Occurences = n_distinct(Date)
-  ) %>%
-  ungroup()
+weekday_averages <- weekday_counts %>%
+  mutate(Weekday_Average = Total_Claims/Occurences)
 
-dow_counts
-```
-
-### Relative value of each weekday
-
-- For each month, calculate the "weekday average" by dividing the total number of claims on weekday *X* by the number of occurences of weekday *X*. Example: 100 claims spread across 4 Mondays would be a Monday avearge of 25.
-
-- Convert the weekday average to a ratio by dividing the weekday average by the average of weekday averages for the same year. 
-
-```{r}
-dow_ratios <- dow_counts %>%
-  mutate(Weekday_Average = Total_Claims/Occurences) %>%
+weekday_relatives <- weekday_averages %>%
   group_by(Inc_Month, Inc_Year) %>%
   mutate(DOW_Ratio = Weekday_Average/mean(Weekday_Average)) %>%
   ungroup() %>%
   select(Inc_Month,
          Weekday_Average,
+         DOW,
          DOW_Name,
          DOW_Ratio)
 ```
 
-## Calculate effecive days
+```{r}
+weekday_relatives %>%
+  ggplot(aes(x = Inc_Month, y = DOW_Ratio)) +
+  facet_wrap(~DOW, scales = "free_y") +
+  geom_line() +
+  labs(title = "Monthly weekday ratios",
+       subtitle = "Notice the y-axis scales are different based on the weekday") +
+  theme_bw()
+```
+
+### Calculate effecive days
 
 ```{r}
-effective_days <- dow_counts %>%
-  inner_join(dow_ratios, by = c("Inc_Month", "DOW_Name")) %>%
+effective_days <- weekday_counts %>%
+  inner_join(weekday_relatives, by = c("Inc_Month", "DOW_Name")) %>%
   mutate(Effective_Days = Occurences*DOW_Ratio) %>%
   group_by(Inc_Month, Inc_Year) %>%
   summarise(
-    Effective_Days = sum(Effective_Days),
-    Actual_Days = sum(Occurences)
+    Actual_Days = sum(Occurences),
+    Effective_Days = sum(Effective_Days)
   ) %>%
   group_by(Inc_Year) %>%
   mutate(Effective_Days_Index = Effective_Days/mean(Effective_Days)) %>%
   ungroup() %>%
   select(-Inc_Year)
+
+effective_days
 ```
 
-```{r}
-effective_days %>%
-  select(-Effective_Days_Index) %>%
-  gather(key, value, -Inc_Month) %>%
-  ggplot(aes(x = Inc_Month, y = value)) +
-  geom_line(aes(group = key, color = key)) +
-  scale_y_continuous(limits = c(27, 33)) +
-  labs(title = "Effective days vs actual days",
-       subtitle = "Differences are due to month composition",
-       x = "Month",
-       y = "Days") +
-  theme_bw()
-```
+## Apply calendar and population adjustments to monthly claims
 
-## Calculate PMPM adjusted by effective days
-
-PMPM (per member per month) is a simple population adjustment. As an additional step, PMPM is adjusted by dividing it by the effective day ratio to account for the month composition.
+Apply the effective days calendar adjustment *C* and a population adjustment *P* to the original monthly claims totals *Y*. The formula for doing this is $Y_{adj} = C_i\div P_i\div Y_i$, where *i* represents each month. This metric is known as adjusted PMPM (per member per month). These adjustments reduce some of the variance in the monthly insurance claims time series and make it more predictable.
 
 ```{r}
 pmpm <- monthly_claims %>% 
@@ -153,72 +173,60 @@ pmpm <- monthly_claims %>%
   mutate(Adj_PMPM = Total_Claims/Population/Effective_Days_Index) %>%
   mutate(Raw_PMPM = Total_Claims/Population) %>%
   select(Inc_Month,
+         Adj_PMPM,
+         Raw_PMPM,
          Total_Claims,
          Population,
-         Effective_Days_Index,
-         Adj_PMPM,
-         Raw_PMPM)
+         Effective_Days_Index)
 ```
 
-## Comparing forecast model accuracy
+## Forecasting with adjusted PMPM
 
-### Train and test sets
+To test the effectiveness of a monthly claims forecast model built using adjusted PMPM, we compare it to a model built using unadjusted PMPM. Both models are trained using a dedicated training set and evaluated using a dedicated holdout set.
+
+### Training and holdout sets
 
 ```{r}
 pmpm_ts <- pmpm %>%
   mutate(Inc_Month = yearmonth(Inc_Month)) %>%
   tsibble::as_tsibble(index = Inc_Month)
 
-train <- pmpm_ts %>%
+training <- pmpm_ts %>%
   filter_index(. ~ "2018-12-01")
 
-test <- pmpm_ts %>%
+holdout <- pmpm_ts %>%
   filter_index("2019-01-01" ~ .)
 ```
 
 ### Arima models
 
-To test the value of the calendar adjustments, three models are fit and evaluated.
-
-1. Adjusted PMPM
-
-2. Raw PMPM
-
-3. Total claims
-
-Models 1 and 2 are backtransformed to the original claims scale.
+Both models are trained using an automatic ARIMA specification.
 
 ```{r}
-adj_pmpm_arima <- train %>%
-  model(ARIMA_Adj_PMPM = ARIMA(Adj_PMPM))
+adj_pmpm_arima <- training %>%
+  model(Adj_PMPM = ARIMA(Adj_PMPM))
 
-raw_pmpm_arima <- train %>% 
-  model(ARIMA_PMPM = ARIMA(Raw_PMPM))
-
-claims_arima <- train %>%
-  model(ARIMA_Claims = ARIMA(Total_Claims))
+raw_pmpm_arima <- training %>% 
+  model(Raw_PMPM = ARIMA(Raw_PMPM))
 ```
 
 ### Forecasts
 
+The forecasts for both models are backtransformed to the original claims scale.
+
 ```{r}
 adj_pmpm_fcast <- forecast(adj_pmpm_arima, h = 12) %>%
-  mutate(Population = test$Population) %>%
-  mutate(Effective_Days_Index = test$Effective_Days_Index) %>%
-  mutate(Total_Claims = test$Total_Claims) %>%
+  mutate(Population = holdout$Population) %>%
+  mutate(Effective_Days_Index = holdout$Effective_Days_Index) %>%
+  mutate(Total_Claims = holdout$Total_Claims) %>%
   mutate(Forecast = .mean*Population*Effective_Days_Index) %>%
   mutate(Error = Forecast - Total_Claims)
 
 raw_pmpm_fcast <- forecast(raw_pmpm_arima, h = 12) %>%
-  mutate(Population = test$Population) %>%
-  mutate(Effective_Days_Index = test$Effective_Days_Index) %>%
-  mutate(Total_Claims = test$Total_Claims) %>%
+  mutate(Population = holdout$Population) %>%
+  mutate(Effective_Days_Index = holdout$Effective_Days_Index) %>%
+  mutate(Total_Claims = holdout$Total_Claims) %>%
   mutate(Forecast = .mean*Population) %>%
-  mutate(Error = Forecast - Total_Claims)
-
-claims_fcast <- forecast(claims_arima, h = 12) %>%
-  mutate(Total_Claims = test$Total_Claims) %>%
-  mutate(Forecast = .mean) %>%
   mutate(Error = Forecast - Total_Claims)
 ```
 
@@ -228,34 +236,17 @@ claims_fcast <- forecast(claims_arima, h = 12) %>%
 tibble::tribble(
   ~Model, ~Metric, ~Value,
   "Adjusted PMPM", "RMSE", sqrt(mean(adj_pmpm_fcast$Error**2)),
-  "Raw PMPM", "RMSE", sqrt(mean(raw_pmpm_fcast$Error**2)),
-  "Total Claims (no adjustments)", "RMSE", sqrt(mean(claims_fcast$Error**2))
+  "Unadjusted PMPM", "RMSE", sqrt(mean(raw_pmpm_fcast$Error**2))
 ) %>%
   ggplot(aes(x = Model, y = Value)) +
   geom_col(aes(fill = Model), alpha = 0.7, width = 0.5, show.legend = F) +
-  scale_fill_manual(values = c("blue", "gray50", "gray50")) +
+  scale_fill_manual(values = c("blue", "gray50")) +
   labs(title = "Comparison of RMSE between models",
-       subtitle = "Model using adjusted PMPM has lowest error on test set") +
+       subtitle = "Model using adjusted PMPM has lowest error on holdout set",
+       y = "RMSE") +
   theme_bw()
 ```
 
+## Conclusion
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+In the context of health insurance claims, monthly forecasts can be improved by making calendar and population adjustments to claim counts. The calendar adjustment technique shown in this post involves quantifying the month composition by assessing the distribution of weekdays in a given month and the relative value of a weekday in the same month. This adjustment, along with a population, has been shown to improve the accuracy of genuine forecats.

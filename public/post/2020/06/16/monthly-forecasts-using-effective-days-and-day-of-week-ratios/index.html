@@ -99,8 +99,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <ul>
 <li><a href="#overview">Overview</a></li>
 <li><a href="#r-packages">R packages</a></li>
-<li><a href="#data">Data</a></li>
+<li><a href="#data">Data</a><ul>
+<li><a href="#daily-claims">Daily claims</a></li>
 <li><a href="#monthly-claims">Monthly claims</a></li>
+</ul></li>
 <li><a href="#quantifying-month-composition">Quantifying month composition</a><ul>
 <li><a href="#count-of-each-weekday-per-month">Count of each weekday per month</a></li>
 <li><a href="#relative-value-of-each-weekday">Relative value of each weekday</a></li>
@@ -125,6 +127,7 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </div>
 <div id="r-packages" class="section level2">
 <h2>R packages</h2>
+<p>When working with dates, I highly recommend <a href="https://lubridate.tidyverse.org/">lubridate</a> and of course <a href="https://dplyr.tidyverse.org/">dplyr</a>. For time series forecasting, I am intrigued by the <a href="https://tidyverts.org/">tidyverts</a> framework. This framework offers an API for forecasting using tidy programming concepts. It has a lot of potential but is currently a bit immature.</p>
 <div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" title="1"><span class="kw">library</span>(tidyverse)</a>
 <a class="sourceLine" id="cb1-2" title="2"><span class="kw">library</span>(lubridate)</a>
 <a class="sourceLine" id="cb1-3" title="3"><span class="kw">library</span>(fable)</a>
@@ -134,70 +137,75 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <div id="data" class="section level2">
 <h2>Data</h2>
 <p>The sample data can be downloaded <a href="./sample_claims.csv">here</a>. It is a generic data set curated for the purpose of this post.</p>
+<div id="daily-claims" class="section level3">
+<h3>Daily claims</h3>
+<p>The original data contains daily claim counts. In order to calculate the calendar adjustments, daily data is required.</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" title="1">claims &lt;-<span class="st"> </span><span class="kw">read_csv</span>(<span class="st">&quot;sample_claims.csv&quot;</span>)</a>
 <a class="sourceLine" id="cb2-2" title="2"></a>
-<a class="sourceLine" id="cb2-3" title="3">claims</a></code></pre></div>
-<pre><code>## # A tibble: 1,461 x 7
-##    Date       Inc_Month  Inc_Year   DOW DOW_Name  Claims Population
-##    &lt;date&gt;     &lt;date&gt;        &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;      &lt;dbl&gt;      &lt;dbl&gt;
-##  1 2016-01-01 2016-01-01     2016     6 Friday     1204.     88072.
-##  2 2016-01-02 2016-01-01     2016     7 Saturday   1435.     88072.
-##  3 2016-01-03 2016-01-01     2016     1 Sunday      912.     88072.
-##  4 2016-01-04 2016-01-01     2016     2 Monday     7026.     88072.
-##  5 2016-01-05 2016-01-01     2016     3 Tuesday    6913.     88072.
-##  6 2016-01-06 2016-01-01     2016     4 Wednesday  6890.     88072.
-##  7 2016-01-07 2016-01-01     2016     5 Thursday   6684      88072.
-##  8 2016-01-08 2016-01-01     2016     6 Friday     6030.     88072.
-##  9 2016-01-09 2016-01-01     2016     7 Saturday   1601.     88072.
-## 10 2016-01-10 2016-01-01     2016     1 Sunday      879.     88072.
-## # ... with 1,451 more rows</code></pre>
+<a class="sourceLine" id="cb2-3" title="3">claims <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb2-4" title="4"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Date, <span class="dt">y =</span> Claims)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb2-5" title="5"><span class="st">  </span><span class="kw">geom_line</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb2-6" title="6"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Daily health insurance claims&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb2-7" title="7"><span class="st">  </span><span class="kw">theme_bw</span>()</a></code></pre></div>
+<p><img src="/post/2020-06-16-monthly-forecasts-using-effective-days-and-day-of-week-ratios_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
 </div>
-<div id="monthly-claims" class="section level2">
-<h2>Monthly claims</h2>
-<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" title="1">monthly_claims &lt;-<span class="st"> </span>claims <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb4-2" title="2"><span class="st">  </span><span class="kw">group_by</span>(Inc_Month, Inc_Year) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb4-3" title="3"><span class="st">  </span><span class="kw">summarise</span>(</a>
-<a class="sourceLine" id="cb4-4" title="4">    <span class="dt">Total_Claims =</span> <span class="kw">sum</span>(Claims),</a>
-<a class="sourceLine" id="cb4-5" title="5">    <span class="dt">Population =</span> <span class="kw">mean</span>(Population)</a>
-<a class="sourceLine" id="cb4-6" title="6">  ) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb4-7" title="7"><span class="st">  </span><span class="kw">ungroup</span>()</a></code></pre></div>
+<div id="monthly-claims" class="section level3">
+<h3>Monthly claims</h3>
+<p>Since the ultimate goal is to forecast monthly claims, the daily data is aggregated to monthly data.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" title="1">monthly_claims &lt;-<span class="st"> </span>claims <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb3-2" title="2"><span class="st">  </span><span class="kw">group_by</span>(Inc_Month, Inc_Year) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb3-3" title="3"><span class="st">  </span><span class="kw">summarise</span>(</a>
+<a class="sourceLine" id="cb3-4" title="4">    <span class="dt">Total_Claims =</span> <span class="kw">sum</span>(Claims),</a>
+<a class="sourceLine" id="cb3-5" title="5">    <span class="dt">Population =</span> <span class="kw">mean</span>(Population)</a>
+<a class="sourceLine" id="cb3-6" title="6">  ) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb3-7" title="7"><span class="st">  </span><span class="kw">ungroup</span>()</a>
+<a class="sourceLine" id="cb3-8" title="8"></a>
+<a class="sourceLine" id="cb3-9" title="9">monthly_claims <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb3-10" title="10"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Inc_Month, <span class="dt">y =</span> Total_Claims)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb3-11" title="11"><span class="st">  </span><span class="kw">geom_line</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb3-12" title="12"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Monthly health insurance claims&quot;</span>,</a>
+<a class="sourceLine" id="cb3-13" title="13">       <span class="dt">x =</span> <span class="st">&quot;Month&quot;</span>,</a>
+<a class="sourceLine" id="cb3-14" title="14">       <span class="dt">y =</span> <span class="st">&quot;Claims&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb3-15" title="15"><span class="st">  </span><span class="kw">theme_bw</span>()</a></code></pre></div>
+<p><img src="/post/2020-06-16-monthly-forecasts-using-effective-days-and-day-of-week-ratios_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+</div>
 </div>
 <div id="quantifying-month-composition" class="section level2">
 <h2>Quantifying month composition</h2>
 <p>The boxplot below shows the distribution of claims for each weekday.</p>
-<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" title="1">claims <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb5-2" title="2"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> <span class="kw">as.character</span>(DOW), <span class="dt">y =</span> Claims)) <span class="op">+</span></a>
-<a class="sourceLine" id="cb5-3" title="3"><span class="st">  </span><span class="kw">facet_wrap</span>(<span class="op">~</span>Inc_Year) <span class="op">+</span></a>
-<a class="sourceLine" id="cb5-4" title="4"><span class="st">  </span><span class="kw">geom_boxplot</span>() <span class="op">+</span></a>
-<a class="sourceLine" id="cb5-5" title="5"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Claims distribution by day of week&quot;</span>,</a>
-<a class="sourceLine" id="cb5-6" title="6">       <span class="dt">subtitle =</span> <span class="st">&quot;Claims volume is highest on Monday and declines over the course of a week&quot;</span>,</a>
-<a class="sourceLine" id="cb5-7" title="7">       <span class="dt">x =</span> <span class="st">&quot;Weekday&quot;</span>) <span class="op">+</span></a>
-<a class="sourceLine" id="cb5-8" title="8"><span class="st">  </span><span class="kw">theme_bw</span>()</a></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" title="1">claims <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb4-2" title="2"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> <span class="kw">as.character</span>(DOW), <span class="dt">y =</span> Claims)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-3" title="3"><span class="st">  </span><span class="kw">facet_wrap</span>(<span class="op">~</span>Inc_Year) <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-4" title="4"><span class="st">  </span><span class="kw">geom_boxplot</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-5" title="5"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Claims distribution by day of week&quot;</span>,</a>
+<a class="sourceLine" id="cb4-6" title="6">       <span class="dt">subtitle =</span> <span class="st">&quot;Claims volume is highest on Monday and declines over the course of a week&quot;</span>,</a>
+<a class="sourceLine" id="cb4-7" title="7">       <span class="dt">x =</span> <span class="st">&quot;Weekday&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-8" title="8"><span class="st">  </span><span class="kw">theme_bw</span>()</a></code></pre></div>
 <p><img src="/post/2020-06-16-monthly-forecasts-using-effective-days-and-day-of-week-ratios_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
 <div id="count-of-each-weekday-per-month" class="section level3">
 <h3>Count of each weekday per month</h3>
-<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" title="1">dow_counts &lt;-<span class="st"> </span>claims <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb6-2" title="2"><span class="st">  </span><span class="kw">group_by</span>(Inc_Month, Inc_Year, DOW_Name) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb6-3" title="3"><span class="st">  </span><span class="kw">summarise</span>(</a>
-<a class="sourceLine" id="cb6-4" title="4">    <span class="dt">Total_Claims =</span> <span class="kw">sum</span>(Claims),</a>
-<a class="sourceLine" id="cb6-5" title="5">    <span class="dt">Occurences =</span> <span class="kw">n_distinct</span>(Date)</a>
-<a class="sourceLine" id="cb6-6" title="6">  ) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb6-7" title="7"><span class="st">  </span><span class="kw">ungroup</span>()</a>
-<a class="sourceLine" id="cb6-8" title="8"></a>
-<a class="sourceLine" id="cb6-9" title="9">dow_counts</a></code></pre></div>
-<pre><code>## # A tibble: 336 x 5
-##    Inc_Month  Inc_Year DOW_Name  Total_Claims Occurences
-##    &lt;date&gt;        &lt;dbl&gt; &lt;chr&gt;            &lt;dbl&gt;      &lt;int&gt;
-##  1 2016-01-01     2016 Friday          24545.          5
-##  2 2016-01-01     2016 Monday          27591.          4
-##  3 2016-01-01     2016 Saturday         7674.          5
-##  4 2016-01-01     2016 Sunday           4422.          5
-##  5 2016-01-01     2016 Thursday        25626.          4
-##  6 2016-01-01     2016 Tuesday         26542.          4
-##  7 2016-01-01     2016 Wednesday       26632.          4
-##  8 2016-02-01     2016 Friday          22331.          4
-##  9 2016-02-01     2016 Monday          34989.          5
-## 10 2016-02-01     2016 Saturday         6082.          4
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" title="1">dow_counts &lt;-<span class="st"> </span>claims <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-2" title="2"><span class="st">  </span><span class="kw">group_by</span>(Inc_Month, Inc_Year, DOW_Name, DOW) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-3" title="3"><span class="st">  </span><span class="kw">summarise</span>(</a>
+<a class="sourceLine" id="cb5-4" title="4">    <span class="dt">Total_Claims =</span> <span class="kw">sum</span>(Claims),</a>
+<a class="sourceLine" id="cb5-5" title="5">    <span class="dt">Occurences =</span> <span class="kw">n_distinct</span>(Date)</a>
+<a class="sourceLine" id="cb5-6" title="6">  ) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-7" title="7"><span class="st">  </span><span class="kw">ungroup</span>()</a>
+<a class="sourceLine" id="cb5-8" title="8"></a>
+<a class="sourceLine" id="cb5-9" title="9">dow_counts</a></code></pre></div>
+<pre><code>## # A tibble: 336 x 6
+##    Inc_Month  Inc_Year DOW_Name    DOW Total_Claims Occurences
+##    &lt;date&gt;        &lt;dbl&gt; &lt;chr&gt;     &lt;dbl&gt;        &lt;dbl&gt;      &lt;int&gt;
+##  1 2016-01-01     2016 Friday        6       24545.          5
+##  2 2016-01-01     2016 Monday        2       27591.          4
+##  3 2016-01-01     2016 Saturday      7        7674.          5
+##  4 2016-01-01     2016 Sunday        1        4422.          5
+##  5 2016-01-01     2016 Thursday      5       25626.          4
+##  6 2016-01-01     2016 Tuesday       3       26542.          4
+##  7 2016-01-01     2016 Wednesday     4       26632.          4
+##  8 2016-02-01     2016 Friday        6       22331.          4
+##  9 2016-02-01     2016 Monday        2       34989.          5
+## 10 2016-02-01     2016 Saturday      7        6082.          4
 ## # ... with 326 more rows</code></pre>
 </div>
 <div id="relative-value-of-each-weekday" class="section level3">
@@ -206,71 +214,78 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li><p>For each month, calculate the “weekday average” by dividing the total number of claims on weekday <em>X</em> by the number of occurences of weekday <em>X</em>. Example: 100 claims spread across 4 Mondays would be a Monday avearge of 25.</p></li>
 <li><p>Convert the weekday average to a ratio by dividing the weekday average by the average of weekday averages for the same year.</p></li>
 </ul>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" title="1">dow_ratios &lt;-<span class="st"> </span>dow_counts <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb8-2" title="2"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Weekday_Average =</span> Total_Claims<span class="op">/</span>Occurences) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb8-3" title="3"><span class="st">  </span><span class="kw">group_by</span>(Inc_Month, Inc_Year) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb8-4" title="4"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">DOW_Ratio =</span> Weekday_Average<span class="op">/</span><span class="kw">mean</span>(Weekday_Average)) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb8-5" title="5"><span class="st">  </span><span class="kw">ungroup</span>() <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb8-6" title="6"><span class="st">  </span><span class="kw">select</span>(Inc_Month,</a>
-<a class="sourceLine" id="cb8-7" title="7">         Weekday_Average,</a>
-<a class="sourceLine" id="cb8-8" title="8">         DOW_Name,</a>
-<a class="sourceLine" id="cb8-9" title="9">         DOW_Ratio)</a></code></pre></div>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb7-1" title="1">dow_ratios &lt;-<span class="st"> </span>dow_counts <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb7-2" title="2"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Weekday_Average =</span> Total_Claims<span class="op">/</span>Occurences) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb7-3" title="3"><span class="st">  </span><span class="kw">group_by</span>(Inc_Month, Inc_Year) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb7-4" title="4"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">DOW_Ratio =</span> Weekday_Average<span class="op">/</span><span class="kw">mean</span>(Weekday_Average)) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb7-5" title="5"><span class="st">  </span><span class="kw">ungroup</span>() <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb7-6" title="6"><span class="st">  </span><span class="kw">select</span>(Inc_Month,</a>
+<a class="sourceLine" id="cb7-7" title="7">         Weekday_Average,</a>
+<a class="sourceLine" id="cb7-8" title="8">         DOW,</a>
+<a class="sourceLine" id="cb7-9" title="9">         DOW_Name,</a>
+<a class="sourceLine" id="cb7-10" title="10">         DOW_Ratio)</a>
+<a class="sourceLine" id="cb7-11" title="11"></a>
+<a class="sourceLine" id="cb7-12" title="12">dow_ratios <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb7-13" title="13"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Inc_Month, <span class="dt">y =</span> DOW_Ratio)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb7-14" title="14"><span class="st">  </span><span class="kw">facet_wrap</span>(<span class="op">~</span>DOW) <span class="op">+</span></a>
+<a class="sourceLine" id="cb7-15" title="15"><span class="st">  </span><span class="kw">geom_line</span>()</a></code></pre></div>
+<p><img src="/post/2020-06-16-monthly-forecasts-using-effective-days-and-day-of-week-ratios_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
 </div>
 </div>
 <div id="calculate-effecive-days" class="section level2">
 <h2>Calculate effecive days</h2>
-<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb9-1" title="1">effective_days &lt;-<span class="st"> </span>dow_counts <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb9-2" title="2"><span class="st">  </span><span class="kw">inner_join</span>(dow_ratios, <span class="dt">by =</span> <span class="kw">c</span>(<span class="st">&quot;Inc_Month&quot;</span>, <span class="st">&quot;DOW_Name&quot;</span>)) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb9-3" title="3"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Effective_Days =</span> Occurences<span class="op">*</span>DOW_Ratio) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb9-4" title="4"><span class="st">  </span><span class="kw">group_by</span>(Inc_Month, Inc_Year) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb9-5" title="5"><span class="st">  </span><span class="kw">summarise</span>(</a>
-<a class="sourceLine" id="cb9-6" title="6">    <span class="dt">Effective_Days =</span> <span class="kw">sum</span>(Effective_Days),</a>
-<a class="sourceLine" id="cb9-7" title="7">    <span class="dt">Actual_Days =</span> <span class="kw">sum</span>(Occurences)</a>
-<a class="sourceLine" id="cb9-8" title="8">  ) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb9-9" title="9"><span class="st">  </span><span class="kw">group_by</span>(Inc_Year) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb9-10" title="10"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Effective_Days_Index =</span> Effective_Days<span class="op">/</span><span class="kw">mean</span>(Effective_Days)) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb9-11" title="11"><span class="st">  </span><span class="kw">ungroup</span>() <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb9-12" title="12"><span class="st">  </span><span class="kw">select</span>(<span class="op">-</span>Inc_Year)</a></code></pre></div>
-<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb10-1" title="1">effective_days <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb10-2" title="2"><span class="st">  </span><span class="kw">select</span>(<span class="op">-</span>Effective_Days_Index) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb10-3" title="3"><span class="st">  </span><span class="kw">gather</span>(key, value, <span class="op">-</span>Inc_Month) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb10-4" title="4"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Inc_Month, <span class="dt">y =</span> value)) <span class="op">+</span></a>
-<a class="sourceLine" id="cb10-5" title="5"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">group =</span> key, <span class="dt">color =</span> key)) <span class="op">+</span></a>
-<a class="sourceLine" id="cb10-6" title="6"><span class="st">  </span><span class="kw">scale_y_continuous</span>(<span class="dt">limits =</span> <span class="kw">c</span>(<span class="dv">27</span>, <span class="dv">33</span>)) <span class="op">+</span></a>
-<a class="sourceLine" id="cb10-7" title="7"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Effective days vs actual days&quot;</span>,</a>
-<a class="sourceLine" id="cb10-8" title="8">       <span class="dt">subtitle =</span> <span class="st">&quot;Differences are due to month composition&quot;</span>,</a>
-<a class="sourceLine" id="cb10-9" title="9">       <span class="dt">x =</span> <span class="st">&quot;Month&quot;</span>,</a>
-<a class="sourceLine" id="cb10-10" title="10">       <span class="dt">y =</span> <span class="st">&quot;Days&quot;</span>) <span class="op">+</span></a>
-<a class="sourceLine" id="cb10-11" title="11"><span class="st">  </span><span class="kw">theme_bw</span>()</a></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" title="1">effective_days &lt;-<span class="st"> </span>dow_counts <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb8-2" title="2"><span class="st">  </span><span class="kw">inner_join</span>(dow_ratios, <span class="dt">by =</span> <span class="kw">c</span>(<span class="st">&quot;Inc_Month&quot;</span>, <span class="st">&quot;DOW_Name&quot;</span>)) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb8-3" title="3"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Effective_Days =</span> Occurences<span class="op">*</span>DOW_Ratio) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb8-4" title="4"><span class="st">  </span><span class="kw">group_by</span>(Inc_Month, Inc_Year) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb8-5" title="5"><span class="st">  </span><span class="kw">summarise</span>(</a>
+<a class="sourceLine" id="cb8-6" title="6">    <span class="dt">Effective_Days =</span> <span class="kw">sum</span>(Effective_Days),</a>
+<a class="sourceLine" id="cb8-7" title="7">    <span class="dt">Actual_Days =</span> <span class="kw">sum</span>(Occurences)</a>
+<a class="sourceLine" id="cb8-8" title="8">  ) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb8-9" title="9"><span class="st">  </span><span class="kw">group_by</span>(Inc_Year) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb8-10" title="10"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Effective_Days_Index =</span> Effective_Days<span class="op">/</span><span class="kw">mean</span>(Effective_Days)) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb8-11" title="11"><span class="st">  </span><span class="kw">ungroup</span>() <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb8-12" title="12"><span class="st">  </span><span class="kw">select</span>(<span class="op">-</span>Inc_Year)</a></code></pre></div>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb9-1" title="1">effective_days <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb9-2" title="2"><span class="st">  </span><span class="kw">select</span>(<span class="op">-</span>Effective_Days_Index) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb9-3" title="3"><span class="st">  </span><span class="kw">gather</span>(key, value, <span class="op">-</span>Inc_Month) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb9-4" title="4"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Inc_Month, <span class="dt">y =</span> value)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb9-5" title="5"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">group =</span> key, <span class="dt">color =</span> key)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb9-6" title="6"><span class="st">  </span><span class="kw">scale_y_continuous</span>(<span class="dt">limits =</span> <span class="kw">c</span>(<span class="dv">27</span>, <span class="dv">33</span>)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb9-7" title="7"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Effective days vs actual days&quot;</span>,</a>
+<a class="sourceLine" id="cb9-8" title="8">       <span class="dt">subtitle =</span> <span class="st">&quot;Differences are due to month composition&quot;</span>,</a>
+<a class="sourceLine" id="cb9-9" title="9">       <span class="dt">x =</span> <span class="st">&quot;Month&quot;</span>,</a>
+<a class="sourceLine" id="cb9-10" title="10">       <span class="dt">y =</span> <span class="st">&quot;Days&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb9-11" title="11"><span class="st">  </span><span class="kw">theme_bw</span>()</a></code></pre></div>
 <p><img src="/post/2020-06-16-monthly-forecasts-using-effective-days-and-day-of-week-ratios_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
 </div>
 <div id="calculate-pmpm-adjusted-by-effective-days" class="section level2">
 <h2>Calculate PMPM adjusted by effective days</h2>
 <p>PMPM (per member per month) is a simple population adjustment. As an additional step, PMPM is adjusted by dividing it by the effective day ratio to account for the month composition.</p>
-<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb11-1" title="1">pmpm &lt;-<span class="st"> </span>monthly_claims <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb11-2" title="2"><span class="st">  </span><span class="kw">inner_join</span>(effective_days, <span class="dt">by =</span> <span class="st">&quot;Inc_Month&quot;</span>) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb11-3" title="3"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Adj_PMPM =</span> Total_Claims<span class="op">/</span>Population<span class="op">/</span>Effective_Days_Index) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb11-4" title="4"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Raw_PMPM =</span> Total_Claims<span class="op">/</span>Population) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb11-5" title="5"><span class="st">  </span><span class="kw">select</span>(Inc_Month,</a>
-<a class="sourceLine" id="cb11-6" title="6">         Total_Claims,</a>
-<a class="sourceLine" id="cb11-7" title="7">         Population,</a>
-<a class="sourceLine" id="cb11-8" title="8">         Effective_Days_Index,</a>
-<a class="sourceLine" id="cb11-9" title="9">         Adj_PMPM,</a>
-<a class="sourceLine" id="cb11-10" title="10">         Raw_PMPM)</a></code></pre></div>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb10-1" title="1">pmpm &lt;-<span class="st"> </span>monthly_claims <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb10-2" title="2"><span class="st">  </span><span class="kw">inner_join</span>(effective_days, <span class="dt">by =</span> <span class="st">&quot;Inc_Month&quot;</span>) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb10-3" title="3"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Adj_PMPM =</span> Total_Claims<span class="op">/</span>Population<span class="op">/</span>Effective_Days_Index) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb10-4" title="4"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Raw_PMPM =</span> Total_Claims<span class="op">/</span>Population) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb10-5" title="5"><span class="st">  </span><span class="kw">select</span>(Inc_Month,</a>
+<a class="sourceLine" id="cb10-6" title="6">         Total_Claims,</a>
+<a class="sourceLine" id="cb10-7" title="7">         Population,</a>
+<a class="sourceLine" id="cb10-8" title="8">         Effective_Days_Index,</a>
+<a class="sourceLine" id="cb10-9" title="9">         Adj_PMPM,</a>
+<a class="sourceLine" id="cb10-10" title="10">         Raw_PMPM)</a></code></pre></div>
 </div>
 <div id="comparing-forecast-model-accuracy" class="section level2">
 <h2>Comparing forecast model accuracy</h2>
 <div id="train-and-test-sets" class="section level3">
 <h3>Train and test sets</h3>
-<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb12-1" title="1">pmpm_ts &lt;-<span class="st"> </span>pmpm <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb12-2" title="2"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Inc_Month =</span> <span class="kw">yearmonth</span>(Inc_Month)) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb12-3" title="3"><span class="st">  </span>tsibble<span class="op">::</span><span class="kw">as_tsibble</span>(<span class="dt">index =</span> Inc_Month)</a>
-<a class="sourceLine" id="cb12-4" title="4"></a>
-<a class="sourceLine" id="cb12-5" title="5">train &lt;-<span class="st"> </span>pmpm_ts <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb12-6" title="6"><span class="st">  </span><span class="kw">filter_index</span>(. <span class="op">~</span><span class="st"> &quot;2018-12-01&quot;</span>)</a>
-<a class="sourceLine" id="cb12-7" title="7"></a>
-<a class="sourceLine" id="cb12-8" title="8">test &lt;-<span class="st"> </span>pmpm_ts <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb12-9" title="9"><span class="st">  </span><span class="kw">filter_index</span>(<span class="st">&quot;2019-01-01&quot;</span> <span class="op">~</span><span class="st"> </span>.)</a></code></pre></div>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb11-1" title="1">pmpm_ts &lt;-<span class="st"> </span>pmpm <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb11-2" title="2"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Inc_Month =</span> <span class="kw">yearmonth</span>(Inc_Month)) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb11-3" title="3"><span class="st">  </span>tsibble<span class="op">::</span><span class="kw">as_tsibble</span>(<span class="dt">index =</span> Inc_Month)</a>
+<a class="sourceLine" id="cb11-4" title="4"></a>
+<a class="sourceLine" id="cb11-5" title="5">train &lt;-<span class="st"> </span>pmpm_ts <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb11-6" title="6"><span class="st">  </span><span class="kw">filter_index</span>(. <span class="op">~</span><span class="st"> &quot;2018-12-01&quot;</span>)</a>
+<a class="sourceLine" id="cb11-7" title="7"></a>
+<a class="sourceLine" id="cb11-8" title="8">test &lt;-<span class="st"> </span>pmpm_ts <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb11-9" title="9"><span class="st">  </span><span class="kw">filter_index</span>(<span class="st">&quot;2019-01-01&quot;</span> <span class="op">~</span><span class="st"> </span>.)</a></code></pre></div>
 </div>
 <div id="arima-models" class="section level3">
 <h3>Arima models</h3>
@@ -281,50 +296,50 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li><p>Total claims</p></li>
 </ol>
 <p>Models 1 and 2 are backtransformed to the original claims scale.</p>
-<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb13-1" title="1">adj_pmpm_arima &lt;-<span class="st"> </span>train <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb13-2" title="2"><span class="st">  </span><span class="kw">model</span>(<span class="dt">ARIMA_Adj_PMPM =</span> <span class="kw">ARIMA</span>(Adj_PMPM))</a>
-<a class="sourceLine" id="cb13-3" title="3"></a>
-<a class="sourceLine" id="cb13-4" title="4">raw_pmpm_arima &lt;-<span class="st"> </span>train <span class="op">%&gt;%</span><span class="st"> </span></a>
-<a class="sourceLine" id="cb13-5" title="5"><span class="st">  </span><span class="kw">model</span>(<span class="dt">ARIMA_PMPM =</span> <span class="kw">ARIMA</span>(Raw_PMPM))</a>
-<a class="sourceLine" id="cb13-6" title="6"></a>
-<a class="sourceLine" id="cb13-7" title="7">claims_arima &lt;-<span class="st"> </span>train <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb13-8" title="8"><span class="st">  </span><span class="kw">model</span>(<span class="dt">ARIMA_Claims =</span> <span class="kw">ARIMA</span>(Total_Claims))</a></code></pre></div>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb12-1" title="1">adj_pmpm_arima &lt;-<span class="st"> </span>train <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb12-2" title="2"><span class="st">  </span><span class="kw">model</span>(<span class="dt">ARIMA_Adj_PMPM =</span> <span class="kw">ARIMA</span>(Adj_PMPM))</a>
+<a class="sourceLine" id="cb12-3" title="3"></a>
+<a class="sourceLine" id="cb12-4" title="4">raw_pmpm_arima &lt;-<span class="st"> </span>train <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb12-5" title="5"><span class="st">  </span><span class="kw">model</span>(<span class="dt">ARIMA_PMPM =</span> <span class="kw">ARIMA</span>(Raw_PMPM))</a>
+<a class="sourceLine" id="cb12-6" title="6"></a>
+<a class="sourceLine" id="cb12-7" title="7">claims_arima &lt;-<span class="st"> </span>train <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb12-8" title="8"><span class="st">  </span><span class="kw">model</span>(<span class="dt">ARIMA_Claims =</span> <span class="kw">ARIMA</span>(Total_Claims))</a></code></pre></div>
 </div>
 <div id="forecasts" class="section level3">
 <h3>Forecasts</h3>
-<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb14-1" title="1">adj_pmpm_fcast &lt;-<span class="st"> </span><span class="kw">forecast</span>(adj_pmpm_arima, <span class="dt">h =</span> <span class="dv">12</span>) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb14-2" title="2"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Population =</span> test<span class="op">$</span>Population) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb14-3" title="3"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Effective_Days_Index =</span> test<span class="op">$</span>Effective_Days_Index) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb14-4" title="4"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Total_Claims =</span> test<span class="op">$</span>Total_Claims) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb14-5" title="5"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Forecast =</span> .mean<span class="op">*</span>Population<span class="op">*</span>Effective_Days_Index) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb14-6" title="6"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Error =</span> Forecast <span class="op">-</span><span class="st"> </span>Total_Claims)</a>
-<a class="sourceLine" id="cb14-7" title="7"></a>
-<a class="sourceLine" id="cb14-8" title="8">raw_pmpm_fcast &lt;-<span class="st"> </span><span class="kw">forecast</span>(raw_pmpm_arima, <span class="dt">h =</span> <span class="dv">12</span>) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb14-9" title="9"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Population =</span> test<span class="op">$</span>Population) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb14-10" title="10"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Effective_Days_Index =</span> test<span class="op">$</span>Effective_Days_Index) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb14-11" title="11"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Total_Claims =</span> test<span class="op">$</span>Total_Claims) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb14-12" title="12"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Forecast =</span> .mean<span class="op">*</span>Population) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb14-13" title="13"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Error =</span> Forecast <span class="op">-</span><span class="st"> </span>Total_Claims)</a>
-<a class="sourceLine" id="cb14-14" title="14"></a>
-<a class="sourceLine" id="cb14-15" title="15">claims_fcast &lt;-<span class="st"> </span><span class="kw">forecast</span>(claims_arima, <span class="dt">h =</span> <span class="dv">12</span>) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb14-16" title="16"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Total_Claims =</span> test<span class="op">$</span>Total_Claims) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb14-17" title="17"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Forecast =</span> .mean) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb14-18" title="18"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Error =</span> Forecast <span class="op">-</span><span class="st"> </span>Total_Claims)</a></code></pre></div>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb13-1" title="1">adj_pmpm_fcast &lt;-<span class="st"> </span><span class="kw">forecast</span>(adj_pmpm_arima, <span class="dt">h =</span> <span class="dv">12</span>) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb13-2" title="2"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Population =</span> test<span class="op">$</span>Population) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb13-3" title="3"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Effective_Days_Index =</span> test<span class="op">$</span>Effective_Days_Index) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb13-4" title="4"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Total_Claims =</span> test<span class="op">$</span>Total_Claims) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb13-5" title="5"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Forecast =</span> .mean<span class="op">*</span>Population<span class="op">*</span>Effective_Days_Index) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb13-6" title="6"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Error =</span> Forecast <span class="op">-</span><span class="st"> </span>Total_Claims)</a>
+<a class="sourceLine" id="cb13-7" title="7"></a>
+<a class="sourceLine" id="cb13-8" title="8">raw_pmpm_fcast &lt;-<span class="st"> </span><span class="kw">forecast</span>(raw_pmpm_arima, <span class="dt">h =</span> <span class="dv">12</span>) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb13-9" title="9"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Population =</span> test<span class="op">$</span>Population) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb13-10" title="10"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Effective_Days_Index =</span> test<span class="op">$</span>Effective_Days_Index) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb13-11" title="11"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Total_Claims =</span> test<span class="op">$</span>Total_Claims) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb13-12" title="12"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Forecast =</span> .mean<span class="op">*</span>Population) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb13-13" title="13"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Error =</span> Forecast <span class="op">-</span><span class="st"> </span>Total_Claims)</a>
+<a class="sourceLine" id="cb13-14" title="14"></a>
+<a class="sourceLine" id="cb13-15" title="15">claims_fcast &lt;-<span class="st"> </span><span class="kw">forecast</span>(claims_arima, <span class="dt">h =</span> <span class="dv">12</span>) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb13-16" title="16"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Total_Claims =</span> test<span class="op">$</span>Total_Claims) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb13-17" title="17"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Forecast =</span> .mean) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb13-18" title="18"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Error =</span> Forecast <span class="op">-</span><span class="st"> </span>Total_Claims)</a></code></pre></div>
 </div>
 <div id="errors" class="section level3">
 <h3>Errors</h3>
-<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb15-1" title="1">tibble<span class="op">::</span><span class="kw">tribble</span>(</a>
-<a class="sourceLine" id="cb15-2" title="2">  <span class="op">~</span>Model, <span class="op">~</span>Metric, <span class="op">~</span>Value,</a>
-<a class="sourceLine" id="cb15-3" title="3">  <span class="st">&quot;Adjusted PMPM&quot;</span>, <span class="st">&quot;RMSE&quot;</span>, <span class="kw">sqrt</span>(<span class="kw">mean</span>(adj_pmpm_fcast<span class="op">$</span>Error<span class="op">**</span><span class="dv">2</span>)),</a>
-<a class="sourceLine" id="cb15-4" title="4">  <span class="st">&quot;Raw PMPM&quot;</span>, <span class="st">&quot;RMSE&quot;</span>, <span class="kw">sqrt</span>(<span class="kw">mean</span>(raw_pmpm_fcast<span class="op">$</span>Error<span class="op">**</span><span class="dv">2</span>)),</a>
-<a class="sourceLine" id="cb15-5" title="5">  <span class="st">&quot;Total Claims (no adjustments)&quot;</span>, <span class="st">&quot;RMSE&quot;</span>, <span class="kw">sqrt</span>(<span class="kw">mean</span>(claims_fcast<span class="op">$</span>Error<span class="op">**</span><span class="dv">2</span>))</a>
-<a class="sourceLine" id="cb15-6" title="6">) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb15-7" title="7"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Model, <span class="dt">y =</span> Value)) <span class="op">+</span></a>
-<a class="sourceLine" id="cb15-8" title="8"><span class="st">  </span><span class="kw">geom_col</span>(<span class="kw">aes</span>(<span class="dt">fill =</span> Model), <span class="dt">alpha =</span> <span class="fl">0.7</span>, <span class="dt">width =</span> <span class="fl">0.5</span>, <span class="dt">show.legend =</span> F) <span class="op">+</span></a>
-<a class="sourceLine" id="cb15-9" title="9"><span class="st">  </span><span class="kw">scale_fill_manual</span>(<span class="dt">values =</span> <span class="kw">c</span>(<span class="st">&quot;blue&quot;</span>, <span class="st">&quot;gray50&quot;</span>, <span class="st">&quot;gray50&quot;</span>)) <span class="op">+</span></a>
-<a class="sourceLine" id="cb15-10" title="10"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Comparison of RMSE between models&quot;</span>,</a>
-<a class="sourceLine" id="cb15-11" title="11">       <span class="dt">subtitle =</span> <span class="st">&quot;Model using adjusted PMPM has lowest error on test set&quot;</span>) <span class="op">+</span></a>
-<a class="sourceLine" id="cb15-12" title="12"><span class="st">  </span><span class="kw">theme_bw</span>()</a></code></pre></div>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb14-1" title="1">tibble<span class="op">::</span><span class="kw">tribble</span>(</a>
+<a class="sourceLine" id="cb14-2" title="2">  <span class="op">~</span>Model, <span class="op">~</span>Metric, <span class="op">~</span>Value,</a>
+<a class="sourceLine" id="cb14-3" title="3">  <span class="st">&quot;Adjusted PMPM&quot;</span>, <span class="st">&quot;RMSE&quot;</span>, <span class="kw">sqrt</span>(<span class="kw">mean</span>(adj_pmpm_fcast<span class="op">$</span>Error<span class="op">**</span><span class="dv">2</span>)),</a>
+<a class="sourceLine" id="cb14-4" title="4">  <span class="st">&quot;Raw PMPM&quot;</span>, <span class="st">&quot;RMSE&quot;</span>, <span class="kw">sqrt</span>(<span class="kw">mean</span>(raw_pmpm_fcast<span class="op">$</span>Error<span class="op">**</span><span class="dv">2</span>)),</a>
+<a class="sourceLine" id="cb14-5" title="5">  <span class="st">&quot;Total Claims (no adjustments)&quot;</span>, <span class="st">&quot;RMSE&quot;</span>, <span class="kw">sqrt</span>(<span class="kw">mean</span>(claims_fcast<span class="op">$</span>Error<span class="op">**</span><span class="dv">2</span>))</a>
+<a class="sourceLine" id="cb14-6" title="6">) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb14-7" title="7"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Model, <span class="dt">y =</span> Value)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb14-8" title="8"><span class="st">  </span><span class="kw">geom_col</span>(<span class="kw">aes</span>(<span class="dt">fill =</span> Model), <span class="dt">alpha =</span> <span class="fl">0.7</span>, <span class="dt">width =</span> <span class="fl">0.5</span>, <span class="dt">show.legend =</span> F) <span class="op">+</span></a>
+<a class="sourceLine" id="cb14-9" title="9"><span class="st">  </span><span class="kw">scale_fill_manual</span>(<span class="dt">values =</span> <span class="kw">c</span>(<span class="st">&quot;blue&quot;</span>, <span class="st">&quot;gray50&quot;</span>, <span class="st">&quot;gray50&quot;</span>)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb14-10" title="10"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Comparison of RMSE between models&quot;</span>,</a>
+<a class="sourceLine" id="cb14-11" title="11">       <span class="dt">subtitle =</span> <span class="st">&quot;Model using adjusted PMPM has lowest error on test set&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb14-12" title="12"><span class="st">  </span><span class="kw">theme_bw</span>()</a></code></pre></div>
 <p><img src="/post/2020-06-16-monthly-forecasts-using-effective-days-and-day-of-week-ratios_files/figure-html/unnamed-chunk-14-1.png" width="672" /></p>
 </div>
 </div>
