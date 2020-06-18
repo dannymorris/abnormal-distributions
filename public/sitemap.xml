@@ -3,6 +3,11 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>/post/2020/06/18/clustering-medicare-star-measures-using-time-based-statistics/</loc>
+    <lastmod>2020-06-18T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>/post/2020/06/17/monthly-forecasts-using-effective-days-and-day-of-week-ratios/</loc>
     <lastmod>2020-06-17T00:00:00+00:00</lastmod>
   </url>
@@ -72,6 +77,18 @@
   </url>
   
   <url>
+    <loc>/tags/analytics/</loc>
+    <lastmod>2020-06-18T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/categories/analytics/</loc>
+    <lastmod>2020-06-18T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
     <loc>/categories/</loc>
     <lastmod>2019-07-06T00:00:00+00:00</lastmod>
     <priority>0</priority>
@@ -86,6 +103,18 @@
   <url>
     <loc>/categories/classification/</loc>
     <lastmod>2020-06-07T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/cluster-analysis/</loc>
+    <lastmod>2020-06-18T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/categories/cluster-analysis/</loc>
+    <lastmod>2020-06-18T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -115,7 +144,7 @@
   
   <url>
     <loc>/</loc>
-    <lastmod>2020-06-17T00:00:00+00:00</lastmod>
+    <lastmod>2020-06-18T00:00:00+00:00</lastmod>
   </url>
   
   <url>
@@ -132,7 +161,7 @@
   
   <url>
     <loc>/post/</loc>
-    <lastmod>2020-06-17T00:00:00+00:00</lastmod>
+    <lastmod>2020-06-18T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -150,13 +179,13 @@
   
   <url>
     <loc>/tags/r/</loc>
-    <lastmod>2020-06-17T00:00:00+00:00</lastmod>
+    <lastmod>2020-06-18T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/categories/r/</loc>
-    <lastmod>2020-06-17T00:00:00+00:00</lastmod>
+    <lastmod>2020-06-18T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   

@@ -1,0 +1,241 @@
+---
+title: Segmenting Medicare STAR measures based on trends in performance, variance, and capacity of scores
+author: Danny Morris
+date: "`r Sys.Date()`"
+output: 
+  blogdown::html_page:
+    toc: true
+    highlight: pygments
+slug: clustering-medicare-star-measures-using-time-based-statistics
+categories:
+  - R
+  - Analytics
+  - Cluster Analysis
+tags:
+  - R
+  - Analytics
+  - Cluster Analysis
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include=F}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
+## Overview
+
+This post how to use hierarchical clustering to segment Medicare STAR measures on the basis of improvement in performance, reduction in variance, and capacity.
+
+**WIP**
+
+## Packages
+
+```{r}
+library(tidyverse)
+library(ggiraph)
+```
+
+## Data
+
+The data is publically available at the [CMS website](https://www.cms.gov/Medicare/Prescription-Drug-Coverage/PrescriptionDrugCovGenIn/PerformanceData). Download the cleansed version [here](.files/standardized_scores.csv).
+
+```{r}
+scores_df <- read_csv("standardized_scores.csv")
+```
+
+## Sample measures
+
+This analysis is limited to current Part C measures that are scored as a rate between 0 and 1.
+
+```{r}
+sample_measures <- scores_df %>%
+  filter(part == "C") %>%
+  group_by(clean_measure) %>%
+  summarise(
+    n_years = n_distinct(star_year),
+    most_recent_year = max(star_year),
+    min_score = min(score, na.rm = T),
+    max_score = max(score, na.rm = T)
+  ) %>%
+  filter(most_recent_year == 2020,
+         n_years >= 3, 
+         min_score >= 0,
+         max_score <= 1) %>%
+  select(clean_measure) %>%
+  distinct()
+```
+
+## Contract scores
+
+```{r}
+scores <- scores_df %>%
+  inner_join(sample_measures, by = "clean_measure") %>%
+  select(clean_measure,
+         CONTRACT_ID,
+         star_year,
+         score) %>%
+  drop_na()
+
+scores
+```
+
+## Interesting attributes of STAR measures
+
+The attributes of interest include:
+
+1. **Improvement trend**
+
+This metric answers the question of "are the measure scores trending upward or downward?" 
+
+2. **Variance trend**
+
+This metric answers the question of "are the measure scores developing a narrow or wide distribution?" A narrow distribution of scores implies tighter competition among contracts.
+
+3. **Capacity**
+
+This metric answers the question of "on average, how distant are the measure scores from their limits?" For measures that are scored as a rate between 0 and 1, the limits are 0 (the floor) and 1 (the ceiling).
+
+These attributes can be quantified and used in a clustering model to reveal interesing segments of Medicare STAR measures.
+
+## Calculate attributes
+
+```{r}
+features <- scores %>% 
+  split(.$clean_measure) %>%
+  map(., function(measure) {
+    year_summary <- measure %>%
+      drop_na() %>%
+      group_by(clean_measure, star_year) %>%
+      summarise(
+        yr_n_contracts = n_distinct(CONTRACT_ID),
+        yr_median_score = median(score),
+        yr_mad_score = mad(score),
+        yr_capacity = 1 - yr_median_score
+      ) %>%
+      ungroup() %>%
+      mutate(year_id = seq_along(star_year))
+    
+    year_summary %>%
+      group_by(clean_measure) %>%
+      summarise(
+        improvement_trend = lm(yr_median_score ~ year_id)$coefficients[2],
+        variance_trend = lm(yr_mad_score ~ year_id)$coefficients[2],
+        capacity = mean(yr_capacity)
+      )
+  }) %>%
+  bind_rows()
+```
+
+```{r}
+p <- features %>%
+  ggplot(aes(x = improvement_trend, y = variance_trend)) +
+  geom_point_interactive(aes(size = capacity,
+                             tooltip = paste(clean_measure)),
+                         alpha = 0.8) +
+  geom_vline(aes(xintercept = 0), 
+             color = 'gray50') +
+  geom_hline(aes(yintercept = 0), 
+             color = 'gray50') +
+  labs(title = "Medicare STAR measure attributes",
+       x = "Improvement Trend",
+       y = "Variance Trend",
+       size = "Capacity Trend") +
+  theme_bw()
+
+ggiraph::girafe(code = print(p), 
+                height_svg = 4)
+```
+
+## Apply hierarchical clustering
+
+### Center and scale variables using median and median absolute deviation
+
+```{r}
+robust_scale <- function(x) {
+  (x - median(x)) / mad(x)
+}
+
+model_df <- features %>%
+  select(-clean_measure) %>%
+  mutate_all(list(robust_scale))
+```
+
+### Clustering
+
+```{r}
+set.seed(1234)
+
+hier_clustering <- model_df %>%
+  dist(method = "euclidean") %>%
+  hclust(method = "ward.D2")
+
+plot(hier_clustering)
+
+clusters <- cutree(hier_clustering, k = 6)
+```
+
+### Visualize clusters
+
+```{r}
+p <- features %>%
+  mutate(Cluster = as.character(clusters)) %>%
+  ggplot(aes(x = improvement_trend, y = variance_trend)) +
+  geom_point_interactive(aes(color = Cluster,
+                             fill = Cluster,
+                             size = capacity,
+                             tooltip = paste(clean_measure)),
+                         alpha = 0.8) +
+  geom_vline(aes(xintercept = 0), 
+             color = 'gray50') +
+  geom_hline(aes(yintercept = 0), 
+             color = 'gray50') +
+  labs(title = "Medicare STAR measure segments based on attributes",
+       x = "Improvement Trend",
+       y = "Variance Trend",
+       size = "Capacity Trend") +
+  theme_bw()
+
+ggiraph::girafe(code = print(p), 
+                height_svg = 4)
+```
+
+### Cluster explanations
+
+```{r}
+cluster_descriptions <- tribble(
+  ~Cluster, ~Description,
+  "1", "Steady with little to no room to grow",
+  "2", "Strong improvement and narrowing margin",
+  "3", "Moderate improvement with little room to grow",
+  "4", "Strong improvement with room to grow",
+  "5", "Drastic improvement and narrowing margin",
+  "6", "Steady state with significant room to grow"
+)
+```
+
+## Conclusion
+
+Because there are many Medicare STAR measures, it can be difficult to assess each measure's individual behavior. An alternative approach is to quantify interesting measure attributes and explore segments using clustering methods. The measure attributes calculated in the analysis reveal interesting segments of Medicare STAR measures. This technique facilitates an immediate understanding of the Medicare STAR landscape. It also provides an immediate basis for discussion and planning without.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
