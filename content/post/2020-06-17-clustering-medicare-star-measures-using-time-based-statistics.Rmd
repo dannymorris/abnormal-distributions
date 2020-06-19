@@ -1,5 +1,5 @@
 ---
-title: Segmenting Medicare STAR measures based on trends in performance, variance, and capacity of scores
+title: Segmenting Medicare STAR measures based on time-based trends the distributions of contract scores
 author: Danny Morris
 date: "`r Sys.Date()`"
 output: 
@@ -25,20 +25,21 @@ knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
 
 ## Overview
 
-This post how to use hierarchical clustering to segment Medicare STAR measures on the basis of improvement in performance, reduction in variance, and capacity.
-
-**WIP**
+This post demonstrates the use of hierarchical clustering to segment Medicare STAR measures based on trends in the distribution of contract scores. Trends are quantified using three time-based statistics: 1) slope of the average score (positive slope suggests scores are improving across the board), 2) slope of the variance (negative slope suggests scores are becoming more tightly distributed across the board), and 3) distance to capacity (high value suggests scores are far from their maximum value and have room for improvement). Understanding trends within each measure enables data-driven planning and goal setting.
 
 ## Packages
 
 ```{r}
 library(tidyverse)
+library(gridExtra)
+library(RColorBrewer)
+library(ggdendro)
 library(ggiraph)
 ```
 
 ## Data
 
-The data is publically available at the [CMS website](https://www.cms.gov/Medicare/Prescription-Drug-Coverage/PrescriptionDrugCovGenIn/PerformanceData). Download the cleansed version [here](.files/standardized_scores.csv).
+The data set is publically available at the [CMS website](https://www.cms.gov/Medicare/Prescription-Drug-Coverage/PrescriptionDrugCovGenIn/PerformanceData). Download the cleansed version [here](.files/standardized_scores.csv).
 
 ```{r}
 scores_df <- read_csv("standardized_scores.csv")
@@ -80,25 +81,25 @@ scores <- scores_df %>%
 scores
 ```
 
-## Interesting attributes of STAR measures
+## Defining the relevant time-based statistics
 
 The attributes of interest include:
 
 1. **Improvement trend**
 
-This metric answers the question of "are the measure scores trending upward or downward?" 
+This statistic reflects the slope of the average contract score. It answers the question "are the contract scores trending upward or downward?" A highly positive slope suggests scores are rapidly improving across the board. 
 
 2. **Variance trend**
 
-This metric answers the question of "are the measure scores developing a narrow or wide distribution?" A narrow distribution of scores implies tighter competition among contracts.
+This statistic reflects the slope of the contract score varaince. It answers the question "are the contract becoming wider or narrower?" A highly negative slope means the variance is decreasing, suggesting contracts are becoming more competitive.
 
 3. **Capacity**
 
-This metric answers the question of "on average, how distant are the measure scores from their limits?" For measures that are scored as a rate between 0 and 1, the limits are 0 (the floor) and 1 (the ceiling).
+This statistic reflects the distance between the average score and the maximum score. For the measures in this analysis, the maximum score is 1. This statistic answers the question "on average, how much room is available for the contract scores to grow?" High values suggest plenty of room for the contract scores to improve. Low values suggest the contract scores are hovering near the maximum value with little room for growth.
 
 These attributes can be quantified and used in a clustering model to reveal interesing segments of Medicare STAR measures.
 
-## Calculate attributes
+## Calculate and visualize attributes
 
 ```{r}
 features <- scores %>% 
@@ -163,60 +164,51 @@ model_df <- features %>%
 
 ### Clustering
 
-```{r}
+```{r, fig.height = 9}
 set.seed(1234)
 
 hier_clustering <- model_df %>%
   dist(method = "euclidean") %>%
   hclust(method = "ward.D2")
 
-plot(hier_clustering)
+hier_clustering$labels <- features$clean_measure
 
+ggdendro::ggdendrogram(hier_clustering, rotate = T) +
+  labs(title = "Clustering dendrogram")
+```
+
+Since this analysis is exploratory, there is no correct answer to the number of clusters present in the data. Based on a visual interpretation of the dendrogram, between 4 and 6 clusters is reasonable. 
+
+```{r}
 clusters <- cutree(hier_clustering, k = 6)
 ```
 
 ### Visualize clusters
 
-```{r}
-p <- features %>%
-  mutate(Cluster = as.character(clusters)) %>%
-  ggplot(aes(x = improvement_trend, y = variance_trend)) +
-  geom_point_interactive(aes(color = Cluster,
-                             fill = Cluster,
-                             size = capacity,
-                             tooltip = paste(clean_measure)),
-                         alpha = 0.8) +
-  geom_vline(aes(xintercept = 0), 
-             color = 'gray50') +
-  geom_hline(aes(yintercept = 0), 
-             color = 'gray50') +
-  labs(title = "Medicare STAR measure segments based on attributes",
-       x = "Improvement Trend",
-       y = "Variance Trend",
-       size = "Capacity Trend") +
-  theme_bw()
+```{r, fig.height=9}
+cluster_ids <- seq(1, max(clusters), 1)
+colors <- RColorBrewer::brewer.pal(max(clusters), "Set1")
 
-ggiraph::girafe(code = print(p), 
-                height_svg = 4)
-```
+plist <- map2(cluster_ids, colors, function(id, color) {
+  features %>%
+    mutate(Cluster = clusters) %>%
+    mutate(target_cluster = ifelse(Cluster == id, "1", "0")) %>%
+    ggplot(aes(x = improvement_trend, y = variance_trend)) +
+    geom_point(aes(color = target_cluster, size = capacity)) +
+    scale_color_manual(values = c("gray80", color)) +
+    labs(title = paste("Cluster:", id)) +
+    guides(color = FALSE) +
+    theme_bw() 
+})
 
-### Cluster explanations
-
-```{r}
-cluster_descriptions <- tribble(
-  ~Cluster, ~Description,
-  "1", "Steady with little to no room to grow",
-  "2", "Strong improvement and narrowing margin",
-  "3", "Moderate improvement with little room to grow",
-  "4", "Strong improvement with room to grow",
-  "5", "Drastic improvement and narrowing margin",
-  "6", "Steady state with significant room to grow"
-)
+do.call("grid.arrange", c(plist, ncol = floor(sqrt(length(plist)))))
 ```
 
 ## Conclusion
 
-Because there are many Medicare STAR measures, it can be difficult to assess each measure's individual behavior. An alternative approach is to quantify interesting measure attributes and explore segments using clustering methods. The measure attributes calculated in the analysis reveal interesting segments of Medicare STAR measures. This technique facilitates an immediate understanding of the Medicare STAR landscape. It also provides an immediate basis for discussion and planning without.
+The measure attributes calculated in the analysis reveal interesting segments of Medicare STAR measures based on trends in performance, variance, and capacity. For example, Cluster 1 contains measures that are holding steady in their distributions of contract scores. Cluster 5 contains a single outlier measure with contract scores that are trending upwards at a rapid rate and becoming narrow, suggesting health plans are rapidly improving in this measure and becoming more competitive.
+
+Because there are many Medicare STAR measures, it can be difficult to assess each measure's individual behavior. An alternative approach is to quantify meaningful measure attributes and discover segments using clustering methods. This technique facilitates an immediate understanding of the current landscape of Medicare STAR measures and their trends without having to delve into each measure individually. It also provides an immediate basis for discussion and goal setting.
 
 
 
