@@ -1,5 +1,5 @@
 ---
-title: Segmenting Medicare STAR measures based on time-based trends the distributions of contract scores
+title: Segmenting Medicare STAR measures based on time-based trends in the distributions of contract scores
 author: Danny Morris
 date: "`r Sys.Date()`"
 output: 
