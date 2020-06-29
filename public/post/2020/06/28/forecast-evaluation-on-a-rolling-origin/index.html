@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Rolling origin cross validation with non-constant horizons and the tidyverts framework | Abnormal Distributions</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/">Home</a></li>
+      
+      <li><a href="/post/">All Posts</a></li>
+      
+      <li><a href="/categories/">By Topic</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">Rolling origin cross validation with non-constant horizons and the tidyverts framework</span></h1>
+<h2 class="author">Danny Morris</h2>
+<h2 class="date">2020/06/28</h2>
+</div>
+
+<main>
+
+<style type="text/css">
+a.sourceLine { display: inline-block; line-height: 1.25; }
+a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
+a.sourceLine:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+a.sourceLine { text-indent: -1em; padding-left: 1em; }
+}
+pre.numberSource a.sourceLine
+  { position: relative; left: -4em; }
+pre.numberSource a.sourceLine::before
+  { content: attr(title);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; pointer-events: all; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  }
+@media screen {
+a.sourceLine::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+<div id="TOC">
+<ul>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#packages">Packages</a></li>
+<li><a href="#data">Data</a></li>
+<li><a href="#initial-training-and-testing-splits">Initial training and testing splits</a></li>
+<li><a href="#objective">Objective</a></li>
+<li><a href="#rocv-function">ROCV function</a></li>
+<li><a href="#run-rocv">Run ROCV</a></li>
+<li><a href="#results">Results</a></li>
+<li><a href="#observations">Observations</a></li>
+</ul>
+</div>
+
+<div id="overview" class="section level2">
+<h2>Overview</h2>
+<p>This post shows how to implement rolling origin cross validation (ROCV) to evaluate time series forecasting models. This idea is discussed in <a href="https://otexts.com/fpp2/accuracy.html">Forecasting: Principles and Practice</a>. ROCV starts by training a model using an initial training split (e.g. 80% of available data). The remainder is the initial testing split. A forecast horizon is chosen by the user. In the first ROCV iteration, model training is performed on the initial training split and accuracy metrics are computed on the forecast horizon. For each subsequent ROCV iteration, the training data increases by a chosen length (e.g. 1 additional observation), and the testing set shifts forward by the same length. Accuracy metrics on the forecasts are stored for each ROCV iteration for further analysis. This strategy repeats until all available data is exhausted.</p>
+<p>This strategy is applicable to any forecasting model. Examples include demand forecasting, workforce planning, sales, etc. It allows for very flexible and robust training and evaluation. Both are essential to producing a valid, high quality predictive model.</p>
+</div>
+<div id="packages" class="section level2">
+<h2>Packages</h2>
+<p>The <a href="https://tidyverts.org/">tidyverts</a> framework is used. This framework offers an API for forecasting using tidy programming concepts. This framework is the next generation of the excellent <a href="https://otexts.com/fpp2/the-forecast-package-in-r.html">forecast</a> package written by Rob Hyndman. Many of the classic forecasting algorithms are implemented in the <a href="http://fable.tidyverts.org/">fable</a> package, such as Arima, Exponential Smoothing, Regression, and Fourier series. Single-layer, autoregressive neural networks are currently available as well. These algorithms work well across a range of forecasting problems, and they have the nice feature of being highly explainable.</p>
+<p>At the time of this writing, the <code>tidyverts</code> framework is powerful but not very mature. I experienced installation issues on a Windows machine due to the complexity of the package dependencies. Still, the framework is worth learning and has a lot of potential.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" title="1"><span class="co"># tidyverse</span></a>
+<a class="sourceLine" id="cb1-2" title="2"><span class="kw">library</span>(tidyverse)</a>
+<a class="sourceLine" id="cb1-3" title="3"></a>
+<a class="sourceLine" id="cb1-4" title="4"><span class="co"># tidyverts</span></a>
+<a class="sourceLine" id="cb1-5" title="5"><span class="kw">library</span>(tsibble)</a>
+<a class="sourceLine" id="cb1-6" title="6"><span class="kw">library</span>(tsibbledata)</a>
+<a class="sourceLine" id="cb1-7" title="7"><span class="kw">library</span>(fable)</a>
+<a class="sourceLine" id="cb1-8" title="8"><span class="kw">library</span>(fabletools)</a>
+<a class="sourceLine" id="cb1-9" title="9"><span class="kw">library</span>(feasts)</a>
+<a class="sourceLine" id="cb1-10" title="10"></a>
+<a class="sourceLine" id="cb1-11" title="11"><span class="co"># misc</span></a>
+<a class="sourceLine" id="cb1-12" title="12"><span class="kw">library</span>(urca)</a>
+<a class="sourceLine" id="cb1-13" title="13"><span class="kw">library</span>(plotly)</a></code></pre></div>
+</div>
+<div id="data" class="section level2">
+<h2>Data</h2>
+<p>The data reflect liquor <a href="https://www.mbi-geodata.com/en/purchasing-power/retail-turnover/">retail turnover</a> in Victoria, Australia. Simply put, it’s a reflection of liquor sales in the area. A log transformation is applied to make the variance stable over time.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" title="1">model_tsibble &lt;-<span class="st"> </span>tsibbledata<span class="op">::</span>aus_retail <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb2-2" title="2"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Turnover =</span> <span class="kw">log</span>(Turnover)) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb2-3" title="3"><span class="st">  </span><span class="kw">filter</span>(State <span class="op">==</span><span class="st"> &quot;Victoria&quot;</span>,</a>
+<a class="sourceLine" id="cb2-4" title="4">         Industry <span class="op">==</span><span class="st"> &quot;Liquor retailing&quot;</span>) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb2-5" title="5"><span class="st">  </span><span class="kw">filter_index</span>(<span class="st">&quot;2005-01-01&quot;</span> <span class="op">~</span><span class="st"> </span>.)</a></code></pre></div>
+</div>
+<div id="initial-training-and-testing-splits" class="section level2">
+<h2>Initial training and testing splits</h2>
+<p>Choose an initial training and initial testing set. These data sets are the starting points for ROCV.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" title="1"><span class="co"># training</span></a>
+<a class="sourceLine" id="cb3-2" title="2">initial_train &lt;-<span class="st"> </span>model_tsibble <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb3-3" title="3"><span class="st">  </span><span class="kw">filter_index</span>(<span class="st">&quot;2005-01-01&quot;</span> <span class="op">~</span><span class="st"> &quot;2013-12-01&quot;</span>) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb3-4" title="4"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Split =</span> <span class="st">&quot;Initial Training&quot;</span>)</a>
+<a class="sourceLine" id="cb3-5" title="5"></a>
+<a class="sourceLine" id="cb3-6" title="6"><span class="co"># testing</span></a>
+<a class="sourceLine" id="cb3-7" title="7">initial_test &lt;-<span class="st"> </span>model_tsibble <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb3-8" title="8"><span class="st">  </span><span class="kw">filter_index</span>(<span class="st">&quot;2014-01-01&quot;</span> <span class="op">~</span><span class="st"> </span>.) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb3-9" title="9"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Split =</span> <span class="st">&quot;Initial Testing&quot;</span>)</a></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" title="1"><span class="kw">bind_rows</span>(initial_train, initial_test) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb4-2" title="2"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Month, <span class="dt">y =</span> Turnover)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-3" title="3"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">color =</span> Split)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-4" title="4"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Monthly liquor retail turnover in Victoria, Australia (log scale)&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-5" title="5"><span class="st">  </span><span class="kw">theme_bw</span>()</a></code></pre></div>
+<p><img src="/post/2020-05-22-forecast-evaluation-on-a-rolling-origin_files/figure-html/unnamed-chunk-5-1.png" width="672" /></p>
+</div>
+<div id="objective" class="section level2">
+<h2>Objective</h2>
+<p>The objective in this example is to test a range of forecasting models and choose one that performs well at producing 12-month forecasts, one for each month in the calendar year. This scenario is common in annual budget forecasting. Models are evaluated for point accuracy (e.g. RMSE) and interval accuracy. Each of these error types are important to consider in selecting an appropriate model.</p>
+</div>
+<div id="rocv-function" class="section level2">
+<h2>ROCV function</h2>
+<p>The function steps include:</p>
+<ol style="list-style-type: decimal">
+<li><p>Configure the CV parameters by specifiying the forecast horizon origin shift amount. For 12-month forecasting where each new forecast is generated at the beginning of a new calendar year, set both the horizon and the shift to 12.</p></li>
+<li><p>Iterate over the CV folds (using <code>purrr::map()</code>), apply functions for subsetting data, fitting models, generating forecasts, and calculating error metrics.</p></li>
+<li><p>Combine the results for further analysis and visualization.</p></li>
+</ol>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" title="1"><span class="co"># Inputs:</span></a>
+<a class="sourceLine" id="cb5-2" title="2"><span class="co"># - initial training set</span></a>
+<a class="sourceLine" id="cb5-3" title="3"><span class="co"># - initial testing set</span></a>
+<a class="sourceLine" id="cb5-4" title="4"><span class="co"># - desired horizon</span></a>
+<a class="sourceLine" id="cb5-5" title="5"><span class="co"># - desired shift (the number of observations to add to training data)</span></a>
+<a class="sourceLine" id="cb5-6" title="6"></a>
+<a class="sourceLine" id="cb5-7" title="7"><span class="co"># Output:</span></a>
+<a class="sourceLine" id="cb5-8" title="8"><span class="co"># - Tibble containing error metrics for each iterations</span></a>
+<a class="sourceLine" id="cb5-9" title="9"></a>
+<a class="sourceLine" id="cb5-10" title="10">rocv &lt;-<span class="st"> </span><span class="cf">function</span>(initial_train, </a>
+<a class="sourceLine" id="cb5-11" title="11">                 initial_test, </a>
+<a class="sourceLine" id="cb5-12" title="12">                 horizon, </a>
+<a class="sourceLine" id="cb5-13" title="13">                 shift) {</a>
+<a class="sourceLine" id="cb5-14" title="14">  </a>
+<a class="sourceLine" id="cb5-15" title="15">  <span class="co"># determine number of CV iterations based on horizon and shift</span></a>
+<a class="sourceLine" id="cb5-16" title="16">  n_iterations &lt;-<span class="st"> </span><span class="kw">nrow</span>(initial_test) <span class="op">-</span><span class="st"> </span>horizon</a>
+<a class="sourceLine" id="cb5-17" title="17">  iterations_idx &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv">0</span>, n_iterations, shift)</a>
+<a class="sourceLine" id="cb5-18" title="18">  </a>
+<a class="sourceLine" id="cb5-19" title="19">  <span class="co"># apply ROCV</span></a>
+<a class="sourceLine" id="cb5-20" title="20">  <span class="kw">map</span>(iterations_idx, <span class="cf">function</span>(i) {</a>
+<a class="sourceLine" id="cb5-21" title="21">    </a>
+<a class="sourceLine" id="cb5-22" title="22">    <span class="co"># construct training data</span></a>
+<a class="sourceLine" id="cb5-23" title="23">    new_train &lt;-<span class="st"> </span><span class="kw">bind_rows</span>(</a>
+<a class="sourceLine" id="cb5-24" title="24">      initial_train,</a>
+<a class="sourceLine" id="cb5-25" title="25">      initial_test <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">slice</span>(<span class="kw">seq</span>(<span class="dv">0</span>, i, <span class="dv">1</span>))</a>
+<a class="sourceLine" id="cb5-26" title="26">    )</a>
+<a class="sourceLine" id="cb5-27" title="27">    </a>
+<a class="sourceLine" id="cb5-28" title="28">    <span class="co"># construct testing data</span></a>
+<a class="sourceLine" id="cb5-29" title="29">    new_test &lt;-<span class="st"> </span>initial_test <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb5-30" title="30"><span class="st">      </span><span class="kw">slice</span>(<span class="kw">seq</span>(i<span class="op">+</span><span class="dv">1</span>, i<span class="op">+</span>horizon, <span class="dv">1</span>))</a>
+<a class="sourceLine" id="cb5-31" title="31">    </a>
+<a class="sourceLine" id="cb5-32" title="32">    <span class="co"># fit models to training data</span></a>
+<a class="sourceLine" id="cb5-33" title="33">    models &lt;-<span class="st"> </span>new_train <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-34" title="34"><span class="st">      </span><span class="kw">model</span>(</a>
+<a class="sourceLine" id="cb5-35" title="35">        <span class="dt">ARIMA =</span> <span class="kw">ARIMA</span>(Turnover),</a>
+<a class="sourceLine" id="cb5-36" title="36">        <span class="dt">ETS =</span> <span class="kw">ETS</span>(Turnover),</a>
+<a class="sourceLine" id="cb5-37" title="37">        <span class="dt">TS_LM =</span> <span class="kw">TSLM</span>(Turnover <span class="op">~</span><span class="st"> </span><span class="kw">trend</span>() <span class="op">+</span><span class="st"> </span><span class="kw">season</span>()),</a>
+<a class="sourceLine" id="cb5-38" title="38">        <span class="dt">DECOMP =</span><span class="kw">decomposition_model</span>(</a>
+<a class="sourceLine" id="cb5-39" title="39">          <span class="kw">STL</span>(<span class="kw">log</span>(Turnover) <span class="op">~</span><span class="st"> </span><span class="kw">season</span>(<span class="dt">window =</span> <span class="ot">Inf</span>)),</a>
+<a class="sourceLine" id="cb5-40" title="40">          <span class="kw">ETS</span>(season_adjust <span class="op">~</span><span class="st"> </span><span class="kw">season</span>(<span class="st">&quot;N&quot;</span>)),</a>
+<a class="sourceLine" id="cb5-41" title="41">          <span class="kw">SNAIVE</span>(season_year)</a>
+<a class="sourceLine" id="cb5-42" title="42">        )</a>
+<a class="sourceLine" id="cb5-43" title="43">      )</a>
+<a class="sourceLine" id="cb5-44" title="44">    </a>
+<a class="sourceLine" id="cb5-45" title="45">    <span class="co"># generate forecasts</span></a>
+<a class="sourceLine" id="cb5-46" title="46">    forecasts &lt;-<span class="st"> </span>models <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-47" title="47"><span class="st">      </span><span class="kw">forecast</span>(<span class="dt">new_data =</span> new_test)</a>
+<a class="sourceLine" id="cb5-48" title="48">    </a>
+<a class="sourceLine" id="cb5-49" title="49">    <span class="co"># evaluate accuracy on testing data</span></a>
+<a class="sourceLine" id="cb5-50" title="50">    metrics_list &lt;-<span class="st"> </span><span class="kw">list</span>(interval_accuracy_measures,</a>
+<a class="sourceLine" id="cb5-51" title="51">                         point_accuracy_measures)</a>
+<a class="sourceLine" id="cb5-52" title="52">    </a>
+<a class="sourceLine" id="cb5-53" title="53">    metrics &lt;-<span class="st"> </span>forecasts <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-54" title="54"><span class="st">      </span>fabletools<span class="op">::</span><span class="kw">accuracy</span>(</a>
+<a class="sourceLine" id="cb5-55" title="55">        <span class="dt">data =</span> new_test,</a>
+<a class="sourceLine" id="cb5-56" title="56">        <span class="dt">measures =</span> metrics_list</a>
+<a class="sourceLine" id="cb5-57" title="57">      ) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-58" title="58"><span class="st">      </span><span class="kw">mutate</span>(<span class="dt">Origin =</span> i)</a>
+<a class="sourceLine" id="cb5-59" title="59">    </a>
+<a class="sourceLine" id="cb5-60" title="60">    <span class="kw">return</span>(metrics)</a>
+<a class="sourceLine" id="cb5-61" title="61">    </a>
+<a class="sourceLine" id="cb5-62" title="62">  }) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-63" title="63"><span class="st">    </span><span class="kw">bind_rows</span>()</a>
+<a class="sourceLine" id="cb5-64" title="64">}</a></code></pre></div>
+</div>
+<div id="run-rocv" class="section level2">
+<h2>Run ROCV</h2>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" title="1">rocv_results &lt;-<span class="st"> </span><span class="kw">rocv</span>(</a>
+<a class="sourceLine" id="cb6-2" title="2">  <span class="dt">initial_train =</span> initial_train,</a>
+<a class="sourceLine" id="cb6-3" title="3">  <span class="dt">initial_test =</span> initial_test,</a>
+<a class="sourceLine" id="cb6-4" title="4">  <span class="dt">horizon =</span> <span class="dv">12</span>,</a>
+<a class="sourceLine" id="cb6-5" title="5">  <span class="dt">shift =</span> <span class="dv">12</span></a>
+<a class="sourceLine" id="cb6-6" title="6">)</a></code></pre></div>
+</div>
+<div id="results" class="section level2">
+<h2>Results</h2>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb7-1" title="1">rocv_results <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb7-2" title="2"><span class="st">  </span><span class="kw">select</span>(Origin, .model, RMSE, winkler) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb7-3" title="3"><span class="st">  </span><span class="kw">gather</span>(Metric, Value, <span class="op">-</span>Origin, <span class="op">-</span>.model) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb7-4" title="4"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Origin, <span class="dt">y =</span> Value)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb7-5" title="5"><span class="st">  </span><span class="kw">facet_wrap</span>(<span class="op">~</span>Metric) <span class="op">+</span></a>
+<a class="sourceLine" id="cb7-6" title="6"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">group =</span> .model, <span class="dt">color =</span> .model)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb7-7" title="7"><span class="st">  </span><span class="kw">geom_point</span>(<span class="kw">aes</span>(<span class="dt">color =</span> .model)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb7-8" title="8"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;ROCV metrics (RMSE and Winkler score)&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb7-9" title="9"><span class="st">  </span><span class="kw">theme_bw</span>()</a></code></pre></div>
+<p><img src="/post/2020-05-22-forecast-evaluation-on-a-rolling-origin_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" title="1">rocv_results <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb8-2" title="2"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> MAPE, <span class="dt">y =</span> winkler)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb8-3" title="3"><span class="st">  </span><span class="kw">geom_point</span>(<span class="kw">aes</span>(<span class="dt">color =</span> .model, <span class="dt">shape =</span> .model)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb8-4" title="4"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;ROCV iteration metrics&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb8-5" title="5"><span class="st">  </span><span class="kw">theme_bw</span>()</a></code></pre></div>
+<p><img src="/post/2020-05-22-forecast-evaluation-on-a-rolling-origin_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb9-1" title="1">rocv_results <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb9-2" title="2"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> MAPE, <span class="dt">y =</span> winkler)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb9-3" title="3"><span class="st">  </span><span class="kw">geom_point</span>(<span class="dt">size =</span> <span class="dv">1</span>, <span class="dt">color =</span> <span class="st">&#39;gray70&#39;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb9-4" title="4"><span class="st">  </span><span class="kw">geom_hline</span>(<span class="kw">aes</span>(<span class="dt">yintercept =</span> <span class="kw">mean</span>(winkler)), <span class="dt">color =</span> <span class="st">&#39;gray70&#39;</span>, <span class="dt">lwd =</span> <span class="dv">2</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb9-5" title="5"><span class="st">  </span><span class="kw">geom_vline</span>(<span class="kw">aes</span>(<span class="dt">xintercept =</span> <span class="kw">mean</span>(MAPE)), <span class="dt">color =</span> <span class="st">&#39;gray70&#39;</span>, <span class="dt">lwd =</span> <span class="dv">2</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb9-6" title="6"><span class="st">  </span><span class="kw">annotate</span>(<span class="st">&quot;text&quot;</span>, <span class="dt">x =</span> <span class="fl">0.65</span>, <span class="dt">y =</span> <span class="fl">0.3</span>, <span class="dt">label =</span> <span class="st">&#39;Ideal zone&#39;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb9-7" title="7"><span class="st">  </span><span class="kw">theme_bw</span>()</a></code></pre></div>
+<p><img src="/post/2020-05-22-forecast-evaluation-on-a-rolling-origin_files/figure-html/unnamed-chunk-9-2.png" width="672" /></p>
+</div>
+<div id="observations" class="section level2">
+<h2>Observations</h2>
+<p>ROCV is a great strategy for testing many forecasting models under different circumstances. In this example, it appears that the ARIMA model is most appropriate due to its superior performance and stability.</p>
+</div>
+
+</main>
+
+  <footer>
+  <script src="//yihui.name/js/math-code.js"></script>
+<script async src="//mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+<script async src="//yihui.name/js/center-img.js"></script>
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-143402170-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-143402170-1');
+</script>
+
+
+  
+  <hr/>
+  <a href="https://github.com/dannymorris">Github</a> | <a href="https://www.linkedin.com/in/drmorris87/">LinkedIn</a> | <a href="mailto:drmorris87@outlook.com">Email</a>
+  
+  </footer>
+  </body>
+</html>
+

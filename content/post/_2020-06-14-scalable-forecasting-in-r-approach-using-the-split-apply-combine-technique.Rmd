@@ -1,5 +1,5 @@
 ---
-title: Scalable forecasting in R approach using the split-apply-combine technique
+title: Multi-group forecasting in R using the split-apply-combine technique
 author: Danny Morris
 date: "`r Sys.Date()`"
 output: 
@@ -25,152 +25,118 @@ knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
 
 ## About split-apply-combine
 
-This document contains an example of the [split-apply-combine programming strategy](https://www.jstatsoft.org/article/view/v040i01/v40i01.pdf) applied to time series forecasting using [Prophet](https://facebook.github.io/prophet/). The focus is on showing the value of the technique in general and not on the specific use case.
+This post demonstrates the use of the [split-apply-combine programming strategy](https://www.jstatsoft.org/article/view/v040i01/v40i01.pdf) applied to time series forecasting. Split-apply-combine involves these three steps:
 
-Split-apply-combine involves splitting the data into meaningful groups. applying the same function to each group, then combining the results. This technique is very useful in data science. Good use cases include:
+1. *Split* the data into natural groups, e.g. products, lines of business, etc. In R, the resulting object is a list.
 
-- automatically train separate and independent models for each group (as shown here)
+2. Define a repeatable set of steps (like a recipe) and *apply* these steps to each group independently. An example recipe might include filtering outliers, fitting a forecast model, and capturing performance metrics using cross validation.
 
-- any of the common variants of cross validation
+3. *Combine* the results.
 
-- parallel processing
+In this post, the data is split by retail industry, a forecast model is fit to each industry using Facebook Prophet and evaluated using rolling origin cross validation, then the MAPE metrics are re-combined for further analysis.
+
+## Strengths of this apprach
+
+I like using split-apply-combine for the following benefits:
+
+- Replicate the exact same forecasting methodology (or any other methodology for that matter) for each group independently.
+
+- Parallelizable using a distributed or multi-core environment. I like using `parLapply` in a multi-core Linux environment.
+
+- Highly efficient alternative to developing and evaluating individual forecast models.
 
 ## R packages
 
 ```{r}
 library(tidyverse)
-library(fable)
-library(fabletools)
-library(feasts)
-library(tsibble)
-library(tsibbledata)
-library(furrr)
+library(prophet)
+library(rsample)
 ```
 
 ## Data
 
 ```{r}
-model_tsibble <- tsibbledata::aus_retail %>%
-  filter_index("2010-01-01" ~ .) %>%
-  mutate(Turnover = log(Turnover))
-
-model_tsibble
+model_df <- tsibbledata::aus_retail %>%
+  as_tibble() %>%
+  mutate(Month = as.Date(Month)) %>%
+  filter(Month >= "2010-01-01",
+         State == "Victoria") %>%
+  select(ds = Month,
+         y = Turnover,
+         State,
+         Industry) %>%
+  as_tibble()
 ```
-
-
 
 ## Objective
 
-The objective is to build a forecasting model for industry in each state. The issue is that there are `model_df %>% count(State, Industry) %>% nrow()` industry-state combinations represented in the data. It would impractical to build and maintain models for each combination. A generalized forecasting procedure applied to each group automatically is far more effecient and repeatable. 
-
-```{r, fig.width = 10, fig.height = 10}
-model_tsibble %>%
-  ggplot(aes(x = Month, y = Turnover)) +
-  facet_wrap(~State, scales = "free_y") +
-  geom_line(aes(color = Industry, group = Industry), show.legend = T) +
-  labs(title = "152 state-industry combinations") +
-  theme_bw()
-```
+The objective is to build a forecasting model for each retail industry in each state. The issue is that there are `model_df %>% count(State, Industry) %>% nrow()` industry-state combinations represented in the data. It would impractical to build and maintain models for each combination. A generalized forecasting procedure applied to each group automatically is far more effecient and repeatable. 
 
 ## Split-apply-combine
 
-### Split
+### Split by industry-state
 
 ```{r}
 # Splitting results in a list of tibbles
-tsibble_splits <- model_tsibble %>%
+industry_splits <- model_df %>%
   group_by(State, Industry) %>%
   group_split()
 
-rows_per_split <- map_dbl(tsibble_splits, nrow)
-
-tsibble_splits <- tsibble_splits[rows_per_split >= 12]
+# count number of observations per split in order to filter out
+# splits with little to no data
+rows_per_split <- map_dbl(industry_splits, nrow)
+industry_splits <- industry_splits[rows_per_split == 108]
 ```
 
-### Apply training and cross validation
+### Apply model and return MAPE metrics from ROCV
 
 ```{r}
-rocv <- function(initial_train, 
-                 initial_test, 
-                 horizon, 
-                 shift) {
-  
-  if (nrow(initial_train) < 12) {
-    placeholder <- 999
-    return(placeholder)
-  }
-  
-  # determine number of CV iterations based on horizon and shift
-  n_iterations <- nrow(initial_test) - horizon
-  iterations_idx <- seq(0, n_iterations, shift)
-  
-  # apply ROCV
-  map(iterations_idx, function(i) {
-    
-    # construct training data
-    new_train <- bind_rows(
-      initial_train,
-      initial_test %>% slice(seq(0, i, 1))
-    )
-    
-    # construct testing data
-    new_test <- initial_test %>% 
-      slice(seq(i+1, i+horizon, 1))
-    
-    # fit models to training data
-    models <- new_train %>%
-      model(
-        #ARIMA = ARIMA(Turnover),
-        #ETS = ETS(Turnover),
-        TS_LM = TSLM(Turnover ~ trend() + season()),
-        # DECOMP =decomposition_model(
-        #   STL(log(Turnover) ~ season(window = Inf)),
-        #   ETS(season_adjust ~ season("N")),
-        #   SNAIVE(season_year)
-        # )
-      )
-    
-    # generate forecasts
-    forecasts <- models %>%
-      forecast(new_data = new_test)
-    
-    # evaluate accuracy on testing data
-    metrics_list <- list(interval_accuracy_measures,
-                         point_accuracy_measures)
-    
-    metrics <- forecasts %>%
-      fabletools::accuracy(
-        data = new_test,
-        measures = metrics_list
-      ) %>%
-      mutate(Origin = i)
-    
-    return(metrics)
-    
-  }) %>%
-    bind_rows()
-}
+# Configure ROCV
+initial_train_obs <- 90         # 1
+forecast_horizon <- 12          # 2
+accumulate_train_obs <- FALSE   # 4
 ```
 
 ```{r}
+library(furrr)
+
 plan(multiprocess)
 
-models_rmse <- tsibble_splits %>%
-  future_map(., function(df) {
+rocv_models <- industry_splits[1:5] %>%
+  map(., function(df) {
     
-    # training
-    initial_train <- df %>%
-      filter_index(. ~ "2016-01-01")
+    rocv_splits <- rsample::rolling_origin(
+      data = df,
+      initial = initial_train_obs,
+      assess = forecast_horizon,
+      cumulative = accumulate_train_obs
+    )
     
-    # testing
-    initial_test <- df %>%
-      filter_index("2017-01-01" ~ .)
+    cv_idx <- seq(1, length(rocv_splits$splits), 1)
     
-    rocv(initial_train = initial_train,
-         initial_test = initial_test,
-         horizon = 3,
-         shift = 4)
-
+    rocv <- map2(rocv_splits$splits, cv_idx, function(split, id) {
+      
+      training <- analysis(split)
+      testing <- assessment(split)
+      
+      prophet_fit <- prophet(df = training,
+                             weekly.seasonality = F,
+                             yearly.seasonality = F,
+                             daily.seasonality = F,
+                             seasonality.mode = "multiplicative") 
+      
+      predict(prophet_fit, testing) %>%
+        select(ds, yhat) %>%
+        mutate(y = testing$y) %>%
+        yardstick::mape(truth = y, estimate = yhat) %>%
+        mutate(Iteration = id)
+    }) %>%
+      bind_rows()
   })
+```
 
+### Combine results
+
+```{r}
+bind_rows(rocv_models)
 ```

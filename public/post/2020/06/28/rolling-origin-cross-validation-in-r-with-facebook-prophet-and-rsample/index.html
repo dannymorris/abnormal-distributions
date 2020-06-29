@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Rolling origin cross validation in R with Facebook Prophet and rsample | Abnormal Distributions</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/">Home</a></li>
+      
+      <li><a href="/post/">All Posts</a></li>
+      
+      <li><a href="/categories/">By Topic</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">Rolling origin cross validation in R with Facebook Prophet and rsample</span></h1>
+<h2 class="author">Danny Morris</h2>
+<h2 class="date">2020/06/28</h2>
+</div>
+
+<main>
+
+<style type="text/css">
+a.sourceLine { display: inline-block; line-height: 1.25; }
+a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
+a.sourceLine:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+a.sourceLine { text-indent: -1em; padding-left: 1em; }
+}
+pre.numberSource a.sourceLine
+  { position: relative; left: -4em; }
+pre.numberSource a.sourceLine::before
+  { content: attr(title);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; pointer-events: all; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  }
+@media screen {
+a.sourceLine::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+<div id="TOC">
+<ul>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#packages">Packages</a></li>
+<li><a href="#data">Data</a></li>
+<li><a href="#configure-rocv-splits">Configure ROCV splits</a></li>
+<li><a href="#visualize-rocv-strategy">Visualize ROCV strategy</a></li>
+<li><a href="#run-rocv">Run ROCV</a></li>
+<li><a href="#results">Results</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+</ul>
+</div>
+
+<div id="overview" class="section level2">
+<h2>Overview</h2>
+<p>This post shows how to implement rolling origin cross validation (ROCV) to evaluate time series forecasting models. This idea is discussed in <a href="https://otexts.com/fpp2/accuracy.html">Forecasting: Principles and Practice</a>. ROCV starts by training a model using an initial training split (e.g. 80% of available data) and a user-defined forecast horizon. In the first ROCV iteration, model training is performed on the initial training split and accuracy metrics are computed on the forecast horizon. For each subsequent ROCV iteration, the training data increases by a chosen length and the testing set shifts forward by the same length. Accuracy metrics on the forecasts are stored for each ROCV iteration for further analysis. This strategy repeats until all available data is exhausted.</p>
+<p>This strategy is applicable to any forecasting task. Examples include demand forecasting, workforce planning, sales, etc. It allows for very flexible and robust training and evaluation. Both are essential to producing a valid, high quality predictive model.</p>
+</div>
+<div id="packages" class="section level2">
+<h2>Packages</h2>
+<p>This post uses the <a href="https://facebook.github.io/prophet/">prophet</a> forecasting library developed by Facebook. The choice to use this framework is unimportant as the focus is on the ROCV strategy.</p>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" title="1"><span class="co"># tidyverse</span></a>
+<a class="sourceLine" id="cb1-2" title="2"><span class="kw">library</span>(tidyverse)</a>
+<a class="sourceLine" id="cb1-3" title="3"><span class="kw">library</span>(prophet)</a>
+<a class="sourceLine" id="cb1-4" title="4"><span class="kw">library</span>(rsample)</a>
+<a class="sourceLine" id="cb1-5" title="5"><span class="kw">library</span>(yardstick)</a>
+<a class="sourceLine" id="cb1-6" title="6"><span class="kw">library</span>(plotly)</a></code></pre></div>
+</div>
+<div id="data" class="section level2">
+<h2>Data</h2>
+<p>The data contains historical Apple stock prices.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" title="1">model_df &lt;-<span class="st"> </span>tsibbledata<span class="op">::</span>gafa_stock <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb2-2" title="2"><span class="st">  </span><span class="kw">filter</span>(Date <span class="op">&gt;=</span><span class="st"> &quot;2018-01-01&quot;</span>) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb2-3" title="3"><span class="st">  </span><span class="kw">filter</span>(Symbol <span class="op">==</span><span class="st"> &quot;AAPL&quot;</span>) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb2-4" title="4"><span class="st">  </span><span class="kw">select</span>(<span class="dt">ds =</span> Date,</a>
+<a class="sourceLine" id="cb2-5" title="5">         <span class="dt">y =</span> Adj_Close)</a>
+<a class="sourceLine" id="cb2-6" title="6"></a>
+<a class="sourceLine" id="cb2-7" title="7"><span class="kw">ggplot</span>(model_df, <span class="kw">aes</span>(<span class="dt">x =</span> ds, <span class="dt">y =</span> y)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb2-8" title="8"><span class="st">  </span><span class="kw">geom_line</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb2-9" title="9"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Daily Apple stock prices, 2018&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb2-10" title="10"><span class="st">  </span><span class="kw">theme_bw</span>()</a></code></pre></div>
+<p><img src="/post/2020-06-28-rolling-origin-cross-validation-in-r-with-facebook-prophet-and-rsample_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
+</div>
+<div id="configure-rocv-splits" class="section level2">
+<h2>Configure ROCV splits</h2>
+<p>To configure the ROCV strategy, decide on values for the following:</p>
+<ol style="list-style-type: decimal">
+<li><p>Size of the initial training set</p></li>
+<li><p>Desired forecast horizon</p></li>
+<li><p>The number of observations to shift forward after each ROCV iteration</p></li>
+<li><p>Whether or not to accumulate training observations</p></li>
+</ol>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" title="1">initial_train_obs &lt;-<span class="st"> </span><span class="dv">200</span>        <span class="co"># 1</span></a>
+<a class="sourceLine" id="cb3-2" title="2">forecast_horizon &lt;-<span class="st"> </span><span class="dv">7</span>           <span class="co"># 2</span></a>
+<a class="sourceLine" id="cb3-3" title="3">skip_size &lt;-<span class="st"> </span><span class="dv">1</span>                  <span class="co"># 3</span></a>
+<a class="sourceLine" id="cb3-4" title="4">accumulate_train_obs &lt;-<span class="st"> </span><span class="ot">FALSE</span>   <span class="co"># 4</span></a></code></pre></div>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" title="1">rocv_splits &lt;-<span class="st"> </span>rsample<span class="op">::</span><span class="kw">rolling_origin</span>(</a>
+<a class="sourceLine" id="cb4-2" title="2">  <span class="dt">data =</span> model_df,</a>
+<a class="sourceLine" id="cb4-3" title="3">  <span class="dt">initial =</span> initial_train_obs,</a>
+<a class="sourceLine" id="cb4-4" title="4">  <span class="dt">assess =</span> forecast_horizon,</a>
+<a class="sourceLine" id="cb4-5" title="5">  <span class="dt">cumulative =</span> accumulate_train_obs,</a>
+<a class="sourceLine" id="cb4-6" title="6">  <span class="dt">skip =</span> skip_size</a>
+<a class="sourceLine" id="cb4-7" title="7">)</a></code></pre></div>
+</div>
+<div id="visualize-rocv-strategy" class="section level2">
+<h2>Visualize ROCV strategy</h2>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" title="1">cv_idx &lt;-<span class="st"> </span><span class="kw">seq</span>(<span class="dv">1</span>, <span class="kw">length</span>(rocv_splits<span class="op">$</span>splits), <span class="dv">1</span>)</a>
+<a class="sourceLine" id="cb5-2" title="2"></a>
+<a class="sourceLine" id="cb5-3" title="3"><span class="kw">map2</span>(rocv_splits<span class="op">$</span>splits[<span class="dv">1</span><span class="op">:</span><span class="dv">5</span>], cv_idx[<span class="dv">1</span><span class="op">:</span><span class="dv">5</span>], <span class="cf">function</span>(split, idx) {</a>
+<a class="sourceLine" id="cb5-4" title="4">  train &lt;-<span class="st"> </span><span class="kw">analysis</span>(split) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">mutate</span>(<span class="dt">Split =</span> <span class="st">&quot;Training&quot;</span>)</a>
+<a class="sourceLine" id="cb5-5" title="5">  test &lt;-<span class="st"> </span><span class="kw">assessment</span>(split) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">mutate</span>(<span class="dt">Split =</span> <span class="st">&quot;Testing&quot;</span>)</a>
+<a class="sourceLine" id="cb5-6" title="6">  model_df &lt;-<span class="st"> </span><span class="kw">bind_rows</span>(train, test) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">mutate</span>(<span class="dt">Idx =</span> idx)</a>
+<a class="sourceLine" id="cb5-7" title="7">}) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-8" title="8"><span class="st">  </span><span class="kw">bind_rows</span>() <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-9" title="9"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> ds, <span class="dt">y =</span> y)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb5-10" title="10"><span class="st">  </span><span class="kw">facet_wrap</span>(<span class="op">~</span>Idx, <span class="dt">ncol =</span> <span class="dv">1</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb5-11" title="11"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">color =</span> Split, <span class="dt">group =</span> Split)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb5-12" title="12"><span class="st">  </span><span class="kw">scale_color_manual</span>(<span class="dt">values =</span> <span class="kw">c</span>(<span class="st">&quot;red&quot;</span>, <span class="st">&quot;steelblue&quot;</span>)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb5-13" title="13"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Sample 5-fold rolling origin cross validation strategy&quot;</span>,</a>
+<a class="sourceLine" id="cb5-14" title="14">       <span class="dt">subtitle =</span> <span class="st">&quot;7-day forecasts using 1-day shifts and non-accumulating training data&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb5-15" title="15"><span class="st">  </span><span class="kw">theme_bw</span>()</a></code></pre></div>
+<p><img src="/post/2020-06-28-rolling-origin-cross-validation-in-r-with-facebook-prophet-and-rsample_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
+</div>
+<div id="run-rocv" class="section level2">
+<h2>Run ROCV</h2>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" title="1">rocv &lt;-<span class="st"> </span><span class="kw">map2</span>(rocv_splits<span class="op">$</span>splits, cv_idx, <span class="cf">function</span>(split, id) {</a>
+<a class="sourceLine" id="cb6-2" title="2">  </a>
+<a class="sourceLine" id="cb6-3" title="3">  training &lt;-<span class="st"> </span><span class="kw">analysis</span>(split)</a>
+<a class="sourceLine" id="cb6-4" title="4">  testing &lt;-<span class="st"> </span><span class="kw">assessment</span>(split)</a>
+<a class="sourceLine" id="cb6-5" title="5">  </a>
+<a class="sourceLine" id="cb6-6" title="6">  prophet_fit &lt;-<span class="st"> </span><span class="kw">prophet</span>(<span class="dt">df =</span> training,</a>
+<a class="sourceLine" id="cb6-7" title="7">                         <span class="dt">daily.seasonality =</span> F,</a>
+<a class="sourceLine" id="cb6-8" title="8">                         <span class="dt">yearly.seasonality =</span> F,</a>
+<a class="sourceLine" id="cb6-9" title="9">                         <span class="dt">weekly.seasonality =</span> T) </a>
+<a class="sourceLine" id="cb6-10" title="10">  </a>
+<a class="sourceLine" id="cb6-11" title="11">  <span class="kw">predict</span>(prophet_fit, testing) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb6-12" title="12"><span class="st">    </span><span class="kw">select</span>(ds, yhat) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb6-13" title="13"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">y =</span> testing<span class="op">$</span>y) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb6-14" title="14"><span class="st">    </span>yardstick<span class="op">::</span><span class="kw">mape</span>(<span class="dt">truth =</span> y, <span class="dt">estimate =</span> yhat) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb6-15" title="15"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">Iteration =</span> id)</a>
+<a class="sourceLine" id="cb6-16" title="16">})</a></code></pre></div>
+</div>
+<div id="results" class="section level2">
+<h2>Results</h2>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb7-1" title="1">rocv <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb7-2" title="2"><span class="st">  </span><span class="kw">bind_rows</span>() <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb7-3" title="3"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Iteration, <span class="dt">y =</span> .estimate)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb7-4" title="4"><span class="st">  </span><span class="kw">geom_line</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb7-5" title="5"><span class="st">  </span><span class="kw">scale_y_continuous</span>(<span class="dt">breaks =</span> <span class="kw">seq</span>(<span class="dv">0</span>, <span class="dv">20</span>, <span class="dv">2</span>)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb7-6" title="6"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;MAPE across all ROCV iterations&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb7-7" title="7"><span class="st">  </span><span class="kw">theme_bw</span>()</a></code></pre></div>
+<p><img src="/post/2020-06-28-rolling-origin-cross-validation-in-r-with-facebook-prophet-and-rsample_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
+</div>
+<div id="conclusion" class="section level2">
+<h2>Conclusion</h2>
+<p>ROCV is a great strategy for rigorously testing forecast models and inspecting performance issues. The basic approach shown in this post can be used to compare multiple models on the same data set by adding new models (e.g. Arima, XGBoost, LSTM) within the <code>rocv</code> object.</p>
+</div>
+
+</main>
+
+  <footer>
+  <script src="//yihui.name/js/math-code.js"></script>
+<script async src="//mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+<script async src="//yihui.name/js/center-img.js"></script>
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-143402170-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-143402170-1');
+</script>
+
+
+  
+  <hr/>
+  <a href="https://github.com/dannymorris">Github</a> | <a href="https://www.linkedin.com/in/drmorris87/">LinkedIn</a> | <a href="mailto:drmorris87@outlook.com">Email</a>
+  
+  </footer>
+  </body>
+</html>
+

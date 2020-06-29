@@ -65,6 +65,10 @@ sample_measures <- scores_df %>%
          max_score <= 1) %>%
   select(clean_measure) %>%
   distinct()
+
+sample_measures %>%
+  select(clean_measure) %>%
+  pull()
 ```
 
 ## Contract scores

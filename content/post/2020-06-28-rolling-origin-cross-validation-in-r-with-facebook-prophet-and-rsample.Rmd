@@ -1,0 +1,173 @@
+---
+title: Evaluating forecast models using rolling origin cross validation
+author: Danny Morris
+date: '`r Sys.Date()`'
+output: 
+  blogdown::html_page:
+    toc: true
+    highlight: pygments
+slug: rolling-origin-cross-validation-in-r-with-facebook-prophet-and-rsample
+categories:
+  - R
+  - Forecasting
+  - Machine Learning
+tags:
+  - R
+  - Forecasting
+  - Machine Learning
+editor_options: 
+  chunk_output_type: console
+---
+
+## Overview
+
+Rolling origin cross validation (ROCV) is a technique for evaluating time series forecasting models by presenting the model with different subsets of data and measuring performance. This idea is discussed in [Forecasting: Principles and Practice](https://otexts.com/fpp2/accuracy.html). ROCV is also known as "walk-forward" validation. The basic idea is to train and test a forecast model on initial splits, then for each subsequent training iteration these splits are shifted forward by a user-defined shift size. The forward walk continues until all available data is exhausted. This robust evaluation strategy measures the model's ability to learn under changing conditions.
+
+This strategy is applicable to any statistical or predictive forecasting task. Examples include demand forecasting, workforce planning, sales, etc. It allows for very flexible and robust training and evaluation. Both are essential to producing a valid, high quality forecast model.
+
+```{r, include=F}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
+## Packages
+
+This post uses [rsample](https://rsample.tidymodels.org/) from the tidymodels framework for generating ROCV splits. The [prophet](https://facebook.github.io/prophet/) forecasting library developed by Facebook is used for model fitting.
+
+```{r}
+# tidyverse
+library(tidyverse)
+library(prophet)
+library(rsample)
+library(yardstick)
+library(plotly)
+```
+
+## Data
+
+The data contains a sample of daily health insurance claims.
+
+```{r}
+claims <- read_csv("sample_claims.csv") %>%
+  mutate(PMPM = Claims/Population) %>%
+  select(ds = Date,
+         y = PMPM)
+
+plot_ly(data = claims, x = ~ds, y = ~y, mode = "lines") %>%
+  layout(title = "Daily insurance claims PMPM")
+```
+
+## Configure ROCV splits
+
+To configure the ROCV strategy, decide on values for the following:
+
+1. Size of the initial training set, i.e. how much of the available data to use as training data in the first ROCV iteration.
+
+2. Desired forecast horizon, e.g. 1 day, 7 days, 30 days, etc.
+
+3. The number of observations to shift forward after each ROCV iteration.
+
+4. Whether or not to accumulate training observations.
+
+```{r}
+initial_train_obs <- 365*3       # 1
+forecast_horizon <- 30           # 2
+shift <- 29                      # 3
+accumulate_train_obs <- TRUE     # 4
+```
+
+The first training iteration uses the first 3 years of data for training and 30 days for testing. For each subsequent training iteration, the training and testing sets shift forward by 30 days.
+
+Note that `shift = 29` because the `rsample::rolling_origin()` resampling function adds a shift of 1 by default. Setting the shift parameter to 29 means that 30 total days will be added to each subsequent training sample.
+
+```{r}
+rocv_splits <- rsample::rolling_origin(
+  data = claims,
+  initial = initial_train_obs,
+  assess = forecast_horizon,
+  cumulative = accumulate_train_obs,
+  skip = shift
+)
+
+rocv_splits
+```
+
+## Visualize ROCV strategy
+
+```{r, fig.height = 10}
+cv_idx <- seq(1, length(rocv_splits$splits), 1)
+
+map2(rocv_splits$splits, cv_idx, function(split, idx) {
+  train <- analysis(split) %>% mutate(Split = "Training")
+  test <- assessment(split) %>% mutate(Split = "Testing")
+  model_df <- bind_rows(train, test) %>% mutate(Idx = idx)
+}) %>%
+  bind_rows() %>%
+  ggplot(aes(x = ds, y = y)) +
+  facet_wrap(~Idx, ncol = 1) +
+  geom_line(aes(color = Split, group = Split)) +
+  scale_color_manual(values = c("red", "steelblue")) +
+  labs(title = "12-fold rolling origin cross validation strategy",
+       subtitle = "30-day forecasts using 30-day shifts with accumulating training data") +
+  theme_bw()
+```
+
+## Run ROCV
+
+```{r, cache = T}
+rocv <- map2(rocv_splits$splits, cv_idx, function(split, id) {
+  
+  training <- analysis(split)
+  testing <- assessment(split)
+  
+  prophet_fit <- prophet(df = training,
+                         daily.seasonality = F,
+                         yearly.seasonality = F,
+                         weekly.seasonality = T) 
+  
+  eval_df <- predict(prophet_fit, testing) %>% 
+    select(ds, 
+           Predicted = yhat) %>%
+    mutate(Actual = testing$y) %>%
+    mutate(Iteration = id)
+  
+  mae <- yardstick::mae_vec(truth = eval_df$Actual, 
+                            estimate = eval_df$Predicted) 
+  
+  output <- list(eval_df = eval_df,
+                 mae = mae)
+  
+  return(output)
+})
+```
+
+## Results
+
+### Distribution of MAE
+
+```{r}
+map_dbl(rocv, function(x) x[['mae']]) %>%
+  enframe(name = "Iteration", value = "MAE") %>%
+  ggplot(aes(x = Iteration, y = MAE)) +
+  geom_line() +
+  labs(title = "Mean absolute error across all ROCV iterations") +
+  theme_bw()
+```
+
+### Visualize predictions
+
+```{r, fig.width=9, fig.height=8}
+map(rocv, function(x) x[['eval_df']]) %>%
+  bind_rows() %>%
+  gather(key, value, -ds, -Iteration)  %>%
+  ggplot(aes(x = ds, y = value)) +
+  facet_wrap(~Iteration, ncol = 3, scales = "free_x") +
+  geom_line(aes(color = key, group = key), lwd = 1.05) +
+  scale_color_manual(values = c("steelblue", "orange3")) +
+  labs(title = "Actual v. predicted fore each ROCV iteration") +
+  theme_bw()
+```
+
+## Conclusion
+
+ROCV is a great strategy for rigorously testing forecast models and measuring accuracy under changing conditions. The basic approach shown in this post can be extended to compare multiple models on the same data set by adding new models (e.g. Arima, XGBoost, LSTM) within the `rocv` object.
+
