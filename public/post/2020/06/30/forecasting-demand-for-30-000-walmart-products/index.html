@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Forecasting demand for over 30,000 Walmart products | Abnormal Distributions</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/">Home</a></li>
+      
+      <li><a href="/post/">All Posts</a></li>
+      
+      <li><a href="/categories/">By Topic</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">Forecasting demand for over 30,000 Walmart products</span></h1>
+<h2 class="author">Danny Morris</h2>
+<h2 class="date">2020/06/30</h2>
+</div>
+
+<main>
+
+
+<div id="TOC">
+<ul>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#competition-overview">Competition overview</a></li>
+<li><a href="#my-goal">My goal</a></li>
+<li><a href="#summary-of-the-final-forecasting-system">Summary of the final forecasting system</a></li>
+<li><a href="#summary-of-my-development-and-evaluation-strategy">Summary of my development and evaluation strategy</a></li>
+</ul>
+</div>
+
+<p><strong>Work in progress</strong></p>
+<div id="overview" class="section level2">
+<h2>Overview</h2>
+<p>In June 2020 I participated in a <a href="to%20forecast%20daily%20sales">Kaggle competition</a> to forecast daily sales for over 30,000 Walmart products. This post documents my methodology.</p>
+</div>
+<div id="competition-overview" class="section level2">
+<h2>Competition overview</h2>
+<p>From the competition webpage…</p>
+<p><em>In this competition, the fifth iteration, you will use hierarchical sales data from Walmart, the world’s largest company by revenue, to forecast daily sales for the next 28 days. The data, covers stores in three US States (California, Texas, and Wisconsin) and includes item level, department, product categories, and store details. In addition, it has explanatory variables such as price, promotions, day of the week, and special events.</em></p>
+<p>One important note is that the 28-day forecast period runs from late-May to late-June of 2016. This is important because most competition participants are likely optimizing their models to work specifically for this forecast period.</p>
+</div>
+<div id="my-goal" class="section level2">
+<h2>My goal</h2>
+<p>Even though the competition rewards participants strictly for predictive accuracy over a 28-day forecast period, I wanted to build a demand forecasting system that was overall <strong>accurate</strong>, <strong>explainable</strong>, <strong>practical</strong>, and <strong>efficient</strong>.</p>
+</div>
+<div id="summary-of-the-final-forecasting-system" class="section level2">
+<h2>Summary of the final forecasting system</h2>
+<p>After much trial and error, I developed a system that satisfied my top four requirements (accurate, explainabile, practical, efficient). These are the key features:</p>
+<ul>
+<li><p>Automatic product-level forecasts using a parallelized <a href="https://www.jstatsoft.org/article/view/v040i01/v40i01.pdf">split-apply-combine</a> technique on a 48-core AWS EC2 instance (c5.12xlarge). This improves the <em>efficiency</em> of the system.</p></li>
+<li><p>Single, repeatable pipeline for data preprocessing, feature engineering, training, and forecasting applied to each product independently. This improves the <em>practicality</em> and <em>efficiency</em> of the system.</p></li>
+<li><p>Over 150 predictors including holidays, sporting events, price promotions, calendar indicators, and historical demand statistics. Lagging and leading indicators were derived from relevant features (e.g. day after Thanksgiving, day before Super Bowl, etc.) to improve predictive accuracy. This improves the <em>accuracy</em> and <em>explainability</em> of the system.</p></li>
+<li><p>Combines forecasts from basic Random Forest and XGBoost algorithms to form an ensemble. This improves the <em>accuracy</em> of the system.</p></li>
+<li><p>Total runtime is under 2 hours.</p></li>
+<li><p>Built entirely in R.</p></li>
+</ul>
+</div>
+<div id="summary-of-my-development-and-evaluation-strategy" class="section level2">
+<h2>Summary of my development and evaluation strategy</h2>
+<p>Developing and evaluating this system was difficult due to the sheer volume of data (55+ million rows) and products. I realized that I couldn’t possibly develop and evaluate a system for all 30,000 products using traditional strategies such as multiple model comparison and cross validation. In light of this, I had to make some decisions to drastically simplify the development process. Those decisions include:</p>
+<ul>
+<li><p>Draw a small yet diverse sample of 100 products for development.</p></li>
+<li><p>For each product, limit the training data to include data from the months of April, May, and June prior to the year 2014 and all data from 2014 and on.</p></li>
+<li><p>For each product, limit the testing data to include the 28 days from 2016-04-25 to 2016-05-22.</p></li>
+<li><p>Use Random Forest (via the <a href="https://arxiv.org/pdf/1508.04409.pdf">ranger</a> package) and XGBoost (via the <a href="https://xgboost.readthedocs.io/en/latest/R-package/xgboostPresentation.html">xgboost</a> package) algorithms with mostly default parameters in a mini-ensemble. Both algorithms are highly regarded for being fast, accurate, resistant to outliers, unaffected by the scales of the features, resistant to overfitting, and capable of handling high dimensionality. Forming a small ensemble with these two algorithms was thought to improve the predictive accuracy.</p></li>
+<li><p>Use theoretical and cultural knowledge to engineer a global set of features and let the algorithms quantify their importances for each product separately.</p></li>
+<li><p>Measure the RMSE on the testing data for each product, then average all RMSE values.</p></li>
+<li><p>Continue making tweaks until the average RMSE is sufficiently minimized.</p></li>
+</ul>
+</div>
+
+</main>
+
+  <footer>
+  <script src="//yihui.name/js/math-code.js"></script>
+<script async src="//mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+<script async src="//yihui.name/js/center-img.js"></script>
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-143402170-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-143402170-1');
+</script>
+
+
+  
+  <hr/>
+  <a href="https://github.com/dannymorris">Github</a> | <a href="https://www.linkedin.com/in/drmorris87/">LinkedIn</a> | <a href="mailto:drmorris87@outlook.com">Email</a>
+  
+  </footer>
+  </body>
+</html>
+

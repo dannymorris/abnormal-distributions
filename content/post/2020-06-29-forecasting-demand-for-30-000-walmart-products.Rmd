@@ -1,0 +1,80 @@
+---
+title: Forecasting demand for over 30,000 Walmart products
+author: Danny Morris
+date: '`r Sys.Date()`'
+output: 
+  blogdown::html_page:
+    toc: true
+    highlight: pygments
+slug: forecasting-demand-for-30-000-walmart-products
+categories:
+  - R
+  - Forecasting
+  - Machine Learning
+tags:
+  - R
+  - Forecasting
+  - Machine Learning
+---
+
+```{r, include=F}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
+**Work in progress**
+
+## Overview
+
+In June 2020 I participated in a [Kaggle competition](to forecast daily sales) to forecast daily sales for over 30,000 Walmart products. This post documents my methodology.
+
+## Competition overview
+
+From the competition webpage...
+
+*In this competition, the fifth iteration, you will use hierarchical sales data from Walmart, the world’s largest company by revenue, to forecast daily sales for the next 28 days. The data, covers stores in three US States (California, Texas, and Wisconsin) and includes item level, department, product categories, and store details. In addition, it has explanatory variables such as price, promotions, day of the week, and special events.*
+
+One important note is that the 28-day forecast period runs from late-May to late-June of 2016. This is important because most competition participants are likely optimizing their models to work specifically for this forecast period.
+
+## My goal
+
+Even though the competition rewards participants strictly for predictive accuracy over a 28-day forecast period, I wanted to build a demand forecasting system that was overall **accurate**, **explainable**, **practical**, and **efficient**.
+
+## Summary of the final forecasting system
+
+After much trial and error, I developed a system that satisfied my top four requirements (accurate, explainabile, practical, efficient). These are the key features:
+
+- Automatic product-level forecasts using a parallelized [split-apply-combine](https://www.jstatsoft.org/article/view/v040i01/v40i01.pdf) technique on a 48-core AWS EC2 instance (c5.12xlarge). This improves the *efficiency* of the system.
+
+- Single, repeatable pipeline for data preprocessing, feature engineering, training, and forecasting applied to each product independently. This improves the *practicality* and *efficiency* of the system.
+
+- Over 150 predictors including holidays, sporting events, price promotions, calendar indicators, and historical demand statistics. Lagging and leading indicators were derived from relevant features (e.g. day after Thanksgiving, day before Super Bowl, etc.) to improve predictive accuracy. This improves the *accuracy* and *explainability* of the system.
+
+- Combines forecasts from basic Random Forest and XGBoost algorithms to form an ensemble. This improves the *accuracy* of the system.
+
+- Total runtime is under 2 hours.
+
+- Built entirely in R.
+
+## Summary of my development and evaluation strategy
+
+Developing and evaluating this system was difficult due to the sheer volume of data (55+ million rows) and products. I realized that I couldn't possibly develop and evaluate a system for all 30,000 products using traditional strategies such as multiple model comparison and cross validation. In light of this, I had to make some decisions to drastically simplify the development process. Those decisions include:
+
+- Draw a small yet diverse sample of 100 products for development.
+
+- For each product, limit the training data to include data from the months of April, May, and June prior to the year 2014 and all data from 2014 and on.
+
+- For each product, limit the testing data to include the 28 days from 2016-04-25 to 2016-05-22.
+
+- Use Random Forest (via the [ranger](https://arxiv.org/pdf/1508.04409.pdf) package) and XGBoost (via the [xgboost](https://xgboost.readthedocs.io/en/latest/R-package/xgboostPresentation.html) package) algorithms with mostly default parameters in a mini-ensemble. Both algorithms are highly regarded for being fast, accurate, resistant to outliers, unaffected by the scales of the features, resistant to overfitting, and capable of handling high dimensionality. Forming a small ensemble with these two algorithms was thought to improve the predictive accuracy.
+
+- Use theoretical and cultural knowledge to engineer a global set of features and let the algorithms quantify their importances for each product separately.
+
+- Measure the RMSE on the testing data for each product, then average all RMSE values.
+
+- Continue making tweaks until the average RMSE is sufficiently minimized.
+
+
+
+
+
+
