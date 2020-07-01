@@ -6,21 +6,18 @@
     <description>Recent content in Home on Abnormal Distributions</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Tue, 30 Jun 2020 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Wed, 01 Jul 2020 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     
     
     <item>
-      <title>Forecasting demand for over 30,000 Walmart products</title>
-      <link>/post/2020/06/30/forecasting-demand-for-30-000-walmart-products/</link>
-      <pubDate>Tue, 30 Jun 2020 00:00:00 +0000</pubDate>
+      <title>My first Kaggle competion - Forecasting demand for over 30,000 Walmart products using machine learning and a bottom-level approach</title>
+      <link>/post/2020/07/01/forecasting-demand-for-30-000-walmart-products/</link>
+      <pubDate>Wed, 01 Jul 2020 00:00:00 +0000</pubDate>
       
-      <guid>/post/2020/06/30/forecasting-demand-for-30-000-walmart-products/</guid>
-      <description>OverviewCompetition overviewMy goalSummary of the final forecasting systemSummary of my development and evaluation strategyWork in progress
-OverviewIn June 2020 I participated in a Kaggle competition to forecast daily sales for over 30,000 Walmart products. This post documents my methodology.
-Competition overviewFrom the competition webpage…
-In this competition, the fifth iteration, you will use hierarchical sales data from Walmart, the world’s largest company by revenue, to forecast daily sales for the next 28 days.</description>
+      <guid>/post/2020/07/01/forecasting-demand-for-30-000-walmart-products/</guid>
+      <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
     </item>
     
     <item>

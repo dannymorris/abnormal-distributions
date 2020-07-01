@@ -1,5 +1,5 @@
 ---
-title: Forecasting demand for over 30,000 Walmart products
+title: My first Kaggle competion - Forecasting demand for over 30,000 Walmart products using machine learning and a bottom-level approach
 author: Danny Morris
 date: '`r Sys.Date()`'
 output: 
@@ -15,64 +15,104 @@ tags:
   - R
   - Forecasting
   - Machine Learning
+editor_options: 
+  chunk_output_type: console
 ---
 
 ```{r, include=F}
 knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
 ```
 
-**Work in progress**
+*Disclaimer: The final private leaderboard shows my score in the 46th percentile. I made a rookie mistake and failed to submit my most recent predictions that were an improvement over my previous submissions. If I had, my score of 0.76922 would have put my ranking in the top 28%*
 
 ## Overview
 
-In June 2020 I participated in a [Kaggle competition](to forecast daily sales) to forecast daily sales for over 30,000 Walmart products. This post documents my methodology.
+I just completed my first [Kaggle competition](https://www.kaggle.com/c/m5-forecasting-accuracy) in which the goal was to produce accurate daily sales point forecasts for over 30,000 Walmart products. I finished in the top 28%. Not great, but considering it was my first competition I am pleased. I **learned a lot** during this competition that I am happy to share.
 
-## Competition overview
+```{r}
+library(tidyverse)
+
+read_csv("leaderboard.csv") %>%
+  filter(Score <= 8) %>%
+  ggplot(aes(x = Score)) +
+  geom_density() +
+  geom_vline(aes(xintercept = 0.76922), color = 'blue', lwd = 2) +
+  geom_segment(aes(x = 1.2, y = 0.01, xend = 0.85, yend = 0.01),
+               color = "blue", lwd = 1.2,
+               arrow = arrow(length = unit(0.3, "cm"))) +
+  annotate("text", x = 1.4, y = 0.015, label = "me", color = "blue") +
+  labs(title = "Distribution of M5 Forecasting - Accuracy Kaggle competition scores",
+       subtitle = "My score placed me in the top 28%",
+       x = "Score (lower is better)") +
+  theme_bw()
+```
+
+## Kaggle competition overview
 
 From the competition webpage...
 
 *In this competition, the fifth iteration, you will use hierarchical sales data from Walmart, the world’s largest company by revenue, to forecast daily sales for the next 28 days. The data, covers stores in three US States (California, Texas, and Wisconsin) and includes item level, department, product categories, and store details. In addition, it has explanatory variables such as price, promotions, day of the week, and special events.*
 
-One important note is that the 28-day forecast period runs from late-May to late-June of 2016. This is important because most competition participants are likely optimizing their models to work specifically for this forecast period.
+## Bottom-level forecasting
 
-## My goal
+My goal was to build an accurate, efficient, and scalable demand forecasting system using a "bottom-level" approach. The bottom-level approach models each time series independently from the rest. In this context, each product is a time series that receives its own model. This is similar to the bottom-up approach for hiearchical forecasting described by Rob Hyndman, except the [bottom-up approach](https://otexts.com/fpp2/bottom-up.html) aggregates the bottom-level forecasts to their respective categories. Even though the products in the competition data belong to product categories, I (questionably) chose to ignore this hierarchical structure and model each bottom-level product separately.
 
-Even though the competition rewards participants strictly for predictive accuracy over a 28-day forecast period, I wanted to build a demand forecasting system that was overall **accurate**, **explainable**, **practical**, and **efficient**.
+Advantages of bottom-level forecasting:
+
+ - Historical dynamics of each time series are captured in the model.
+ - Conceptually very simple.
+ 
+Disadvantages of bottom-level forecasting:
+
+  - Large number of time series models.
+  - Relationships between time series are ignored.
+  - Noisy time series are difficult to model.
+  
+## Machine learning
+
+I decided at the beginning of the competition that I wanted to gain experience treating time series forecasting as a supervised machine learning problem using tree-based algorithms. Most of my previous experience with time series forecasting involved the use of traditional methods (e.g. Arima) and Facebook Prophet, but through my own research I learned that tree-based machine learning algorithms (e.g. XGBoost, Random Forest) can produce highly accurate point forecasts given their flexibility and tolerance to noise.
 
 ## Summary of the final forecasting system
 
-After much trial and error, I developed a system that satisfied my top four requirements (accurate, explainabile, practical, efficient). These are the key features:
+- Automatic product-level forecasts using a parallelized [split-apply-combine](https://www.jstatsoft.org/article/view/v040i01/v40i01.pdf) technique on a 48-core AWS EC2 instance (c5.12xlarge). Total runtime is under 2 hours.
 
-- Automatic product-level forecasts using a parallelized [split-apply-combine](https://www.jstatsoft.org/article/view/v040i01/v40i01.pdf) technique on a 48-core AWS EC2 instance (c5.12xlarge). This improves the *efficiency* of the system.
+- Single, repeatable pipeline for data preprocessing, feature engineering, training, and forecasting applied to each product independently.
 
-- Single, repeatable pipeline for data preprocessing, feature engineering, training, and forecasting applied to each product independently. This improves the *practicality* and *efficiency* of the system.
+- Over 150 predictors including holidays, sporting events, price promotions, calendar indicators, and historical demand statistics. Lagging and leading indicators were derived from relevant features (e.g. day after Thanksgiving, day before Super Bowl, etc.) to improve predictive accuracy. 
 
-- Over 150 predictors including holidays, sporting events, price promotions, calendar indicators, and historical demand statistics. Lagging and leading indicators were derived from relevant features (e.g. day after Thanksgiving, day before Super Bowl, etc.) to improve predictive accuracy. This improves the *accuracy* and *explainability* of the system.
-
-- Combines forecasts from basic Random Forest and XGBoost algorithms to form an ensemble. This improves the *accuracy* of the system.
-
-- Total runtime is under 2 hours.
+- Random Forest algorithm from the `ranger` package using mostly default parameters.
 
 - Built entirely in R.
 
 ## Summary of my development and evaluation strategy
 
-Developing and evaluating this system was difficult due to the sheer volume of data (55+ million rows) and products. I realized that I couldn't possibly develop and evaluate a system for all 30,000 products using traditional strategies such as multiple model comparison and cross validation. In light of this, I had to make some decisions to drastically simplify the development process. Those decisions include:
+Developing and evaluating the bottom-level forecasting system was difficult due to the sheer volume of data (55+ million rows) and products (30,000+). I realized that I couldn't possibly develop and evaluate a system for all 30,000 products using preferred strategies such as multiple model comparison, cross validation, and hyperparameter tuning. In light of this, I had to make some decisions to drastically simplify the development process at the expense of extensive testing.
 
-- Draw a small yet diverse sample of 100 products for development.
+- Draw a small yet diverse sample of 100 products for iterative development.
 
-- For each product, limit the training data to include data from the months of April, May, and June prior to the year 2014 and all data from 2014 and on.
+- For each product, limit the training data to include observations from 2012-01-01 to 2016-04-24. This reduced the available data by $\approx$ 15% and removed some unwanted noise in the data prior to the cutoff.
 
-- For each product, limit the testing data to include the 28 days from 2016-04-25 to 2016-05-22.
+- For each product, limit the testing data to include observations from 2016-04-25 to 2016-05-22.
 
-- Use Random Forest (via the [ranger](https://arxiv.org/pdf/1508.04409.pdf) package) and XGBoost (via the [xgboost](https://xgboost.readthedocs.io/en/latest/R-package/xgboostPresentation.html) package) algorithms with mostly default parameters in a mini-ensemble. Both algorithms are highly regarded for being fast, accurate, resistant to outliers, unaffected by the scales of the features, resistant to overfitting, and capable of handling high dimensionality. Forming a small ensemble with these two algorithms was thought to improve the predictive accuracy.
+- Use Random Forest (via the [ranger](https://arxiv.org/pdf/1508.04409.pdf) package) which is highly regarded for being fast, accurate, resistant to outliers, unaffected by the scales of the features, resistant to overfitting, and capable of overcoming high dimensionality.
 
-- Use theoretical and cultural knowledge to engineer a global set of features and let the algorithms quantify their importances for each product separately.
+- Use theoretical and cultural knowledge to engineer a standardized feature engineering pipeline and let the algorithm quantify the importances of feature for each product separately.
 
-- Measure the RMSE on the testing data for each product, then average all RMSE values.
+- Measure the RMSSE on the testing data for each product, then average all RMSSE values to quantify the overall performance of the system.
 
-- Continue making tweaks until the average RMSE is sufficiently minimized.
+- Continue making tweaks until the average RMSSE is sufficiently minimized.
 
+## Potential improvements
+
+If I were to compete in this competition again, I would experiement with the following changes:
+
+1. More and/or better features related to weather, economic conditions, natural disasters, elections, etc.
+
+2. Specific hierarchical forecasting strategies, particularly the one mentioned [in this paper](https://arxiv.org/abs/1912.00370).
+
+3. Ensemble of simple, traditional models since this strategy worked very well in the M4 Forecasting competition.
+
+4. More extensive evaluation strategy
 
 
 
