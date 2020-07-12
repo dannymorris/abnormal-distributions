@@ -1,0 +1,252 @@
+---
+title: Quantifying "month composition" to improve monthly forecasts (Python)
+author: Danny Morris
+date: '2020-06-17'
+output: 
+  blogdown::html_page:
+    toc: true
+    highlight: pygments
+slug: applying-calendar-adjustments-to-improve-monthly-health-insurance-claims-forecasts-python
+categories:
+  - Python
+  - Forecasting
+tags:
+  - Python
+  - Forecasting
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include=F}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
+## Overview
+
+This post is essentialy a copy of [this post]((/2020/06/17/monthly-forecasts-using-effective-days-r/)) except the methodology is written in Python using pandas, numpy, and Facebook Prophet.
+
+```{r, echo=F}
+# Configure conda env
+Sys.setenv(
+  RETICULATE_PYTHON = "C:/Users/Owner/.conda/envs/dsci/python.exe"
+)
+
+reticulate::use_condaenv("dsci")
+```
+
+```{python, echo=F}
+import os
+os.environ['QT_QPA_PLATFORM_PLUGIN_PATH'] = 'C:/Users/Owner/.conda/envs/dsci/Library/plugins/platforms'
+```
+
+## Python packages
+
+```{python}
+import pandas as pd # version 1.0.5
+import numpy as np  # version 1.18.5
+import seaborn as sns
+import matplotlib
+import matplotlib.pyplot as plt
+import fbprophet
+from fbprophet import Prophet
+```
+
+```{python}
+print("Pandas version: " + pd.__version__)
+print("Numpy version: " + np.__version__)
+print("Seaborn version: " + sns.__version__)
+print("Matplotlib version: " + matplotlib.__version__)
+print("Prophet version: " + fbprophet.__version__)
+```
+
+## Data
+
+### Daily claims
+
+```{python}
+claims = pd.read_csv('sample_claims.csv', parse_dates=['Inc_Month'])
+
+claims.head()
+```
+
+### Monthly claims
+
+```{python}
+monthly_claims = (claims
+   .groupby(['Inc_Year', 'Inc_Month'])
+   .agg(Claims = ('Claims', 'sum'),
+        Population = ('Population', 'mean'))
+   .reset_index()
+   )
+
+ax = sns.lineplot(data=monthly_claims, x='Inc_Month', y='Claims')
+ax.set_title("Daily claims")
+```
+
+## Quantify month composition
+
+### Weekday occurences per month
+
+```{python}
+weekday_counts = (claims
+   .groupby(['Inc_Month', 'Inc_Year', 'DOW_Name', 'DOW'])
+   .agg(Total_Claims = ('Claims', 'sum'),
+        Occurences = ('Date', 'nunique'))
+   .reset_index()
+ )
+```
+
+### Weekday relative values per month
+
+```{python}
+ax = sns.boxplot(x="DOW", y="Claims", data=claims)
+ax.set_title('Claims distribution by day of week')
+```
+
+```{python}
+weekday_averages = (weekday_counts
+   .assign(Weekday_Average = weekday_counts['Total_Claims']/weekday_counts['Occurences'])
+ )
+
+average_weekday = (weekday_averages
+   .groupby(['Inc_Month'])
+   .agg(Average_Weekday = ('Weekday_Average', 'mean'))
+   .reset_index()
+ )
+
+weekday_relatives = (weekday_averages.merge(average_weekday,
+                       on = 'Inc_Month',
+                       how = 'inner')
+   .pipe(lambda x: x.assign(DOW_Ratio = x['Weekday_Average']/x['Average_Weekday']))
+   .filter(['Inc_Month',
+            'Weekday_Average',
+            'DOW',
+            'DOW_Name',
+            'DOW_Ratio'])
+ )
+
+ax = sns.FacetGrid(weekday_relatives, col="DOW", 
+                  col_wrap=3, sharey=False)
+ax.map(sns.lineplot, "Inc_Month", "DOW_Ratio", color=".3")
+plt.show()
+plt.close()
+```
+
+### Calcualte effective days
+
+```{python}
+effective_days = (weekday_counts.merge(weekday_relatives,
+                      on = ['Inc_Month', 'DOW_Name'],
+                      how = 'inner')
+   .pipe(lambda x: x.assign(Effective_Days = x['Occurences']*x['DOW_Ratio']))
+   .groupby(['Inc_Month', 'Inc_Year'])
+   .agg(Actual_Days = ('Occurences', 'sum'),
+        Effective_Days = ('Effective_Days', 'sum'))
+   .reset_index()
+ )
+
+average_effective_days = (
+    effective_days
+      .groupby(['Inc_Year'])
+      .agg(Avg_Effective_Days = ('Effective_Days', 'mean'))
+      .reset_index()
+ )
+
+effective_days_index = (effective_days.merge(average_effective_days,
+                     on = 'Inc_Year',
+                     how = 'inner')
+   .pipe(lambda x: x.assign(Effective_Days_Index = x['Effective_Days']/x['Avg_Effective_Days']))
+   .filter(['Inc_Month',
+            'Inc_Year',
+            'Effective_Days',
+            'Effective_Days_Index'])
+ )
+```
+
+## Calculate adjusted PMPM using month composition and population adjustments
+
+```{python}
+pmpm = (monthly_claims
+   .merge(effective_days_index, on = "Inc_Month", how = "inner")
+   .pipe(lambda x: x.assign(Adj_PMPM = x['Claims']/x['Population']/x['Effective_Days_Index']))
+   .pipe(lambda x: x.assign(Raw_PMPM = x['Claims']/x['Population']))
+   .filter(['Inc_Month', 
+            'Adj_PMPM', 
+            'Raw_PMPM', 
+            'Claims', 
+            'Population',
+            'Effective_Days_Index'])
+ )
+
+pmpm.head()
+```
+
+## Compare RMSE of forecasts using adjusted and unadjusted PMPM
+
+The algorithm chosen for this comparison is Facebook Prophet.
+
+```{python}
+def calc_rmse(adjusted = True):
+
+    '''
+    Train model using adjusted or unadjusted PMPM as target
+    Returns RMSE on testing set
+    '''
+    
+    # define target
+    if adjusted:
+        target = "Adj_PMPM"
+    else:
+        target = "Raw_PMPM"
+
+    # train/test splits
+    training = (pmpm[pmpm['Inc_Month'] <= '2018-12-01']
+       .rename(columns={"Inc_Month": "ds", target: "y"})
+    )
+    
+    testing = (pmpm[pmpm['Inc_Month'] >= '2019-01-01']
+       .rename(columns={"Inc_Month": "ds", target: "y"})
+       .reset_index()
+    )
+    
+    # fit Prophet
+    m = Prophet()
+    m.fit(training)
+    
+    # make forecasts
+    forecast = m.predict(testing)
+    
+    # function to convert PMPM to original claims units
+    def backtransform(x, adjusted):
+        if adjusted:
+            out = x['yhat']*x['Population']*x['Effective_Days_Index']
+        else:
+            out = x['yhat']*x['Population']
+        return(out)   
+    
+    # calculate forecast errors
+    forecast_errors = (pd.concat(
+      [forecast,
+       testing[['Population', 'Effective_Days_Index', 'Claims']]],
+       axis=1)
+     .pipe(lambda x: x.assign(Forecast = backtransform(x, adjusted)))
+     .pipe(lambda x: x.assign(Error = x['Forecast']-x['Claims']))
+    )
+
+    # calculate RMSE
+    mse = np.mean(forecast_errors['Error']**2)
+    rmse = np.sqrt(mse)
+    
+    return(rmse)
+```
+
+```{python}
+rmse_w_adj = calc_rmse(adjusted=True)
+rmse_wo_adj = calc_rmse(adjusted=False)
+
+plt_X = ['Adjusted PMPM', 'Unadjusted PMPM']
+plt_Y = [rmse_w_adj, rmse_wo_adj]
+plt.bar(plt_X, plt_Y, color = ['blue', 'gray'])
+plt.title("Adjusting PMPM using month composition improves RMSE")
+plt.show()
+```

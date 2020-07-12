@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Quantifying &#34;month composition&#34; to improve monthly forecasts (Python) | Abnormal Distributions</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/">Home</a></li>
+      
+      <li><a href="/post/">All Posts</a></li>
+      
+      <li><a href="/categories/">By Topic</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">Quantifying &ldquo;month composition&rdquo; to improve monthly forecasts (Python)</span></h1>
+<h2 class="author">Danny Morris</h2>
+<h2 class="date">2020/06/17</h2>
+</div>
+
+<main>
+
+<style type="text/css">
+a.sourceLine { display: inline-block; line-height: 1.25; }
+a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
+a.sourceLine:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+a.sourceLine { text-indent: -1em; padding-left: 1em; }
+}
+pre.numberSource a.sourceLine
+  { position: relative; left: -4em; }
+pre.numberSource a.sourceLine::before
+  { content: attr(title);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; pointer-events: all; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  }
+@media screen {
+a.sourceLine::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+<div id="TOC">
+<ul>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#python-packages">Python packages</a></li>
+<li><a href="#data">Data</a><ul>
+<li><a href="#daily-claims">Daily claims</a></li>
+<li><a href="#monthly-claims">Monthly claims</a></li>
+</ul></li>
+<li><a href="#quantify-month-composition">Quantify month composition</a><ul>
+<li><a href="#weekday-occurences-per-month">Weekday occurences per month</a></li>
+<li><a href="#weekday-relative-values-per-month">Weekday relative values per month</a></li>
+<li><a href="#calcualte-effective-days">Calcualte effective days</a></li>
+</ul></li>
+<li><a href="#calculate-adjusted-pmpm-using-month-composition-and-population-adjustments">Calculate adjusted PMPM using month composition and population adjustments</a></li>
+<li><a href="#compare-rmse-of-forecasts-using-adjusted-and-unadjusted-pmpm">Compare RMSE of forecasts using adjusted and unadjusted PMPM</a></li>
+</ul>
+</div>
+
+<div id="overview" class="section level2">
+<h2>Overview</h2>
+<p>This post is essentialy a copy of <a href="(/2020/06/17/monthly-forecasts-using-effective-days-r/)">this post</a> except the methodology is written in Python using pandas, numpy, and Facebook Prophet.</p>
+</div>
+<div id="python-packages" class="section level2">
+<h2>Python packages</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb1-1" title="1"><span class="im">import</span> pandas <span class="im">as</span> pd <span class="co"># version 1.0.5</span></a>
+<a class="sourceLine" id="cb1-2" title="2"><span class="im">import</span> numpy <span class="im">as</span> np  <span class="co"># version 1.18.5</span></a>
+<a class="sourceLine" id="cb1-3" title="3"><span class="im">import</span> seaborn <span class="im">as</span> sns</a>
+<a class="sourceLine" id="cb1-4" title="4"><span class="im">import</span> matplotlib</a>
+<a class="sourceLine" id="cb1-5" title="5"><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</a>
+<a class="sourceLine" id="cb1-6" title="6"><span class="im">import</span> fbprophet</a>
+<a class="sourceLine" id="cb1-7" title="7"><span class="im">from</span> fbprophet <span class="im">import</span> Prophet</a></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb2-1" title="1"><span class="bu">print</span>(<span class="st">&quot;Pandas version: &quot;</span> <span class="op">+</span> pd.__version__)</a></code></pre></div>
+<pre><code>## Pandas version: 1.0.5</code></pre>
+<div class="sourceCode" id="cb4"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb4-1" title="1"><span class="bu">print</span>(<span class="st">&quot;Numpy version: &quot;</span> <span class="op">+</span> np.__version__)</a></code></pre></div>
+<pre><code>## Numpy version: 1.18.5</code></pre>
+<div class="sourceCode" id="cb6"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb6-1" title="1"><span class="bu">print</span>(<span class="st">&quot;Seaborn version: &quot;</span> <span class="op">+</span> sns.__version__)</a></code></pre></div>
+<pre><code>## Seaborn version: 0.10.1</code></pre>
+<div class="sourceCode" id="cb8"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb8-1" title="1"><span class="bu">print</span>(<span class="st">&quot;Matplotlib version: &quot;</span> <span class="op">+</span> matplotlib.__version__)</a></code></pre></div>
+<pre><code>## Matplotlib version: 3.2.2</code></pre>
+<div class="sourceCode" id="cb10"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb10-1" title="1"><span class="bu">print</span>(<span class="st">&quot;Prophet version: &quot;</span> <span class="op">+</span> fbprophet.__version__)</a></code></pre></div>
+<pre><code>## Prophet version: 0.6</code></pre>
+</div>
+<div id="data" class="section level2">
+<h2>Data</h2>
+<div id="daily-claims" class="section level3">
+<h3>Daily claims</h3>
+<div class="sourceCode" id="cb12"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb12-1" title="1">claims <span class="op">=</span> pd.read_csv(<span class="st">&#39;sample_claims.csv&#39;</span>, parse_dates<span class="op">=</span>[<span class="st">&#39;Inc_Month&#39;</span>])</a>
+<a class="sourceLine" id="cb12-2" title="2"></a>
+<a class="sourceLine" id="cb12-3" title="3">claims.head()</a></code></pre></div>
+<pre><code>##          Date  Inc_Month  Inc_Year  DOW  DOW_Name       Claims    Population
+## 0  2016-01-01 2016-01-01      2016    6    Friday  1204.500000  88071.666667
+## 1  2016-01-02 2016-01-01      2016    7  Saturday  1435.333333  88071.666667
+## 2  2016-01-03 2016-01-01      2016    1    Sunday   912.166667  88071.666667
+## 3  2016-01-04 2016-01-01      2016    2    Monday  7026.333333  88071.666667
+## 4  2016-01-05 2016-01-01      2016    3   Tuesday  6912.666667  88071.666667</code></pre>
+</div>
+<div id="monthly-claims" class="section level3">
+<h3>Monthly claims</h3>
+<div class="sourceCode" id="cb14"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb14-1" title="1">monthly_claims <span class="op">=</span> (claims</a>
+<a class="sourceLine" id="cb14-2" title="2">   .groupby([<span class="st">&#39;Inc_Year&#39;</span>, <span class="st">&#39;Inc_Month&#39;</span>])</a>
+<a class="sourceLine" id="cb14-3" title="3">   .agg(Claims <span class="op">=</span> (<span class="st">&#39;Claims&#39;</span>, <span class="st">&#39;sum&#39;</span>),</a>
+<a class="sourceLine" id="cb14-4" title="4">        Population <span class="op">=</span> (<span class="st">&#39;Population&#39;</span>, <span class="st">&#39;mean&#39;</span>))</a>
+<a class="sourceLine" id="cb14-5" title="5">   .reset_index()</a>
+<a class="sourceLine" id="cb14-6" title="6">   )</a>
+<a class="sourceLine" id="cb14-7" title="7"></a>
+<a class="sourceLine" id="cb14-8" title="8">ax <span class="op">=</span> sns.lineplot(data<span class="op">=</span>monthly_claims, x<span class="op">=</span><span class="st">&#39;Inc_Month&#39;</span>, y<span class="op">=</span><span class="st">&#39;Claims&#39;</span>)</a>
+<a class="sourceLine" id="cb14-9" title="9">ax.set_title(<span class="st">&quot;Daily claims&quot;</span>)</a></code></pre></div>
+<p><img src="/post/2020-07-10-applying-calendar-adjustments-to-improve-monthly-health-insurance-claims-forecasts-python_files/figure-html/unnamed-chunk-7-1.png" width="672" /></p>
+</div>
+</div>
+<div id="quantify-month-composition" class="section level2">
+<h2>Quantify month composition</h2>
+<div id="weekday-occurences-per-month" class="section level3">
+<h3>Weekday occurences per month</h3>
+<div class="sourceCode" id="cb15"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb15-1" title="1">weekday_counts <span class="op">=</span> (claims</a>
+<a class="sourceLine" id="cb15-2" title="2">   .groupby([<span class="st">&#39;Inc_Month&#39;</span>, <span class="st">&#39;Inc_Year&#39;</span>, <span class="st">&#39;DOW_Name&#39;</span>, <span class="st">&#39;DOW&#39;</span>])</a>
+<a class="sourceLine" id="cb15-3" title="3">   .agg(Total_Claims <span class="op">=</span> (<span class="st">&#39;Claims&#39;</span>, <span class="st">&#39;sum&#39;</span>),</a>
+<a class="sourceLine" id="cb15-4" title="4">        Occurences <span class="op">=</span> (<span class="st">&#39;Date&#39;</span>, <span class="st">&#39;nunique&#39;</span>))</a>
+<a class="sourceLine" id="cb15-5" title="5">   .reset_index()</a>
+<a class="sourceLine" id="cb15-6" title="6"> )</a></code></pre></div>
+</div>
+<div id="weekday-relative-values-per-month" class="section level3">
+<h3>Weekday relative values per month</h3>
+<div class="sourceCode" id="cb16"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb16-1" title="1">ax <span class="op">=</span> sns.boxplot(x<span class="op">=</span><span class="st">&quot;DOW&quot;</span>, y<span class="op">=</span><span class="st">&quot;Claims&quot;</span>, data<span class="op">=</span>claims)</a>
+<a class="sourceLine" id="cb16-2" title="2">ax.set_title(<span class="st">&#39;Claims distribution by day of week&#39;</span>)</a></code></pre></div>
+<p><img src="/post/2020-07-10-applying-calendar-adjustments-to-improve-monthly-health-insurance-claims-forecasts-python_files/figure-html/unnamed-chunk-9-1.png" width="672" /></p>
+<div class="sourceCode" id="cb17"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb17-1" title="1">weekday_averages <span class="op">=</span> (weekday_counts</a>
+<a class="sourceLine" id="cb17-2" title="2">   .assign(Weekday_Average <span class="op">=</span> weekday_counts[<span class="st">&#39;Total_Claims&#39;</span>]<span class="op">/</span>weekday_counts[<span class="st">&#39;Occurences&#39;</span>])</a>
+<a class="sourceLine" id="cb17-3" title="3"> )</a>
+<a class="sourceLine" id="cb17-4" title="4"></a>
+<a class="sourceLine" id="cb17-5" title="5">average_weekday <span class="op">=</span> (weekday_averages</a>
+<a class="sourceLine" id="cb17-6" title="6">   .groupby([<span class="st">&#39;Inc_Month&#39;</span>])</a>
+<a class="sourceLine" id="cb17-7" title="7">   .agg(Average_Weekday <span class="op">=</span> (<span class="st">&#39;Weekday_Average&#39;</span>, <span class="st">&#39;mean&#39;</span>))</a>
+<a class="sourceLine" id="cb17-8" title="8">   .reset_index()</a>
+<a class="sourceLine" id="cb17-9" title="9"> )</a>
+<a class="sourceLine" id="cb17-10" title="10"></a>
+<a class="sourceLine" id="cb17-11" title="11">weekday_relatives <span class="op">=</span> (weekday_averages.merge(average_weekday,</a>
+<a class="sourceLine" id="cb17-12" title="12">                       on <span class="op">=</span> <span class="st">&#39;Inc_Month&#39;</span>,</a>
+<a class="sourceLine" id="cb17-13" title="13">                       how <span class="op">=</span> <span class="st">&#39;inner&#39;</span>)</a>
+<a class="sourceLine" id="cb17-14" title="14">   .pipe(<span class="kw">lambda</span> x: x.assign(DOW_Ratio <span class="op">=</span> x[<span class="st">&#39;Weekday_Average&#39;</span>]<span class="op">/</span>x[<span class="st">&#39;Average_Weekday&#39;</span>]))</a>
+<a class="sourceLine" id="cb17-15" title="15">   .<span class="bu">filter</span>([<span class="st">&#39;Inc_Month&#39;</span>,</a>
+<a class="sourceLine" id="cb17-16" title="16">            <span class="st">&#39;Weekday_Average&#39;</span>,</a>
+<a class="sourceLine" id="cb17-17" title="17">            <span class="st">&#39;DOW&#39;</span>,</a>
+<a class="sourceLine" id="cb17-18" title="18">            <span class="st">&#39;DOW_Name&#39;</span>,</a>
+<a class="sourceLine" id="cb17-19" title="19">            <span class="st">&#39;DOW_Ratio&#39;</span>])</a>
+<a class="sourceLine" id="cb17-20" title="20"> )</a>
+<a class="sourceLine" id="cb17-21" title="21"></a>
+<a class="sourceLine" id="cb17-22" title="22">ax <span class="op">=</span> sns.FacetGrid(weekday_relatives, col<span class="op">=</span><span class="st">&quot;DOW&quot;</span>, </a>
+<a class="sourceLine" id="cb17-23" title="23">                  col_wrap<span class="op">=</span><span class="dv">3</span>, sharey<span class="op">=</span><span class="va">False</span>)</a>
+<a class="sourceLine" id="cb17-24" title="24">ax.<span class="bu">map</span>(sns.lineplot, <span class="st">&quot;Inc_Month&quot;</span>, <span class="st">&quot;DOW_Ratio&quot;</span>, color<span class="op">=</span><span class="st">&quot;.3&quot;</span>)</a></code></pre></div>
+<pre><code>## &lt;seaborn.axisgrid.FacetGrid object at 0x000000002D11D518&gt;</code></pre>
+<div class="sourceCode" id="cb19"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb19-1" title="1">plt.show()</a></code></pre></div>
+<p><img src="/post/2020-07-10-applying-calendar-adjustments-to-improve-monthly-health-insurance-claims-forecasts-python_files/figure-html/unnamed-chunk-10-1.png" width="864" /></p>
+<div class="sourceCode" id="cb20"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb20-1" title="1">plt.close()</a></code></pre></div>
+</div>
+<div id="calcualte-effective-days" class="section level3">
+<h3>Calcualte effective days</h3>
+<div class="sourceCode" id="cb21"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb21-1" title="1">effective_days <span class="op">=</span> (weekday_counts.merge(weekday_relatives,</a>
+<a class="sourceLine" id="cb21-2" title="2">                      on <span class="op">=</span> [<span class="st">&#39;Inc_Month&#39;</span>, <span class="st">&#39;DOW_Name&#39;</span>],</a>
+<a class="sourceLine" id="cb21-3" title="3">                      how <span class="op">=</span> <span class="st">&#39;inner&#39;</span>)</a>
+<a class="sourceLine" id="cb21-4" title="4">   .pipe(<span class="kw">lambda</span> x: x.assign(Effective_Days <span class="op">=</span> x[<span class="st">&#39;Occurences&#39;</span>]<span class="op">*</span>x[<span class="st">&#39;DOW_Ratio&#39;</span>]))</a>
+<a class="sourceLine" id="cb21-5" title="5">   .groupby([<span class="st">&#39;Inc_Month&#39;</span>, <span class="st">&#39;Inc_Year&#39;</span>])</a>
+<a class="sourceLine" id="cb21-6" title="6">   .agg(Actual_Days <span class="op">=</span> (<span class="st">&#39;Occurences&#39;</span>, <span class="st">&#39;sum&#39;</span>),</a>
+<a class="sourceLine" id="cb21-7" title="7">        Effective_Days <span class="op">=</span> (<span class="st">&#39;Effective_Days&#39;</span>, <span class="st">&#39;sum&#39;</span>))</a>
+<a class="sourceLine" id="cb21-8" title="8">   .reset_index()</a>
+<a class="sourceLine" id="cb21-9" title="9"> )</a>
+<a class="sourceLine" id="cb21-10" title="10"></a>
+<a class="sourceLine" id="cb21-11" title="11">average_effective_days <span class="op">=</span> (</a>
+<a class="sourceLine" id="cb21-12" title="12">    effective_days</a>
+<a class="sourceLine" id="cb21-13" title="13">      .groupby([<span class="st">&#39;Inc_Year&#39;</span>])</a>
+<a class="sourceLine" id="cb21-14" title="14">      .agg(Avg_Effective_Days <span class="op">=</span> (<span class="st">&#39;Effective_Days&#39;</span>, <span class="st">&#39;mean&#39;</span>))</a>
+<a class="sourceLine" id="cb21-15" title="15">      .reset_index()</a>
+<a class="sourceLine" id="cb21-16" title="16"> )</a>
+<a class="sourceLine" id="cb21-17" title="17"></a>
+<a class="sourceLine" id="cb21-18" title="18">effective_days_index <span class="op">=</span> (effective_days.merge(average_effective_days,</a>
+<a class="sourceLine" id="cb21-19" title="19">                     on <span class="op">=</span> <span class="st">&#39;Inc_Year&#39;</span>,</a>
+<a class="sourceLine" id="cb21-20" title="20">                     how <span class="op">=</span> <span class="st">&#39;inner&#39;</span>)</a>
+<a class="sourceLine" id="cb21-21" title="21">   .pipe(<span class="kw">lambda</span> x: x.assign(Effective_Days_Index <span class="op">=</span> x[<span class="st">&#39;Effective_Days&#39;</span>]<span class="op">/</span>x[<span class="st">&#39;Avg_Effective_Days&#39;</span>]))</a>
+<a class="sourceLine" id="cb21-22" title="22">   .<span class="bu">filter</span>([<span class="st">&#39;Inc_Month&#39;</span>,</a>
+<a class="sourceLine" id="cb21-23" title="23">            <span class="st">&#39;Inc_Year&#39;</span>,</a>
+<a class="sourceLine" id="cb21-24" title="24">            <span class="st">&#39;Effective_Days&#39;</span>,</a>
+<a class="sourceLine" id="cb21-25" title="25">            <span class="st">&#39;Effective_Days_Index&#39;</span>])</a>
+<a class="sourceLine" id="cb21-26" title="26"> )</a></code></pre></div>
+</div>
+</div>
+<div id="calculate-adjusted-pmpm-using-month-composition-and-population-adjustments" class="section level2">
+<h2>Calculate adjusted PMPM using month composition and population adjustments</h2>
+<div class="sourceCode" id="cb22"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb22-1" title="1">pmpm <span class="op">=</span> (monthly_claims</a>
+<a class="sourceLine" id="cb22-2" title="2">   .merge(effective_days_index, on <span class="op">=</span> <span class="st">&quot;Inc_Month&quot;</span>, how <span class="op">=</span> <span class="st">&quot;inner&quot;</span>)</a>
+<a class="sourceLine" id="cb22-3" title="3">   .pipe(<span class="kw">lambda</span> x: x.assign(Adj_PMPM <span class="op">=</span> x[<span class="st">&#39;Claims&#39;</span>]<span class="op">/</span>x[<span class="st">&#39;Population&#39;</span>]<span class="op">/</span>x[<span class="st">&#39;Effective_Days_Index&#39;</span>]))</a>
+<a class="sourceLine" id="cb22-4" title="4">   .pipe(<span class="kw">lambda</span> x: x.assign(Raw_PMPM <span class="op">=</span> x[<span class="st">&#39;Claims&#39;</span>]<span class="op">/</span>x[<span class="st">&#39;Population&#39;</span>]))</a>
+<a class="sourceLine" id="cb22-5" title="5">   .<span class="bu">filter</span>([<span class="st">&#39;Inc_Month&#39;</span>, </a>
+<a class="sourceLine" id="cb22-6" title="6">            <span class="st">&#39;Adj_PMPM&#39;</span>, </a>
+<a class="sourceLine" id="cb22-7" title="7">            <span class="st">&#39;Raw_PMPM&#39;</span>, </a>
+<a class="sourceLine" id="cb22-8" title="8">            <span class="st">&#39;Claims&#39;</span>, </a>
+<a class="sourceLine" id="cb22-9" title="9">            <span class="st">&#39;Population&#39;</span>,</a>
+<a class="sourceLine" id="cb22-10" title="10">            <span class="st">&#39;Effective_Days_Index&#39;</span>])</a>
+<a class="sourceLine" id="cb22-11" title="11"> )</a>
+<a class="sourceLine" id="cb22-12" title="12"></a>
+<a class="sourceLine" id="cb22-13" title="13">pmpm.head()</a></code></pre></div>
+<pre><code>##    Inc_Month  Adj_PMPM  ...    Population  Effective_Days_Index
+## 0 2016-01-01  1.676844  ...  88071.666667              0.968506
+## 1 2016-02-01  1.683038  ...  88002.333333              0.966133
+## 2 2016-03-01  1.689676  ...  87893.166667              1.049594
+## 3 2016-04-01  1.718938  ...  87894.500000              0.966720
+## 4 2016-05-01  1.663902  ...  87689.000000              1.011846
+## 
+## [5 rows x 6 columns]</code></pre>
+</div>
+<div id="compare-rmse-of-forecasts-using-adjusted-and-unadjusted-pmpm" class="section level2">
+<h2>Compare RMSE of forecasts using adjusted and unadjusted PMPM</h2>
+<p>The algorithm chosen for this comparison is Facebook Prophet.</p>
+<div class="sourceCode" id="cb24"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb24-1" title="1"><span class="kw">def</span> calc_rmse(adjusted <span class="op">=</span> <span class="va">True</span>):</a>
+<a class="sourceLine" id="cb24-2" title="2"></a>
+<a class="sourceLine" id="cb24-3" title="3">    <span class="co">&#39;&#39;&#39;</span></a>
+<a class="sourceLine" id="cb24-4" title="4"><span class="co">    Train model using adjusted or unadjusted PMPM as target</span></a>
+<a class="sourceLine" id="cb24-5" title="5"><span class="co">    Returns RMSE on testing set</span></a>
+<a class="sourceLine" id="cb24-6" title="6"><span class="co">    &#39;&#39;&#39;</span></a>
+<a class="sourceLine" id="cb24-7" title="7">    </a>
+<a class="sourceLine" id="cb24-8" title="8">    <span class="co"># define target</span></a>
+<a class="sourceLine" id="cb24-9" title="9">    <span class="cf">if</span> adjusted:</a>
+<a class="sourceLine" id="cb24-10" title="10">        target <span class="op">=</span> <span class="st">&quot;Adj_PMPM&quot;</span></a>
+<a class="sourceLine" id="cb24-11" title="11">    <span class="cf">else</span>:</a>
+<a class="sourceLine" id="cb24-12" title="12">        target <span class="op">=</span> <span class="st">&quot;Raw_PMPM&quot;</span></a>
+<a class="sourceLine" id="cb24-13" title="13"></a>
+<a class="sourceLine" id="cb24-14" title="14">    <span class="co"># train/test splits</span></a>
+<a class="sourceLine" id="cb24-15" title="15">    training <span class="op">=</span> (pmpm[pmpm[<span class="st">&#39;Inc_Month&#39;</span>] <span class="op">&lt;=</span> <span class="st">&#39;2018-12-01&#39;</span>]</a>
+<a class="sourceLine" id="cb24-16" title="16">       .rename(columns<span class="op">=</span>{<span class="st">&quot;Inc_Month&quot;</span>: <span class="st">&quot;ds&quot;</span>, target: <span class="st">&quot;y&quot;</span>})</a>
+<a class="sourceLine" id="cb24-17" title="17">    )</a>
+<a class="sourceLine" id="cb24-18" title="18">    </a>
+<a class="sourceLine" id="cb24-19" title="19">    testing <span class="op">=</span> (pmpm[pmpm[<span class="st">&#39;Inc_Month&#39;</span>] <span class="op">&gt;=</span> <span class="st">&#39;2019-01-01&#39;</span>]</a>
+<a class="sourceLine" id="cb24-20" title="20">       .rename(columns<span class="op">=</span>{<span class="st">&quot;Inc_Month&quot;</span>: <span class="st">&quot;ds&quot;</span>, target: <span class="st">&quot;y&quot;</span>})</a>
+<a class="sourceLine" id="cb24-21" title="21">       .reset_index()</a>
+<a class="sourceLine" id="cb24-22" title="22">    )</a>
+<a class="sourceLine" id="cb24-23" title="23">    </a>
+<a class="sourceLine" id="cb24-24" title="24">    <span class="co"># fit Prophet</span></a>
+<a class="sourceLine" id="cb24-25" title="25">    m <span class="op">=</span> Prophet()</a>
+<a class="sourceLine" id="cb24-26" title="26">    m.fit(training)</a>
+<a class="sourceLine" id="cb24-27" title="27">    </a>
+<a class="sourceLine" id="cb24-28" title="28">    <span class="co"># make forecasts</span></a>
+<a class="sourceLine" id="cb24-29" title="29">    forecast <span class="op">=</span> m.predict(testing)</a>
+<a class="sourceLine" id="cb24-30" title="30">    </a>
+<a class="sourceLine" id="cb24-31" title="31">    <span class="co"># function to convert PMPM to original claims units</span></a>
+<a class="sourceLine" id="cb24-32" title="32">    <span class="kw">def</span> backtransform(x, adjusted):</a>
+<a class="sourceLine" id="cb24-33" title="33">        <span class="cf">if</span> adjusted:</a>
+<a class="sourceLine" id="cb24-34" title="34">            out <span class="op">=</span> x[<span class="st">&#39;yhat&#39;</span>]<span class="op">*</span>x[<span class="st">&#39;Population&#39;</span>]<span class="op">*</span>x[<span class="st">&#39;Effective_Days_Index&#39;</span>]</a>
+<a class="sourceLine" id="cb24-35" title="35">        <span class="cf">else</span>:</a>
+<a class="sourceLine" id="cb24-36" title="36">            out <span class="op">=</span> x[<span class="st">&#39;yhat&#39;</span>]<span class="op">*</span>x[<span class="st">&#39;Population&#39;</span>]</a>
+<a class="sourceLine" id="cb24-37" title="37">        <span class="cf">return</span>(out)   </a>
+<a class="sourceLine" id="cb24-38" title="38">    </a>
+<a class="sourceLine" id="cb24-39" title="39">    <span class="co"># calculate forecast errors</span></a>
+<a class="sourceLine" id="cb24-40" title="40">    forecast_errors <span class="op">=</span> (pd.concat(</a>
+<a class="sourceLine" id="cb24-41" title="41">      [forecast,</a>
+<a class="sourceLine" id="cb24-42" title="42">       testing[[<span class="st">&#39;Population&#39;</span>, <span class="st">&#39;Effective_Days_Index&#39;</span>, <span class="st">&#39;Claims&#39;</span>]]],</a>
+<a class="sourceLine" id="cb24-43" title="43">       axis<span class="op">=</span><span class="dv">1</span>)</a>
+<a class="sourceLine" id="cb24-44" title="44">     .pipe(<span class="kw">lambda</span> x: x.assign(Forecast <span class="op">=</span> backtransform(x, adjusted)))</a>
+<a class="sourceLine" id="cb24-45" title="45">     .pipe(<span class="kw">lambda</span> x: x.assign(Error <span class="op">=</span> x[<span class="st">&#39;Forecast&#39;</span>]<span class="op">-</span>x[<span class="st">&#39;Claims&#39;</span>]))</a>
+<a class="sourceLine" id="cb24-46" title="46">    )</a>
+<a class="sourceLine" id="cb24-47" title="47"></a>
+<a class="sourceLine" id="cb24-48" title="48">    <span class="co"># calculate RMSE</span></a>
+<a class="sourceLine" id="cb24-49" title="49">    mse <span class="op">=</span> np.mean(forecast_errors[<span class="st">&#39;Error&#39;</span>]<span class="op">**</span><span class="dv">2</span>)</a>
+<a class="sourceLine" id="cb24-50" title="50">    rmse <span class="op">=</span> np.sqrt(mse)</a>
+<a class="sourceLine" id="cb24-51" title="51">    </a>
+<a class="sourceLine" id="cb24-52" title="52">    <span class="cf">return</span>(rmse)</a></code></pre></div>
+<div class="sourceCode" id="cb25"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb25-1" title="1">rmse_w_adj <span class="op">=</span> calc_rmse(adjusted<span class="op">=</span><span class="va">True</span>)</a></code></pre></div>
+<pre><code>## INFO:fbprophet:Disabling weekly seasonality. Run prophet with weekly_seasonality=True to override this.
+## INFO:fbprophet:Disabling daily seasonality. Run prophet with daily_seasonality=True to override this.
+## C:\Users\Owner\.conda\envs\dsci\lib\site-packages\pystan\misc.py:399: FutureWarning: Conversion of the second argument of issubdtype from `float` to `np.floating` is deprecated. In future, it will be treated as `np.float64 == np.dtype(float).type`.
+##   elif np.issubdtype(np.asarray(v).dtype, float):</code></pre>
+<div class="sourceCode" id="cb27"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb27-1" title="1">rmse_wo_adj <span class="op">=</span> calc_rmse(adjusted<span class="op">=</span><span class="va">False</span>)</a></code></pre></div>
+<pre><code>## INFO:fbprophet:Disabling weekly seasonality. Run prophet with weekly_seasonality=True to override this.
+## INFO:fbprophet:Disabling daily seasonality. Run prophet with daily_seasonality=True to override this.</code></pre>
+<div class="sourceCode" id="cb29"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb29-1" title="1">plt_X <span class="op">=</span> [<span class="st">&#39;Adjusted PMPM&#39;</span>, <span class="st">&#39;Unadjusted PMPM&#39;</span>]</a>
+<a class="sourceLine" id="cb29-2" title="2">plt_Y <span class="op">=</span> [rmse_w_adj, rmse_wo_adj]</a>
+<a class="sourceLine" id="cb29-3" title="3">plt.bar(plt_X, plt_Y, color <span class="op">=</span> [<span class="st">&#39;blue&#39;</span>, <span class="st">&#39;gray&#39;</span>])</a></code></pre></div>
+<pre><code>## &lt;BarContainer object of 2 artists&gt;</code></pre>
+<div class="sourceCode" id="cb31"><pre class="sourceCode python"><code class="sourceCode python"><a class="sourceLine" id="cb31-1" title="1">plt.title(<span class="st">&quot;Adjusting PMPM using month composition improves RMSE&quot;</span>)</a>
+<a class="sourceLine" id="cb31-2" title="2">plt.show()</a></code></pre></div>
+<p><img src="/post/2020-07-10-applying-calendar-adjustments-to-improve-monthly-health-insurance-claims-forecasts-python_files/figure-html/unnamed-chunk-14-1.png" width="672" /></p>
+</div>
+
+</main>
+
+  <footer>
+  <script src="//yihui.name/js/math-code.js"></script>
+<script async src="//mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+<script async src="//yihui.name/js/center-img.js"></script>
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-143402170-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-143402170-1');
+</script>
+
+
+  
+  <hr/>
+  <a href="https://github.com/dannymorris">Github</a> | <a href="https://www.linkedin.com/in/drmorris87/">LinkedIn</a> | <a href="mailto:drmorris87@outlook.com">Email</a>
+  
+  </footer>
+  </body>
+</html>
+

@@ -30,11 +30,20 @@
     </item>
     
     <item>
-      <title>Applying calendar adjustments to improve monthly health insurance claims forecasts</title>
-      <link>/post/2020/06/17/monthly-forecasts-using-effective-days-and-day-of-week-ratios/</link>
+      <title>Quantifying &#34;month composition&#34; to improve monthly forecasts</title>
+      <link>/post/2020/06/17/monthly-forecasts-using-effective-days-r/</link>
       <pubDate>Wed, 17 Jun 2020 00:00:00 +0000</pubDate>
       
-      <guid>/post/2020/06/17/monthly-forecasts-using-effective-days-and-day-of-week-ratios/</guid>
+      <guid>/post/2020/06/17/monthly-forecasts-using-effective-days-r/</guid>
+      <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
+    </item>
+    
+    <item>
+      <title>Quantifying &#34;month composition&#34; to improve monthly forecasts (Python)</title>
+      <link>/post/2020/06/17/applying-calendar-adjustments-to-improve-monthly-health-insurance-claims-forecasts-python/</link>
+      <pubDate>Wed, 17 Jun 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2020/06/17/applying-calendar-adjustments-to-improve-monthly-health-insurance-claims-forecasts-python/</guid>
       <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
     </item>
     

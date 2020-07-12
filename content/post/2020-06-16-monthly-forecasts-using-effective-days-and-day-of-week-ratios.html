@@ -1,12 +1,12 @@
 ---
-title: Applying calendar adjustments to improve monthly health insurance claims forecasts
+title: Quantifying "month composition" to improve monthly forecasts
 author: Danny Morris
 date: "2020-06-17"
 output: 
   blogdown::html_page:
     toc: true
     highlight: pygments
-slug: monthly-forecasts-using-effective-days-and-day-of-week-ratios
+slug: monthly-forecasts-using-effective-days-r
 categories:
   - Forecasting
   - R
@@ -91,13 +91,13 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li><a href="#daily-claims">Daily claims</a></li>
 <li><a href="#monthly-claims">Monthly claims</a></li>
 </ul></li>
-<li><a href="#quantifying-month-composition">Quantifying month composition</a><ul>
+<li><a href="#quantify-month-composition">Quantify month composition</a><ul>
 <li><a href="#weekday-occurences-per-month">Weekday occurences per month</a></li>
 <li><a href="#weekday-relative-values-per-month">Weekday relative values per month</a></li>
-<li><a href="#calculate-effecive-days">Calculate effecive days</a></li>
+<li><a href="#calculate-effective-days">Calculate effective days</a></li>
 </ul></li>
-<li><a href="#apply-calendar-and-population-adjustments-to-monthly-claims">Apply calendar and population adjustments to monthly claims</a></li>
-<li><a href="#forecasting-with-adjusted-pmpm">Forecasting with adjusted PMPM</a><ul>
+<li><a href="#calculate-adjusted-pmpm-using-month-composition-and-population-adjustments">Calculate adjusted PMPM using month composition and population adjustments</a></li>
+<li><a href="#compare-rmse-of-forecasts-using-adjusted-and-unadjusted-pmpm">Compare RMSE of forecasts using adjusted and unadjusted PMPM</a><ul>
 <li><a href="#training-and-holdout-sets">Training and holdout sets</a></li>
 <li><a href="#arima-models">Arima models</a></li>
 <li><a href="#forecasts">Forecasts</a></li>
@@ -109,10 +109,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 
 <div id="overview" class="section level2">
 <h2>Overview</h2>
-<p>This post describes a simple yet effective technique for improving the accuracy of monthly forecasting using calendar adjustments derived from daily data. The example data set covers health insurance claims, however this technique generalizes to any other domain where monthly forecasts are required and daily data is available for calculating calendar adjustments. Later in the post, the performance of this technique is compared to a baseline technique to show the value in a predictive forecasting scenario.</p>
+<p>This post describes a simple yet effective technique for improving the accuracy of monthly forecasts using information about the frequency and relative value of each weekday in a given month. This information is known as the “month composition”. The example data set covers health insurance claims, however this technique generalizes to any other domain where monthly forecasts are required and daily data is available for calculating the month composition. Later in the post, the performance of this technique is compared to a baseline technique to show the value in a predictive forecasting scenario.</p>
 <p>People typically seek healthcare treatment (e.g. routine check-ups, specialist treatments, etc.) during the normal business week while reserving the weekends for more interesting activities. In a given month, the total number of insurance claims may be relatively high if there are many days in the month relative to the average month. Claims could also be relatively high if there are more weekdays relative to the average month. Taking this concept a step further, some weekdays tend to produce more insurance claims than others. For example, Mondays are a relatively high volume day while Fridays are relatively low volume (though not as low as a Saturday or Sunday). All in the all, the “month composition” (i.e. the total number of days, the number of Monday, Tuesdays, etc.) is a good predictor of the expected number of insurance claims.</p>
-<p>In a forecasting scenario, quantifying the month composition can improve the accuracy of the forecast model. To quantify month composition, first determine the total number of days and the number of occurences of Mondays, Tuesdays, Wednesdays, Thursdays, Fridays, Saturdays, and Sundays in the month. Then, quantify the “relative value” of each weekday compared to the average weekday. For example, Mondays are generally high volume so the relative value of a Monday will be higher than the average weekday. Finally, redefine the total number of days in each month by multiplying the weekday occurences by the weekday relative values and summing the results. The final summation is known as “effective days”. A recommended but optional step is to convert the effective days calculation to an index by dividing the effective day calculation by the annual average effective days. To adjust the outcome of interest (e.g. monthly claims), simply divide the outcome by the effective day index. For example, if there were 500 claims in a month and the effective day index is 1.05, the adjusted claims number would be 500/1.05 = 476.19.</p>
-<p>By applying this calendar adjustment to the outcome of interest, the variance in the outcome (i.e. claims) caused by the month composition is removed. This adjustment combined with a population adjustment is likely to have a significantly positive effect on the final forecast model.</p>
+<p>In a forecasting scenario, quantifying the month composition can improve the accuracy of the forecast model. To quantify month composition, first determine the total number of days and the number of occurences of Mondays, Tuesdays, Wednesdays, Thursdays, Fridays, Saturdays, and Sundays in the month. Then, quantify the “relative value” of each weekday compared to the average weekday. For example, Mondays are generally high volume so the relative value of a Monday will be higher than the average weekday. Finally, redefine the total number of days in each month by multiplying the weekday occurences by the weekday relative values and summing the results. The final summation is known as <strong>effective days</strong>. A recommended but optional step is to convert the effective days calculation to an index by dividing the effective day calculation by the annual average effective days. To adjust the outcome of interest (e.g. monthly claims), simply divide the outcome by the effective day index. For example, if there were 500 claims in a month and the effective day index is 1.05, the adjusted claims number would be 500/1.05 = 476.19.</p>
+<p>By applying this calendar adjustment to the outcome of interest, the variance in the target variable caused by the month composition is removed. This adjustment combined with a population adjustment is likely to have a significantly positive effect on the final forecast model.</p>
 </div>
 <div id="r-packages" class="section level2">
 <h2>R packages</h2>
@@ -175,13 +175,13 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ## # ... with 38 more rows</code></pre>
 </div>
 </div>
-<div id="quantifying-month-composition" class="section level2">
-<h2>Quantifying month composition</h2>
+<div id="quantify-month-composition" class="section level2">
+<h2>Quantify month composition</h2>
 <p>Quantifying month composition involves the following steps:</p>
 <ol style="list-style-type: decimal">
 <li><p>For each month in the data, count the number of occurences of each weekday</p></li>
-<li><p>For each month, assign a relative weight to each weekday based on the typical claims volume observed for each weekday</p></li>
-<li><p>For each month, calculate “effective days” by multiplying the weekday occurences by the weekday relative values. Sum these products to arrive at the final effective days calculation</p></li>
+<li><p>For each month, assign a relative weight to each weekday based on the average claims volume observed for each weekday</p></li>
+<li><p>For each month, calculate effective days by multiplying the weekday occurences by the weekday relative values. Sum these products to arrive at the final effective days calculation.</p></li>
 </ol>
 <div id="weekday-occurences-per-month" class="section level3">
 <h3>Weekday occurences per month</h3>
@@ -246,8 +246,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <a class="sourceLine" id="cb10-7" title="7"><span class="st">  </span><span class="kw">theme_bw</span>()</a></code></pre></div>
 <p><img src="/post/2020-06-16-monthly-forecasts-using-effective-days-and-day-of-week-ratios_files/figure-html/unnamed-chunk-8-1.png" width="672" /></p>
 </div>
-<div id="calculate-effecive-days" class="section level3">
-<h3>Calculate effecive days</h3>
+<div id="calculate-effective-days" class="section level3">
+<h3>Calculate effective days</h3>
 <div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb11-1" title="1">effective_days &lt;-<span class="st"> </span>weekday_counts <span class="op">%&gt;%</span></a>
 <a class="sourceLine" id="cb11-2" title="2"><span class="st">  </span><span class="kw">inner_join</span>(weekday_relatives, <span class="dt">by =</span> <span class="kw">c</span>(<span class="st">&quot;Inc_Month&quot;</span>, <span class="st">&quot;DOW_Name&quot;</span>)) <span class="op">%&gt;%</span></a>
 <a class="sourceLine" id="cb11-3" title="3"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Effective_Days =</span> Occurences<span class="op">*</span>DOW_Ratio) <span class="op">%&gt;%</span></a>
@@ -278,8 +278,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 ## # ... with 38 more rows</code></pre>
 </div>
 </div>
-<div id="apply-calendar-and-population-adjustments-to-monthly-claims" class="section level2">
-<h2>Apply calendar and population adjustments to monthly claims</h2>
+<div id="calculate-adjusted-pmpm-using-month-composition-and-population-adjustments" class="section level2">
+<h2>Calculate adjusted PMPM using month composition and population adjustments</h2>
 <p>Apply the effective days calendar adjustment <em>C</em> and a population adjustment <em>P</em> to the original monthly claims totals <em>Y</em>. The formula for doing this is <span class="math inline">\(Y_{adj} = C_i\div P_i\div Y_i\)</span>, where <em>i</em> represents each month. This metric is known as adjusted PMPM (per member per month). These adjustments reduce some of the variance in the monthly insurance claims time series and make it more predictable.</p>
 <div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb13-1" title="1">pmpm &lt;-<span class="st"> </span>monthly_claims <span class="op">%&gt;%</span><span class="st"> </span></a>
 <a class="sourceLine" id="cb13-2" title="2"><span class="st">  </span><span class="kw">inner_join</span>(effective_days, <span class="dt">by =</span> <span class="st">&quot;Inc_Month&quot;</span>) <span class="op">%&gt;%</span></a>
@@ -292,9 +292,9 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <a class="sourceLine" id="cb13-9" title="9">         Population,</a>
 <a class="sourceLine" id="cb13-10" title="10">         Effective_Days_Index)</a></code></pre></div>
 </div>
-<div id="forecasting-with-adjusted-pmpm" class="section level2">
-<h2>Forecasting with adjusted PMPM</h2>
-<p>To test the effectiveness of a monthly claims forecast model built using adjusted PMPM, we compare it to a model built using unadjusted PMPM. Both models are trained using a dedicated training set and evaluated using a dedicated holdout set.</p>
+<div id="compare-rmse-of-forecasts-using-adjusted-and-unadjusted-pmpm" class="section level2">
+<h2>Compare RMSE of forecasts using adjusted and unadjusted PMPM</h2>
+<p>To test the effectiveness of a monthly claims forecast model built using adjusted PMPM, compare it to an identical model built using unadjusted PMPM. Both models are trained using a dedicated training set and evaluated using a dedicated holdout set.</p>
 <div id="training-and-holdout-sets" class="section level3">
 <h3>Training and holdout sets</h3>
 <div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb14-1" title="1">pmpm_ts &lt;-<span class="st"> </span>pmpm <span class="op">%&gt;%</span></a>
@@ -352,5 +352,5 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 </div>
 <div id="conclusion" class="section level2">
 <h2>Conclusion</h2>
-<p>In the context of health insurance claims, monthly forecasts can be improved by making calendar and population adjustments to claim counts. The calendar adjustment technique shown in this post involves quantifying the month composition by assessing the distribution of weekdays in a given month and the relative value of a weekday in the same month. This adjustment, along with a population, has been shown to improve the accuracy of genuine forecats.</p>
+<p>Month composition is quantified by determing the frequency and relative value of each weekday in a given month. When used to adjust the target variable in a forecasting scenario, it may improve accuracy as shown in this post.</p>
 </div>

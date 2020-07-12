@@ -18,7 +18,12 @@
   </url>
   
   <url>
-    <loc>/post/2020/06/17/monthly-forecasts-using-effective-days-and-day-of-week-ratios/</loc>
+    <loc>/post/2020/06/17/monthly-forecasts-using-effective-days-r/</loc>
+    <lastmod>2020-06-17T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
+    <loc>/post/2020/06/17/applying-calendar-adjustments-to-improve-monthly-health-insurance-claims-forecasts-python/</loc>
     <lastmod>2020-06-17T00:00:00+00:00</lastmod>
   </url>
   
@@ -173,6 +178,18 @@
   
   <url>
     <loc>/categories/predictive-modeling/</loc>
+    <lastmod>2020-06-17T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/python/</loc>
+    <lastmod>2020-06-17T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/categories/python/</loc>
     <lastmod>2020-06-17T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
