@@ -2,8 +2,5 @@
 .Rhistory
 .RData
 .Ruserdata
-content/posts/creditcard.csv
-public/post/creditcard.csv
-public/post/reuters-test
-public/post/reuters-train
+*.csv
 blogdown
