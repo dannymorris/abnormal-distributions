@@ -1,0 +1,420 @@
+---
+title: A template for comparing point forecasts using traditional models, Prophet, and supervised machine learning
+author: Danny Morris
+date: '2020-07-12'
+output: 
+  blogdown::html_page:
+    toc: true
+    highlight: pygments
+slug: time-series-forecasting-as-a-supervised-machine-learning-problem
+categories:
+  - R
+  - Machine Learning
+  - Forecasting
+tags:
+  - R
+  - Machine Learning
+  - Forecasting
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include=F}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
+## Overview
+
+This post offers a customizable template with R code for comparing point forecast accuracy using different categories of forecasting models and varying horizons. This is a powerful methodology for gauging which types of models perform well for different horizons.
+
+The models compared in this post include:
+
+- Traditional (Seasonal naive, SARIMA, ETS)
+- Supervised machine learning (Random Forest, GLM)
+- Facebook Prophet
+
+## R packages
+
+```{r}
+# Data wrangling and visualization
+library(tidyverse)
+library(lubridate)
+library(plotly)
+library(DT)
+
+# ML packages
+library(rsample)
+library(yardstick)
+library(recipes)
+
+# Forecasting frameworks
+library(forecast)
+library(h2o)
+library(prophet)
+```
+
+## Data
+
+The data used in this example contains monthly health insurance claims with calendar and population adjustment already applied. The target variable is *Adj_PMPM*.
+
+```{r}
+sample_df <- read_csv("sample_pmpm.csv") 
+
+sample_df
+
+sample_df %>%
+  ggplot(aes(x = Inc_Month, y = Adj_PMPM)) +
+  geom_line() +
+  labs(title = "Monthly insurance claims with calendar and population adjustments") +
+  theme_bw()
+```
+
+## Prepare models and encapsulate as functions
+
+### Traditional models
+
+Traditional models use lagged values of the target variable to produce forecasts. The traditional models used in this example include:
+
+- Seasonal naive
+- Arima (automatic parameter tuning)
+- Exponential smooth state space (automatic parameter tuning)
+
+#### Functions
+
+```{r}
+##################
+# Seasonal naive #
+##################
+snaive_model <- function(y, h) {
+  snaive(y, h = h)$mean %>% as.vector()
+}
+
+#########
+# Arima #
+#########
+arima_model <- function(y, h) {
+  arima_fit <- auto.arima(y)
+  arima_fcast <- forecast(arima_fit, h = h)$mean %>%
+    as.vector()
+  return(arima_fcast)
+}
+
+#######
+# ETS #
+#######
+ets_model <- function(y, h) {
+  ets_fit <- ets(y)
+  ets_fcast <- forecast(ets_fit, h = h)$mean %>% 
+    as.vector()
+  return(ets_fcast)
+}
+```
+
+### Machine learning models
+
+The machine learning models use explicit features to predict the target variable. In the example, features which are engineered include the following:
+
+- one-hot-encoded month 
+- one-hot encoded year
+- Target variable lagged by 12 months
+
+The models used in this example include:
+
+- Random Forest
+- Generalized Linear Model
+
+Implementations of these algorithms are available in the H2O machine learning library, which is used in this example.
+
+#### Engineer date-based dummy features
+
+The features can be engineered outside of the machine learning pipeline since they are static (i.e. known in advance).
+
+```{r}
+date_ohe <- sample_df %>%
+  select(Inc_Month) %>%
+  mutate(Month = lubridate::month(Inc_Month)) %>%
+  mutate(Year = lubridate::year(Inc_Month)) %>%
+  mutate_at(vars(-Inc_Month), list(as.factor)) %>%
+  recipes::recipe(~ ., data = .) %>%
+  recipes::step_dummy(all_predictors(), -Inc_Month, one_hot = T) %>%
+  recipes::prep() %>%
+  recipes::juice()
+```
+
+#### Functions
+
+```{r}
+# function to return vector of predictions from H2O fitted models.
+predict_h2o <- function(m, test_df) {
+  test_df %>%
+    drop_na() %>%
+    as.h2o() %>%
+    predict(m, newdata = .) %>%
+    as.vector()
+}
+
+#################
+# Random Forest #
+#################
+rf_model <- function(x, y, train_df, test_df) {
+  # Fit
+  rf_fit <- h2o.randomForest(
+    x = x,
+    y = y,
+    training_frame = as.h2o(train_df)
+  )
+  # Forecast
+  rf_fcast <- predict_h2o(rf_fit, test_df = test_df)
+  return(rf_fcast)
+}
+
+############################
+# Generalized linear model #
+############################
+glm_model <- function(x, y, train_df, test_df) {
+  # Fit
+  glm_fit <- h2o.glm(
+    x = x,
+    y = y,
+    training_frame = as.h2o(train_df)
+  )
+  # Forecast
+  glm_fcast <- predict_h2o(glm_fit, test_df = test_df)
+  return(glm_fcast)
+}
+```
+
+### Prophet model
+
+Developed by Facebook's Core Data Science team, [Prophet](https://facebook.github.io/prophet/) is a robust decomposition model designed for "business time series", which often exhibit multiple seasonalities and outliers. It accepts a variety of time series data (e.g. monthly, data, sub-daily) and it accepts extra regressors. It is relatively fast, robust to outliers and trend changes, and it requires very little coding to get started.
+
+```{r}
+prophet_model <- function(train_df, test_df) {
+  # Fit prophet
+  prophet_fit <- prophet::prophet(
+    df = train_df,
+    growth = "linear",
+    yearly.seasonality = T,
+    weekly.seasonality = F,
+    daily.seasonality = F
+  )
+  # Forecast
+  prophet_fcast <- predict(prophet_fit, df = test_df) %>%
+    pull(yhat)
+  
+  return(prophet_fcast)
+}
+```
+
+## Configure rolling origin cross validation with varying horizons
+
+The rolling origin cross validation strategy is defined as follows:
+
+- Intital training split uses years 2016-2018, initial test split uses 2019
+- Horizons of 1, 3, 6, and 11
+- Cumulative training data as origin shifts forward
+- 12 months of lag values of *y* included in test set to enable feature engineering
+
+```{r}
+horizons <- c(1, 3, 6, 11)
+
+cv_splits <- map(horizons, function(i) {
+  rsample::rolling_origin(
+    data = sample_df,
+    initial = 36,
+    assess = i,
+    cumulative = T,
+    lag = 12
+  ) 
+}) %>%
+  bind_rows()
+
+cv_splits
+```
+
+## Run cross validation
+
+This anonymous function does the following *within each cross validtion fold*:
+
+- Separate the train and test sets for the current CV iteration
+- Produce forecasts with traditional models
+- Produce forecasts with ML models
+- Produce forecasts with Prophet model
+- Produce an ensemble forecast by combining traditional, ML, and Prophet models
+- Backtransform forecasts to original units
+- Report mean and standard deviation of RMSE
+
+```{r}
+# Inititalize H2O cluster
+h2o.init()
+h2o.no_progress()
+```
+
+```{r, cache = T}
+model_comp <- map(cv_splits$splits, function(cv) {
+  
+  ######################
+  ## Train/test split ##
+  #####################
+  
+  train <- analysis(cv) 
+  test <- assessment(cv) %>% 
+    slice(seq(13, nrow(.), 1))
+  test_w_lags <- assessment(cv)
+  
+  ###################################################
+  ## Traditional models using the forecast package ##
+  ###################################################
+  
+  # target time series variable
+  y <- ts(train$Adj_PMPM, start = 2016, freq = 12)
+  
+  # Seasonal naive
+  snaive_fcast <- snaive_model(y, h = nrow(test))
+  # Arima fit/forecast
+  arima_fcast <- arima_model(y, h = nrow(test))
+  # ETS fit/forecast
+  ets_fcast <- ets_model(y, h = nrow(test))
+  
+  #######################################
+  ## Machine learning models using H2O  #
+  #######################################
+  
+  # Engineer features for training
+  ml_train <- train %>%
+    inner_join(date_ohe, by = "Inc_Month") %>%
+    mutate(Adj_PMPM_Lag_12 = lag(Adj_PMPM, 12)) %>%
+    select(Adj_PMPM,
+           Adj_PMPM_Lag_12,
+           contains("Month_"),
+           contains("Year_")) %>%
+    drop_na()
+  
+  # Engineer features for testing
+  ml_test <- test_w_lags %>%
+    inner_join(date_ohe, by = "Inc_Month") %>%
+    mutate(Adj_PMPM_Lag_12 = lag(Adj_PMPM, 12)) %>%
+    select(Adj_PMPM,
+           Adj_PMPM_Lag_12,
+           contains("Month_"),
+           contains("Year_")) %>%
+    drop_na()
+  
+  # Feature/target names as strings for H2O input
+  X = ml_train %>% select(-Adj_PMPM) %>% colnames()
+  y = "Adj_PMPM"
+  
+  # Random forest
+  rf_fcast <- rf_model(X, y, ml_train, ml_test)
+  
+  # GLM
+  glm_fcast <- glm_model(X, y, ml_train, ml_test)
+  
+  ######################
+  ## Facebook Prophet ##
+  ######################
+  
+  # Format training data per Prophet specs
+  prophet_train <- train %>%
+    select(ds = Inc_Month,
+           y = Adj_PMPM)
+  
+  # Format testing data per Prophet specs
+  prophet_test <- test %>%
+    select(ds = Inc_Month,
+           y = Adj_PMPM)
+  
+  # Format train/test
+  prophet_fcast <- prophet_model(train_df = prophet_train, 
+                                 test_df = prophet_test)
+  
+  ##############
+  ## Ensemble ##
+  ##############
+  
+  model_list <- list(snaive_fcast, arima_fcast, ets_fcast, 
+                     rf_fcast, glm_fcast, prophet_fcast)
+  
+  ensemble_fcast <- model_list %>%
+    reduce(`+`)/length(model_list)
+  
+  ##################
+  ## Measure RMSE ##
+  ##################
+  
+  # function to transform forecasts to original units and calc RMSE
+  backtransform_forecasts <- function(fcast) {
+    backtransform <- fcast*test$Population*test$Effective_Days_Index
+    actual <- test$Total_Claims
+    rmse_vec(actual, backtransform)
+  }
+  
+  # apply RMSE calculation to each model
+  rmse_tbl <- list(
+    snaive = snaive_fcast,
+    arima = arima_fcast,
+    ets = ets_fcast,
+    h2o_rf = rf_fcast,
+    h2o_glm = glm_fcast,
+    prophet = prophet_fcast,
+    ensemble = ensemble_fcast
+  ) %>%
+    map(backtransform_forecasts) %>%
+    bind_cols() %>%
+    mutate(horizon = nrow(test))
+  
+  return(rmse_tbl)
+})
+```
+
+## Evaluate performance of models
+
+```{r}
+model_performance <- bind_rows(model_comp) %>%
+  gather(key, value, -horizon) %>%
+  group_by(key, horizon) %>%
+  summarise(
+    Mean_Rmse = mean(value),
+    Sd_Rmse = sd(value)
+  ) 
+
+DT::datatable(model_performance) %>%
+  DT::formatRound(columns = c("Mean_Rmse", "Sd_Rmse"), digits = 0)
+```
+
+```{r, fig.height = 8}
+model_performance %>%
+  ggplot(aes(x = Mean_Rmse, y = Sd_Rmse)) +
+  facet_wrap(~horizon, ncol = 1) +
+  geom_point(aes(color = key, shape = key), size = 2) +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 10)) +
+  scale_shape_manual(values = c(13:20)) +
+  labs(title = "Mean and standard deviation of RMSE by horizon",
+       x = "Mean RMSE",
+       y = "SD RMSE") +
+  theme_bw()
+```
+
+Some interesting takeaways:
+
+- The simple seasonal naive is arguably the best model for the 11-month horizon in terms of accuracy and stability.
+
+- The ensemble model is the consistently the most accurate across the board.
+
+- Regarding the traditional models, ETS and SNAIVE are consistently more accurate than the Arima model.
+
+- Regarding the ML models, the GLM is more impressive than the Random Forest. The GLM model is on par with the ETS and SNAIVE traditional models.
+
+- Prophet shows decent performance, especially in the 11-month horizon, but there are better traditional and ML alternatives in this application.
+
+## Potential improvements
+
+- The cross validation strategy is easily parallelizable on a multi-core machine.
+
+- Perform hyperparameter tuning for the ML models.
+
+- Engineer additional lagged values as predictors in the ML models.
+
+## Conclusion
+
+This is a useful template for quickly comparing different categories of forecast models. This post compares traditional, machine learning, and Prophet models with monthly data. Other types of intervals (e.g. daily) can be used with this template so long as the models, seasonalities, and features are specified accordingly. By encapsulating each individual model in its own function, making tweaks and adding new models is easy. 

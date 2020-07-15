@@ -108,140 +108,140 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>This post demonstrates a strategy for text classification (binary) using efficient data representation, transformation, and modeling techniques. Using the <code>text2vec</code> package, raw text is tokenized, converted to sparse bag-of-words feature matrix, and weighted using TF-IDF. The weighted bag-of-words feature matrix is used as an input to an efficient penalized logistic regression algorithm implemented in the <code>glmnet</code> pacakge. This pipeline is implemented along with repeated cross validation for robust model evaluation.</p>
 <div id="packages" class="section level2">
 <h2>Packages</h2>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(text2vec)     <span class="co"># NLP tools</span>
-<span class="kw">library</span>(tidytext)     <span class="co"># tidy text mining</span>
-<span class="kw">library</span>(glmnet)       <span class="co"># logistic regression</span>
-<span class="kw">library</span>(tidymodels)   <span class="co"># modeling</span>
-<span class="kw">library</span>(tidyverse)    <span class="co"># general purpose data manipulation</span>
-<span class="kw">library</span>(textstem)     <span class="co"># word lemmatization</span></code></pre>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" title="1"><span class="kw">library</span>(text2vec)     <span class="co"># NLP tools</span></a>
+<a class="sourceLine" id="cb1-2" title="2"><span class="kw">library</span>(tidytext)     <span class="co"># tidy text mining</span></a>
+<a class="sourceLine" id="cb1-3" title="3"><span class="kw">library</span>(glmnet)       <span class="co"># logistic regression</span></a>
+<a class="sourceLine" id="cb1-4" title="4"><span class="kw">library</span>(tidymodels)   <span class="co"># modeling</span></a>
+<a class="sourceLine" id="cb1-5" title="5"><span class="kw">library</span>(tidyverse)    <span class="co"># general purpose data manipulation</span></a>
+<a class="sourceLine" id="cb1-6" title="6"><span class="kw">library</span>(textstem)     <span class="co"># word lemmatization</span></a></code></pre></div>
 </div>
 <div id="data" class="section level2">
 <h2>Data</h2>
-<pre class="sourceCode r"><code class="sourceCode r">text_df &lt;-<span class="st"> </span><span class="kw">read_csv</span>(<span class="st">&quot;text_clf.csv&quot;</span>) <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">sample_frac</span>(<span class="fl">0.1</span>) <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">mutate</span>(<span class="dt">doc_id =</span> <span class="kw">row_number</span>())</code></pre>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" title="1">text_df &lt;-<span class="st"> </span><span class="kw">read_csv</span>(<span class="st">&quot;text_clf.csv&quot;</span>) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb2-2" title="2"><span class="st">  </span><span class="kw">sample_frac</span>(<span class="fl">0.1</span>) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb2-3" title="3"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">doc_id =</span> <span class="kw">row_number</span>())</a></code></pre></div>
 </div>
 <div id="model-function" class="section level2">
 <h2>Model function</h2>
-<pre class="sourceCode r"><code class="sourceCode r"><span class="co"># Arguments: training and testing data</span>
-<span class="co"># Returns: AUC of out-of-sample (testing) predictions</span>
-model_function &lt;-<span class="st"> </span><span class="cf">function</span>(train, test) {
-  
-  model_dfs &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">train =</span> train, <span class="dt">test =</span> test)
-  
-  <span class="co">############</span>
-  <span class="co"># Tokenize #</span>
-  <span class="co">############</span>
-  
-  tokens &lt;-<span class="st"> </span>model_dfs <span class="op">%&gt;%</span>
-<span class="st">    </span><span class="kw">map</span>(., <span class="cf">function</span>(x) {
-      x <span class="op">%&gt;%</span>
-<span class="st">        </span>tidytext<span class="op">::</span><span class="kw">unnest_tokens</span>(word, Text) <span class="op">%&gt;%</span>
-<span class="st">        </span><span class="kw">ungroup</span>() <span class="op">%&gt;%</span>
-<span class="st">        </span><span class="co"># remove stopwords</span>
-<span class="st">        </span><span class="kw">anti_join</span>(stop_words, <span class="dt">by =</span> <span class="st">&quot;word&quot;</span>) <span class="op">%&gt;%</span>
-<span class="st">        </span><span class="co"># lemmatize</span>
-<span class="st">        </span><span class="kw">mutate</span>(<span class="dt">word =</span> textstem<span class="op">::</span><span class="kw">lemmatize_words</span>(word)) <span class="op">%&gt;%</span>
-<span class="st">        </span><span class="kw">mutate</span>(<span class="dt">word =</span> <span class="kw">str_replace_all</span>(word, <span class="st">&quot;[^[:alpha:]]&quot;</span>, <span class="st">&quot; &quot;</span>)) <span class="op">%&gt;%</span><span class="st"> </span>
-<span class="st">        </span><span class="kw">mutate</span>(<span class="dt">word =</span> <span class="kw">str_replace</span>(<span class="kw">gsub</span>(<span class="st">&quot;</span><span class="ch">\\</span><span class="st">s+&quot;</span>, <span class="st">&quot; &quot;</span>, <span class="kw">str_trim</span>(word)), <span class="st">&quot;B&quot;</span>, <span class="st">&quot;b&quot;</span>)) <span class="op">%&gt;%</span>
-<span class="st">        </span><span class="co"># obtain the vector of words (tokens) for each training and testing document</span>
-<span class="st">        </span><span class="kw">split</span>(.<span class="op">$</span>doc_id) <span class="op">%&gt;%</span>
-<span class="st">        </span><span class="kw">map</span>(., <span class="cf">function</span>(x) x <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">pull</span>(word))
-    })
-  
-  <span class="co">########################################</span>
-  <span class="co"># Create vocabulary from training data #</span>
-  <span class="co">########################################</span>
-  
-  iter_train &lt;-<span class="st"> </span>text2vec<span class="op">::</span><span class="kw">itoken</span>(<span class="dt">iterable =</span> tokens<span class="op">$</span>train, 
-                                 <span class="dt">ids =</span> model_dfs<span class="op">$</span>train<span class="op">$</span>doc_id,
-                                 <span class="dt">progressbar =</span> <span class="ot">FALSE</span>)
-  
-  iter_test &lt;-<span class="st"> </span>text2vec<span class="op">::</span><span class="kw">itoken</span>(<span class="dt">iterable =</span> tokens<span class="op">$</span>test, 
-                                <span class="dt">ids =</span> model_dfs<span class="op">$</span>test<span class="op">$</span>doc_id,
-                                <span class="dt">progressbar =</span> <span class="ot">FALSE</span>)
-  
-  vocab &lt;-<span class="st"> </span>text2vec<span class="op">::</span><span class="kw">create_vocabulary</span>(iter_train)
-  
-  vectorizer &lt;-<span class="st"> </span>text2vec<span class="op">::</span><span class="kw">vocab_vectorizer</span>(vocab)
-  
-  <span class="co">##########################</span>
-  <span class="co"># Document-term matrices #</span>
-  <span class="co">##########################</span>
-  
-  doc_term_train =<span class="st"> </span>text2vec<span class="op">::</span><span class="kw">create_dtm</span>(iter_train, vectorizer)
-  doc_term_test =<span class="st"> </span><span class="kw">create_dtm</span>(iter_test, vectorizer)
-  
-  <span class="co">##########</span>
-  <span class="co"># TF-IDF #</span>
-  <span class="co">##########</span>
-  
-  tf_idf =<span class="st"> </span>TfIdf<span class="op">$</span><span class="kw">new</span>()
-  
-  <span class="co"># fit tf-idf to training data</span>
-  doc_term_train_tfidf =<span class="st"> </span><span class="kw">fit_transform</span>(doc_term_train, tf_idf)
-  
-  <span class="co"># apply pre-trained tf-idf transformation to testing data</span>
-  doc_term_test_tfidf  =<span class="st"> </span><span class="kw">transform</span>(doc_term_test, tf_idf)
-  
-  <span class="co">####################</span>
-  <span class="co"># Train classifier #</span>
-  <span class="co">####################</span>
-  
-  glmnet_classifier =<span class="st"> </span><span class="kw">cv.glmnet</span>(
-    <span class="dt">x =</span> doc_term_train_tfidf, 
-    <span class="dt">y =</span> model_dfs<span class="op">$</span>train<span class="op">$</span>Label,
-    <span class="dt">family =</span> <span class="st">&#39;binomial&#39;</span>, 
-    <span class="dt">alpha =</span> <span class="dv">1</span>,
-    <span class="dt">type.measure =</span> <span class="st">&quot;auc&quot;</span>,
-    <span class="dt">nfolds =</span> <span class="dv">5</span>,
-    <span class="dt">thresh =</span> <span class="fl">1e-3</span>,
-    <span class="dt">maxit =</span> <span class="fl">1e3</span>)
-  
-  probs =<span class="st"> </span><span class="kw">predict</span>(glmnet_classifier, doc_term_test_tfidf, <span class="dt">type =</span> <span class="st">&#39;response&#39;</span>)[, <span class="dv">1</span>]
-  
-  <span class="co">###########################</span>
-  <span class="co"># Measure AUC on test set #</span>
-  <span class="co">###########################</span>
-  
-  test_auc =<span class="st"> </span>glmnet<span class="op">:::</span><span class="kw">auc</span>(
-    <span class="dt">y =</span> model_dfs<span class="op">$</span>test<span class="op">$</span>Label <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">as.integer</span>(),
-    <span class="dt">prob =</span> probs
-  )
-  
-  <span class="kw">return</span>(test_auc)
-  
-}</code></pre>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb3-1" title="1"><span class="co"># Arguments: training and testing data</span></a>
+<a class="sourceLine" id="cb3-2" title="2"><span class="co"># Returns: AUC of out-of-sample (testing) predictions</span></a>
+<a class="sourceLine" id="cb3-3" title="3">model_function &lt;-<span class="st"> </span><span class="cf">function</span>(train, test) {</a>
+<a class="sourceLine" id="cb3-4" title="4">  </a>
+<a class="sourceLine" id="cb3-5" title="5">  model_dfs &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">train =</span> train, <span class="dt">test =</span> test)</a>
+<a class="sourceLine" id="cb3-6" title="6">  </a>
+<a class="sourceLine" id="cb3-7" title="7">  <span class="co">############</span></a>
+<a class="sourceLine" id="cb3-8" title="8">  <span class="co"># Tokenize #</span></a>
+<a class="sourceLine" id="cb3-9" title="9">  <span class="co">############</span></a>
+<a class="sourceLine" id="cb3-10" title="10">  </a>
+<a class="sourceLine" id="cb3-11" title="11">  tokens &lt;-<span class="st"> </span>model_dfs <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb3-12" title="12"><span class="st">    </span><span class="kw">map</span>(., <span class="cf">function</span>(x) {</a>
+<a class="sourceLine" id="cb3-13" title="13">      x <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb3-14" title="14"><span class="st">        </span>tidytext<span class="op">::</span><span class="kw">unnest_tokens</span>(word, Text) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb3-15" title="15"><span class="st">        </span><span class="kw">ungroup</span>() <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb3-16" title="16"><span class="st">        </span><span class="co"># remove stopwords</span></a>
+<a class="sourceLine" id="cb3-17" title="17"><span class="st">        </span><span class="kw">anti_join</span>(stop_words, <span class="dt">by =</span> <span class="st">&quot;word&quot;</span>) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb3-18" title="18"><span class="st">        </span><span class="co"># lemmatize</span></a>
+<a class="sourceLine" id="cb3-19" title="19"><span class="st">        </span><span class="kw">mutate</span>(<span class="dt">word =</span> textstem<span class="op">::</span><span class="kw">lemmatize_words</span>(word)) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb3-20" title="20"><span class="st">        </span><span class="kw">mutate</span>(<span class="dt">word =</span> <span class="kw">str_replace_all</span>(word, <span class="st">&quot;[^[:alpha:]]&quot;</span>, <span class="st">&quot; &quot;</span>)) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb3-21" title="21"><span class="st">        </span><span class="kw">mutate</span>(<span class="dt">word =</span> <span class="kw">str_replace</span>(<span class="kw">gsub</span>(<span class="st">&quot;</span><span class="ch">\\</span><span class="st">s+&quot;</span>, <span class="st">&quot; &quot;</span>, <span class="kw">str_trim</span>(word)), <span class="st">&quot;B&quot;</span>, <span class="st">&quot;b&quot;</span>)) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb3-22" title="22"><span class="st">        </span><span class="co"># obtain the vector of words (tokens) for each training and testing document</span></a>
+<a class="sourceLine" id="cb3-23" title="23"><span class="st">        </span><span class="kw">split</span>(.<span class="op">$</span>doc_id) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb3-24" title="24"><span class="st">        </span><span class="kw">map</span>(., <span class="cf">function</span>(x) x <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">pull</span>(word))</a>
+<a class="sourceLine" id="cb3-25" title="25">    })</a>
+<a class="sourceLine" id="cb3-26" title="26">  </a>
+<a class="sourceLine" id="cb3-27" title="27">  <span class="co">########################################</span></a>
+<a class="sourceLine" id="cb3-28" title="28">  <span class="co"># Create vocabulary from training data #</span></a>
+<a class="sourceLine" id="cb3-29" title="29">  <span class="co">########################################</span></a>
+<a class="sourceLine" id="cb3-30" title="30">  </a>
+<a class="sourceLine" id="cb3-31" title="31">  iter_train &lt;-<span class="st"> </span>text2vec<span class="op">::</span><span class="kw">itoken</span>(<span class="dt">iterable =</span> tokens<span class="op">$</span>train, </a>
+<a class="sourceLine" id="cb3-32" title="32">                                 <span class="dt">ids =</span> model_dfs<span class="op">$</span>train<span class="op">$</span>doc_id,</a>
+<a class="sourceLine" id="cb3-33" title="33">                                 <span class="dt">progressbar =</span> <span class="ot">FALSE</span>)</a>
+<a class="sourceLine" id="cb3-34" title="34">  </a>
+<a class="sourceLine" id="cb3-35" title="35">  iter_test &lt;-<span class="st"> </span>text2vec<span class="op">::</span><span class="kw">itoken</span>(<span class="dt">iterable =</span> tokens<span class="op">$</span>test, </a>
+<a class="sourceLine" id="cb3-36" title="36">                                <span class="dt">ids =</span> model_dfs<span class="op">$</span>test<span class="op">$</span>doc_id,</a>
+<a class="sourceLine" id="cb3-37" title="37">                                <span class="dt">progressbar =</span> <span class="ot">FALSE</span>)</a>
+<a class="sourceLine" id="cb3-38" title="38">  </a>
+<a class="sourceLine" id="cb3-39" title="39">  vocab &lt;-<span class="st"> </span>text2vec<span class="op">::</span><span class="kw">create_vocabulary</span>(iter_train)</a>
+<a class="sourceLine" id="cb3-40" title="40">  </a>
+<a class="sourceLine" id="cb3-41" title="41">  vectorizer &lt;-<span class="st"> </span>text2vec<span class="op">::</span><span class="kw">vocab_vectorizer</span>(vocab)</a>
+<a class="sourceLine" id="cb3-42" title="42">  </a>
+<a class="sourceLine" id="cb3-43" title="43">  <span class="co">##########################</span></a>
+<a class="sourceLine" id="cb3-44" title="44">  <span class="co"># Document-term matrices #</span></a>
+<a class="sourceLine" id="cb3-45" title="45">  <span class="co">##########################</span></a>
+<a class="sourceLine" id="cb3-46" title="46">  </a>
+<a class="sourceLine" id="cb3-47" title="47">  doc_term_train =<span class="st"> </span>text2vec<span class="op">::</span><span class="kw">create_dtm</span>(iter_train, vectorizer)</a>
+<a class="sourceLine" id="cb3-48" title="48">  doc_term_test =<span class="st"> </span><span class="kw">create_dtm</span>(iter_test, vectorizer)</a>
+<a class="sourceLine" id="cb3-49" title="49">  </a>
+<a class="sourceLine" id="cb3-50" title="50">  <span class="co">##########</span></a>
+<a class="sourceLine" id="cb3-51" title="51">  <span class="co"># TF-IDF #</span></a>
+<a class="sourceLine" id="cb3-52" title="52">  <span class="co">##########</span></a>
+<a class="sourceLine" id="cb3-53" title="53">  </a>
+<a class="sourceLine" id="cb3-54" title="54">  tf_idf =<span class="st"> </span>TfIdf<span class="op">$</span><span class="kw">new</span>()</a>
+<a class="sourceLine" id="cb3-55" title="55">  </a>
+<a class="sourceLine" id="cb3-56" title="56">  <span class="co"># fit tf-idf to training data</span></a>
+<a class="sourceLine" id="cb3-57" title="57">  doc_term_train_tfidf =<span class="st"> </span><span class="kw">fit_transform</span>(doc_term_train, tf_idf)</a>
+<a class="sourceLine" id="cb3-58" title="58">  </a>
+<a class="sourceLine" id="cb3-59" title="59">  <span class="co"># apply pre-trained tf-idf transformation to testing data</span></a>
+<a class="sourceLine" id="cb3-60" title="60">  doc_term_test_tfidf  =<span class="st"> </span><span class="kw">transform</span>(doc_term_test, tf_idf)</a>
+<a class="sourceLine" id="cb3-61" title="61">  </a>
+<a class="sourceLine" id="cb3-62" title="62">  <span class="co">####################</span></a>
+<a class="sourceLine" id="cb3-63" title="63">  <span class="co"># Train classifier #</span></a>
+<a class="sourceLine" id="cb3-64" title="64">  <span class="co">####################</span></a>
+<a class="sourceLine" id="cb3-65" title="65">  </a>
+<a class="sourceLine" id="cb3-66" title="66">  glmnet_classifier =<span class="st"> </span><span class="kw">cv.glmnet</span>(</a>
+<a class="sourceLine" id="cb3-67" title="67">    <span class="dt">x =</span> doc_term_train_tfidf, </a>
+<a class="sourceLine" id="cb3-68" title="68">    <span class="dt">y =</span> model_dfs<span class="op">$</span>train<span class="op">$</span>Label,</a>
+<a class="sourceLine" id="cb3-69" title="69">    <span class="dt">family =</span> <span class="st">&#39;binomial&#39;</span>, </a>
+<a class="sourceLine" id="cb3-70" title="70">    <span class="dt">alpha =</span> <span class="dv">1</span>,</a>
+<a class="sourceLine" id="cb3-71" title="71">    <span class="dt">type.measure =</span> <span class="st">&quot;auc&quot;</span>,</a>
+<a class="sourceLine" id="cb3-72" title="72">    <span class="dt">nfolds =</span> <span class="dv">5</span>,</a>
+<a class="sourceLine" id="cb3-73" title="73">    <span class="dt">thresh =</span> <span class="fl">1e-3</span>,</a>
+<a class="sourceLine" id="cb3-74" title="74">    <span class="dt">maxit =</span> <span class="fl">1e3</span>)</a>
+<a class="sourceLine" id="cb3-75" title="75">  </a>
+<a class="sourceLine" id="cb3-76" title="76">  probs =<span class="st"> </span><span class="kw">predict</span>(glmnet_classifier, doc_term_test_tfidf, <span class="dt">type =</span> <span class="st">&#39;response&#39;</span>)[, <span class="dv">1</span>]</a>
+<a class="sourceLine" id="cb3-77" title="77">  </a>
+<a class="sourceLine" id="cb3-78" title="78">  <span class="co">###########################</span></a>
+<a class="sourceLine" id="cb3-79" title="79">  <span class="co"># Measure AUC on test set #</span></a>
+<a class="sourceLine" id="cb3-80" title="80">  <span class="co">###########################</span></a>
+<a class="sourceLine" id="cb3-81" title="81">  </a>
+<a class="sourceLine" id="cb3-82" title="82">  test_auc =<span class="st"> </span>glmnet<span class="op">:::</span><span class="kw">auc</span>(</a>
+<a class="sourceLine" id="cb3-83" title="83">    <span class="dt">y =</span> model_dfs<span class="op">$</span>test<span class="op">$</span>Label <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">as.integer</span>(),</a>
+<a class="sourceLine" id="cb3-84" title="84">    <span class="dt">prob =</span> probs</a>
+<a class="sourceLine" id="cb3-85" title="85">  )</a>
+<a class="sourceLine" id="cb3-86" title="86">  </a>
+<a class="sourceLine" id="cb3-87" title="87">  <span class="kw">return</span>(test_auc)</a>
+<a class="sourceLine" id="cb3-88" title="88">  </a>
+<a class="sourceLine" id="cb3-89" title="89">}</a></code></pre></div>
 </div>
 <div id="implement-cross-validation" class="section level2">
 <h2>Implement cross validation</h2>
 <p>Using <code>purrr::map()</code>, run the model function within each cross validation fold.</p>
-<pre class="sourceCode r"><code class="sourceCode r">n_folds &lt;-<span class="st"> </span><span class="dv">5</span>
-n_repeats &lt;-<span class="st"> </span><span class="dv">3</span>
-
-cv_splits &lt;-<span class="st"> </span>rsample<span class="op">::</span><span class="kw">vfold_cv</span>(text_df, 
-                               <span class="dt">v =</span> n_folds, 
-                               <span class="dt">repeats =</span> n_repeats, 
-                               <span class="dt">strata =</span> <span class="st">&#39;Label&#39;</span>)
-
-cv_models &lt;-<span class="st"> </span><span class="kw">map_dbl</span>(cv_splits<span class="op">$</span>splits, <span class="cf">function</span>(cv) {
-  train &lt;-<span class="st"> </span>rsample<span class="op">::</span><span class="kw">training</span>(cv)
-  test &lt;-<span class="st"> </span>rsample<span class="op">::</span><span class="kw">testing</span>(cv)
-  <span class="kw">model_function</span>(<span class="dt">train =</span> train, <span class="dt">test =</span> test)
-})</code></pre>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" title="1">n_folds &lt;-<span class="st"> </span><span class="dv">5</span></a>
+<a class="sourceLine" id="cb4-2" title="2">n_repeats &lt;-<span class="st"> </span><span class="dv">3</span></a>
+<a class="sourceLine" id="cb4-3" title="3"></a>
+<a class="sourceLine" id="cb4-4" title="4">cv_splits &lt;-<span class="st"> </span>rsample<span class="op">::</span><span class="kw">vfold_cv</span>(text_df, </a>
+<a class="sourceLine" id="cb4-5" title="5">                               <span class="dt">v =</span> n_folds, </a>
+<a class="sourceLine" id="cb4-6" title="6">                               <span class="dt">repeats =</span> n_repeats, </a>
+<a class="sourceLine" id="cb4-7" title="7">                               <span class="dt">strata =</span> <span class="st">&#39;Label&#39;</span>)</a>
+<a class="sourceLine" id="cb4-8" title="8"></a>
+<a class="sourceLine" id="cb4-9" title="9">cv_models &lt;-<span class="st"> </span><span class="kw">map_dbl</span>(cv_splits<span class="op">$</span>splits, <span class="cf">function</span>(cv) {</a>
+<a class="sourceLine" id="cb4-10" title="10">  train &lt;-<span class="st"> </span>rsample<span class="op">::</span><span class="kw">training</span>(cv)</a>
+<a class="sourceLine" id="cb4-11" title="11">  test &lt;-<span class="st"> </span>rsample<span class="op">::</span><span class="kw">testing</span>(cv)</a>
+<a class="sourceLine" id="cb4-12" title="12">  <span class="kw">model_function</span>(<span class="dt">train =</span> train, <span class="dt">test =</span> test)</a>
+<a class="sourceLine" id="cb4-13" title="13">})</a></code></pre></div>
 </div>
 <div id="evaluate-cv-results" class="section level2">
 <h2>Evaluate CV results</h2>
 <p>Evaluate performance of the classifier by looking at the distribution of AUC across all cross validation folds.</p>
-<pre class="sourceCode r"><code class="sourceCode r">cv_models <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">enframe</span>() <span class="op">%&gt;%</span>
-<span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> value)) <span class="op">+</span>
-<span class="st">  </span><span class="kw">geom_density</span>() <span class="op">+</span>
-<span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Distribution of AUC across all cross validation folds&quot;</span>,
-       <span class="dt">subtitle =</span> <span class="kw">paste</span>(<span class="st">&quot;N models = &quot;</span>, <span class="kw">length</span>(cv_splits<span class="op">$</span>splits)),
-       <span class="dt">x =</span> <span class="st">&quot;AUC&quot;</span>) <span class="op">+</span>
-<span class="st">  </span><span class="kw">scale_x_continuous</span>(<span class="dt">breaks =</span> scales<span class="op">::</span><span class="kw">pretty_breaks</span>(<span class="dt">n=</span><span class="dv">10</span>)) <span class="op">+</span>
-<span class="st">  </span><span class="kw">theme_bw</span>()</code></pre>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" title="1">cv_models <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-2" title="2"><span class="st">  </span><span class="kw">enframe</span>() <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-3" title="3"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> value)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb5-4" title="4"><span class="st">  </span><span class="kw">geom_density</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb5-5" title="5"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Distribution of AUC across all cross validation folds&quot;</span>,</a>
+<a class="sourceLine" id="cb5-6" title="6">       <span class="dt">subtitle =</span> <span class="kw">paste</span>(<span class="st">&quot;N models = &quot;</span>, <span class="kw">length</span>(cv_splits<span class="op">$</span>splits)),</a>
+<a class="sourceLine" id="cb5-7" title="7">       <span class="dt">x =</span> <span class="st">&quot;AUC&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb5-8" title="8"><span class="st">  </span><span class="kw">scale_x_continuous</span>(<span class="dt">breaks =</span> scales<span class="op">::</span><span class="kw">pretty_breaks</span>(<span class="dt">n=</span><span class="dv">10</span>)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb5-9" title="9"><span class="st">  </span><span class="kw">theme_bw</span>()</a></code></pre></div>
 <p><img src="/post/2019-02-17-text-classification-using-text2vec_files/figure-html/unnamed-chunk-6-1.png" width="672" /></p>
 </div>
 

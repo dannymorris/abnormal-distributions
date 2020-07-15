@@ -161,6 +161,14 @@ effective_days <- weekday_counts %>%
   select(-Inc_Year)
 
 effective_days
+
+dow_counts <- weekday_counts %>%
+  inner_join(weekday_relatives, by = c("Inc_Month", "DOW_Name")) %>%
+  mutate(Effective_Days = Occurences*DOW_Ratio) %>%
+  select(Inc_Month,
+         DOW_Name,
+         Effective_Days) %>%
+  spread(DOW_Name, Effective_Days)
 ```
 
 ## Calculate adjusted PMPM using month composition and population adjustments

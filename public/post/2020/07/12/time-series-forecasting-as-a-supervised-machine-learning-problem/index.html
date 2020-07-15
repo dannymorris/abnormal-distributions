@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>A template for comparing point forecasts using traditional models, Prophet, and supervised machine learning | Abnormal Distributions</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/">Home</a></li>
+      
+      <li><a href="/post/">All Posts</a></li>
+      
+      <li><a href="/categories/">By Topic</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">A template for comparing point forecasts using traditional models, Prophet, and supervised machine learning</span></h1>
+<h2 class="author">Danny Morris</h2>
+<h2 class="date">2020/07/12</h2>
+</div>
+
+<main>
+
+<script src="/rmarkdown-libs/htmlwidgets/htmlwidgets.js"></script>
+<script src="/rmarkdown-libs/jquery/jquery.min.js"></script>
+<link href="/rmarkdown-libs/datatables-css/datatables-crosstalk.css" rel="stylesheet" />
+<script src="/rmarkdown-libs/datatables-binding/datatables.js"></script>
+<link href="/rmarkdown-libs/dt-core/css/jquery.dataTables.min.css" rel="stylesheet" />
+<link href="/rmarkdown-libs/dt-core/css/jquery.dataTables.extra.css" rel="stylesheet" />
+<script src="/rmarkdown-libs/dt-core/js/jquery.dataTables.min.js"></script>
+<link href="/rmarkdown-libs/crosstalk/css/crosstalk.css" rel="stylesheet" />
+<script src="/rmarkdown-libs/crosstalk/js/crosstalk.min.js"></script>
+<style type="text/css">
+a.sourceLine { display: inline-block; line-height: 1.25; }
+a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
+a.sourceLine:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+a.sourceLine { text-indent: -1em; padding-left: 1em; }
+}
+pre.numberSource a.sourceLine
+  { position: relative; left: -4em; }
+pre.numberSource a.sourceLine::before
+  { content: attr(title);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; pointer-events: all; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  }
+@media screen {
+a.sourceLine::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+<div id="TOC">
+<ul>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#r-packages">R packages</a></li>
+<li><a href="#data">Data</a></li>
+<li><a href="#prepare-models-and-encapsulate-as-functions">Prepare models and encapsulate as functions</a><ul>
+<li><a href="#traditional-models">Traditional models</a></li>
+<li><a href="#machine-learning-models">Machine learning models</a></li>
+<li><a href="#prophet-model">Prophet model</a></li>
+</ul></li>
+<li><a href="#configure-rolling-origin-cross-validation-with-varying-horizons">Configure rolling origin cross validation with varying horizons</a></li>
+<li><a href="#run-cross-validation">Run cross validation</a></li>
+<li><a href="#evaluate-performance-of-models">Evaluate performance of models</a></li>
+<li><a href="#potential-improvements">Potential improvements</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+</ul>
+</div>
+
+<div id="overview" class="section level2">
+<h2>Overview</h2>
+<p>This post offers a customizable template with R code for comparing point forecast accuracy using different categories of forecasting models and varying horizons. This is a powerful methodology for gauging which types of models perform well for different horizons.</p>
+<p>The models compared in this post include:</p>
+<ul>
+<li>Traditional (Seasonal naive, SARIMA, ETS)</li>
+<li>Supervised machine learning (Random Forest, GLM)</li>
+<li>Facebook Prophet</li>
+</ul>
+</div>
+<div id="r-packages" class="section level2">
+<h2>R packages</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" title="1"><span class="co"># Data wrangling and visualization</span></a>
+<a class="sourceLine" id="cb1-2" title="2"><span class="kw">library</span>(tidyverse)</a>
+<a class="sourceLine" id="cb1-3" title="3"><span class="kw">library</span>(lubridate)</a>
+<a class="sourceLine" id="cb1-4" title="4"><span class="kw">library</span>(plotly)</a>
+<a class="sourceLine" id="cb1-5" title="5"><span class="kw">library</span>(DT)</a>
+<a class="sourceLine" id="cb1-6" title="6"></a>
+<a class="sourceLine" id="cb1-7" title="7"><span class="co"># ML packages</span></a>
+<a class="sourceLine" id="cb1-8" title="8"><span class="kw">library</span>(rsample)</a>
+<a class="sourceLine" id="cb1-9" title="9"><span class="kw">library</span>(yardstick)</a>
+<a class="sourceLine" id="cb1-10" title="10"><span class="kw">library</span>(recipes)</a>
+<a class="sourceLine" id="cb1-11" title="11"></a>
+<a class="sourceLine" id="cb1-12" title="12"><span class="co"># Forecasting frameworks</span></a>
+<a class="sourceLine" id="cb1-13" title="13"><span class="kw">library</span>(forecast)</a>
+<a class="sourceLine" id="cb1-14" title="14"><span class="kw">library</span>(h2o)</a>
+<a class="sourceLine" id="cb1-15" title="15"><span class="kw">library</span>(prophet)</a></code></pre></div>
+</div>
+<div id="data" class="section level2">
+<h2>Data</h2>
+<p>The data used in this example contains monthly health insurance claims with calendar and population adjustment already applied. The target variable is <em>Adj_PMPM</em>.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" title="1">sample_df &lt;-<span class="st"> </span><span class="kw">read_csv</span>(<span class="st">&quot;sample_pmpm.csv&quot;</span>) </a>
+<a class="sourceLine" id="cb2-2" title="2"></a>
+<a class="sourceLine" id="cb2-3" title="3">sample_df</a></code></pre></div>
+<pre><code>## # A tibble: 48 x 5
+##    Inc_Month  Adj_PMPM Total_Claims Population Effective_Days_Index
+##    &lt;date&gt;        &lt;dbl&gt;        &lt;dbl&gt;      &lt;dbl&gt;                &lt;dbl&gt;
+##  1 2016-01-01     1.68      143031.     88072.                0.969
+##  2 2016-02-01     1.68      143095.     88002.                0.966
+##  3 2016-03-01     1.69      155876.     87893.                1.05 
+##  4 2016-04-01     1.72      146057.     87894.                0.967
+##  5 2016-05-01     1.66      147634.     87689                 1.01 
+##  6 2016-06-01     1.69      148985.     87653                 1.01 
+##  7 2016-07-01     1.59      134767.     87239.                0.973
+##  8 2016-08-01     1.65      152131.     87182.                1.06 
+##  9 2016-09-01     1.65      144339.     87302.                1.00 
+## 10 2016-10-01     1.75      149476.     87341.                0.979
+## # ... with 38 more rows</code></pre>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" title="1">sample_df <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb4-2" title="2"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Inc_Month, <span class="dt">y =</span> Adj_PMPM)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-3" title="3"><span class="st">  </span><span class="kw">geom_line</span>() <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-4" title="4"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Monthly insurance claims with calendar and population adjustments&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-5" title="5"><span class="st">  </span><span class="kw">theme_bw</span>()</a></code></pre></div>
+<p><img src="/post/2020-07-12-point-forecasts-using-traditional-ml-prophet_files/figure-html/unnamed-chunk-3-1.png" width="672" /></p>
+</div>
+<div id="prepare-models-and-encapsulate-as-functions" class="section level2">
+<h2>Prepare models and encapsulate as functions</h2>
+<div id="traditional-models" class="section level3">
+<h3>Traditional models</h3>
+<p>Traditional models use lagged values of the target variable to produce forecasts. The traditional models used in this example include:</p>
+<ul>
+<li>Seasonal naive</li>
+<li>Arima (automatic parameter tuning)</li>
+<li>Exponential smooth state space (automatic parameter tuning)</li>
+</ul>
+<div id="functions" class="section level4">
+<h4>Functions</h4>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" title="1"><span class="co">##################</span></a>
+<a class="sourceLine" id="cb5-2" title="2"><span class="co"># Seasonal naive #</span></a>
+<a class="sourceLine" id="cb5-3" title="3"><span class="co">##################</span></a>
+<a class="sourceLine" id="cb5-4" title="4">snaive_model &lt;-<span class="st"> </span><span class="cf">function</span>(y, h) {</a>
+<a class="sourceLine" id="cb5-5" title="5">  <span class="kw">snaive</span>(y, <span class="dt">h =</span> h)<span class="op">$</span>mean <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">as.vector</span>()</a>
+<a class="sourceLine" id="cb5-6" title="6">}</a>
+<a class="sourceLine" id="cb5-7" title="7"></a>
+<a class="sourceLine" id="cb5-8" title="8"><span class="co">#########</span></a>
+<a class="sourceLine" id="cb5-9" title="9"><span class="co"># Arima #</span></a>
+<a class="sourceLine" id="cb5-10" title="10"><span class="co">#########</span></a>
+<a class="sourceLine" id="cb5-11" title="11">arima_model &lt;-<span class="st"> </span><span class="cf">function</span>(y, h) {</a>
+<a class="sourceLine" id="cb5-12" title="12">  arima_fit &lt;-<span class="st"> </span><span class="kw">auto.arima</span>(y)</a>
+<a class="sourceLine" id="cb5-13" title="13">  arima_fcast &lt;-<span class="st"> </span><span class="kw">forecast</span>(arima_fit, <span class="dt">h =</span> h)<span class="op">$</span>mean <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-14" title="14"><span class="st">    </span><span class="kw">as.vector</span>()</a>
+<a class="sourceLine" id="cb5-15" title="15">  <span class="kw">return</span>(arima_fcast)</a>
+<a class="sourceLine" id="cb5-16" title="16">}</a>
+<a class="sourceLine" id="cb5-17" title="17"></a>
+<a class="sourceLine" id="cb5-18" title="18"><span class="co">#######</span></a>
+<a class="sourceLine" id="cb5-19" title="19"><span class="co"># ETS #</span></a>
+<a class="sourceLine" id="cb5-20" title="20"><span class="co">#######</span></a>
+<a class="sourceLine" id="cb5-21" title="21">ets_model &lt;-<span class="st"> </span><span class="cf">function</span>(y, h) {</a>
+<a class="sourceLine" id="cb5-22" title="22">  ets_fit &lt;-<span class="st"> </span><span class="kw">ets</span>(y)</a>
+<a class="sourceLine" id="cb5-23" title="23">  ets_fcast &lt;-<span class="st"> </span><span class="kw">forecast</span>(ets_fit, <span class="dt">h =</span> h)<span class="op">$</span>mean <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb5-24" title="24"><span class="st">    </span><span class="kw">as.vector</span>()</a>
+<a class="sourceLine" id="cb5-25" title="25">  <span class="kw">return</span>(ets_fcast)</a>
+<a class="sourceLine" id="cb5-26" title="26">}</a></code></pre></div>
+</div>
+</div>
+<div id="machine-learning-models" class="section level3">
+<h3>Machine learning models</h3>
+<p>The machine learning models use explicit features to predict the target variable. In the example, features which are engineered include the following:</p>
+<ul>
+<li>one-hot-encoded month</li>
+<li>one-hot encoded year</li>
+<li>Target variable lagged by 12 months</li>
+</ul>
+<p>The models used in this example include:</p>
+<ul>
+<li>Random Forest</li>
+<li>Generalized Linear Model</li>
+</ul>
+<p>Implementations of these algorithms are available in the H2O machine learning library, which is used in this example.</p>
+<div id="engineer-date-based-dummy-features" class="section level4">
+<h4>Engineer date-based dummy features</h4>
+<p>The features can be engineered outside of the machine learning pipeline since they are static (i.e. known in advance).</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" title="1">date_ohe &lt;-<span class="st"> </span>sample_df <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb6-2" title="2"><span class="st">  </span><span class="kw">select</span>(Inc_Month) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb6-3" title="3"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Month =</span> lubridate<span class="op">::</span><span class="kw">month</span>(Inc_Month)) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb6-4" title="4"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Year =</span> lubridate<span class="op">::</span><span class="kw">year</span>(Inc_Month)) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb6-5" title="5"><span class="st">  </span><span class="kw">mutate_at</span>(<span class="kw">vars</span>(<span class="op">-</span>Inc_Month), <span class="kw">list</span>(as.factor)) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb6-6" title="6"><span class="st">  </span>recipes<span class="op">::</span><span class="kw">recipe</span>(<span class="op">~</span><span class="st"> </span>., <span class="dt">data =</span> .) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb6-7" title="7"><span class="st">  </span>recipes<span class="op">::</span><span class="kw">step_dummy</span>(<span class="kw">all_predictors</span>(), <span class="op">-</span>Inc_Month, <span class="dt">one_hot =</span> T) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb6-8" title="8"><span class="st">  </span>recipes<span class="op">::</span><span class="kw">prep</span>() <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb6-9" title="9"><span class="st">  </span>recipes<span class="op">::</span><span class="kw">juice</span>()</a></code></pre></div>
+</div>
+<div id="functions-1" class="section level4">
+<h4>Functions</h4>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb7-1" title="1"><span class="co"># function to return vector of predictions from H2O fitted models.</span></a>
+<a class="sourceLine" id="cb7-2" title="2">predict_h2o &lt;-<span class="st"> </span><span class="cf">function</span>(m, test_df) {</a>
+<a class="sourceLine" id="cb7-3" title="3">  test_df <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb7-4" title="4"><span class="st">    </span><span class="kw">drop_na</span>() <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb7-5" title="5"><span class="st">    </span><span class="kw">as.h2o</span>() <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb7-6" title="6"><span class="st">    </span><span class="kw">predict</span>(m, <span class="dt">newdata =</span> .) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb7-7" title="7"><span class="st">    </span><span class="kw">as.vector</span>()</a>
+<a class="sourceLine" id="cb7-8" title="8">}</a>
+<a class="sourceLine" id="cb7-9" title="9"></a>
+<a class="sourceLine" id="cb7-10" title="10"><span class="co">#################</span></a>
+<a class="sourceLine" id="cb7-11" title="11"><span class="co"># Random Forest #</span></a>
+<a class="sourceLine" id="cb7-12" title="12"><span class="co">#################</span></a>
+<a class="sourceLine" id="cb7-13" title="13">rf_model &lt;-<span class="st"> </span><span class="cf">function</span>(x, y, train_df, test_df) {</a>
+<a class="sourceLine" id="cb7-14" title="14">  <span class="co"># Fit</span></a>
+<a class="sourceLine" id="cb7-15" title="15">  rf_fit &lt;-<span class="st"> </span><span class="kw">h2o.randomForest</span>(</a>
+<a class="sourceLine" id="cb7-16" title="16">    <span class="dt">x =</span> x,</a>
+<a class="sourceLine" id="cb7-17" title="17">    <span class="dt">y =</span> y,</a>
+<a class="sourceLine" id="cb7-18" title="18">    <span class="dt">training_frame =</span> <span class="kw">as.h2o</span>(train_df)</a>
+<a class="sourceLine" id="cb7-19" title="19">  )</a>
+<a class="sourceLine" id="cb7-20" title="20">  <span class="co"># Forecast</span></a>
+<a class="sourceLine" id="cb7-21" title="21">  rf_fcast &lt;-<span class="st"> </span><span class="kw">predict_h2o</span>(rf_fit, <span class="dt">test_df =</span> test_df)</a>
+<a class="sourceLine" id="cb7-22" title="22">  <span class="kw">return</span>(rf_fcast)</a>
+<a class="sourceLine" id="cb7-23" title="23">}</a>
+<a class="sourceLine" id="cb7-24" title="24"></a>
+<a class="sourceLine" id="cb7-25" title="25"><span class="co">############################</span></a>
+<a class="sourceLine" id="cb7-26" title="26"><span class="co"># Generalized linear model #</span></a>
+<a class="sourceLine" id="cb7-27" title="27"><span class="co">############################</span></a>
+<a class="sourceLine" id="cb7-28" title="28">glm_model &lt;-<span class="st"> </span><span class="cf">function</span>(x, y, train_df, test_df) {</a>
+<a class="sourceLine" id="cb7-29" title="29">  <span class="co"># Fit</span></a>
+<a class="sourceLine" id="cb7-30" title="30">  glm_fit &lt;-<span class="st"> </span><span class="kw">h2o.glm</span>(</a>
+<a class="sourceLine" id="cb7-31" title="31">    <span class="dt">x =</span> x,</a>
+<a class="sourceLine" id="cb7-32" title="32">    <span class="dt">y =</span> y,</a>
+<a class="sourceLine" id="cb7-33" title="33">    <span class="dt">training_frame =</span> <span class="kw">as.h2o</span>(train_df)</a>
+<a class="sourceLine" id="cb7-34" title="34">  )</a>
+<a class="sourceLine" id="cb7-35" title="35">  <span class="co"># Forecast</span></a>
+<a class="sourceLine" id="cb7-36" title="36">  glm_fcast &lt;-<span class="st"> </span><span class="kw">predict_h2o</span>(glm_fit, <span class="dt">test_df =</span> test_df)</a>
+<a class="sourceLine" id="cb7-37" title="37">  <span class="kw">return</span>(glm_fcast)</a>
+<a class="sourceLine" id="cb7-38" title="38">}</a></code></pre></div>
+</div>
+</div>
+<div id="prophet-model" class="section level3">
+<h3>Prophet model</h3>
+<p>Developed by Facebook’s Core Data Science team, <a href="https://facebook.github.io/prophet/">Prophet</a> is a robust decomposition model designed for “business time series”, which often exhibit multiple seasonalities and outliers. It accepts a variety of time series data (e.g. monthly, data, sub-daily) and it accepts extra regressors. It is relatively fast, robust to outliers and trend changes, and it requires very little coding to get started.</p>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" title="1">prophet_model &lt;-<span class="st"> </span><span class="cf">function</span>(train_df, test_df) {</a>
+<a class="sourceLine" id="cb8-2" title="2">  <span class="co"># Fit prophet</span></a>
+<a class="sourceLine" id="cb8-3" title="3">  prophet_fit &lt;-<span class="st"> </span>prophet<span class="op">::</span><span class="kw">prophet</span>(</a>
+<a class="sourceLine" id="cb8-4" title="4">    <span class="dt">df =</span> train_df,</a>
+<a class="sourceLine" id="cb8-5" title="5">    <span class="dt">growth =</span> <span class="st">&quot;linear&quot;</span>,</a>
+<a class="sourceLine" id="cb8-6" title="6">    <span class="dt">yearly.seasonality =</span> T,</a>
+<a class="sourceLine" id="cb8-7" title="7">    <span class="dt">weekly.seasonality =</span> F,</a>
+<a class="sourceLine" id="cb8-8" title="8">    <span class="dt">daily.seasonality =</span> F</a>
+<a class="sourceLine" id="cb8-9" title="9">  )</a>
+<a class="sourceLine" id="cb8-10" title="10">  <span class="co"># Forecast</span></a>
+<a class="sourceLine" id="cb8-11" title="11">  prophet_fcast &lt;-<span class="st"> </span><span class="kw">predict</span>(prophet_fit, <span class="dt">df =</span> test_df) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb8-12" title="12"><span class="st">    </span><span class="kw">pull</span>(yhat)</a>
+<a class="sourceLine" id="cb8-13" title="13">  </a>
+<a class="sourceLine" id="cb8-14" title="14">  <span class="kw">return</span>(prophet_fcast)</a>
+<a class="sourceLine" id="cb8-15" title="15">}</a></code></pre></div>
+</div>
+</div>
+<div id="configure-rolling-origin-cross-validation-with-varying-horizons" class="section level2">
+<h2>Configure rolling origin cross validation with varying horizons</h2>
+<p>The rolling origin cross validation strategy is defined as follows:</p>
+<ul>
+<li>Intital training split uses years 2016-2018, initial test split uses 2019</li>
+<li>Horizons of 1, 3, 6, and 11</li>
+<li>Cumulative training data as origin shifts forward</li>
+<li>12 months of lag values of <em>y</em> included in test set to enable feature engineering</li>
+</ul>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb9-1" title="1">horizons &lt;-<span class="st"> </span><span class="kw">c</span>(<span class="dv">1</span>, <span class="dv">3</span>, <span class="dv">6</span>, <span class="dv">11</span>)</a>
+<a class="sourceLine" id="cb9-2" title="2"></a>
+<a class="sourceLine" id="cb9-3" title="3">cv_splits &lt;-<span class="st"> </span><span class="kw">map</span>(horizons, <span class="cf">function</span>(i) {</a>
+<a class="sourceLine" id="cb9-4" title="4">  rsample<span class="op">::</span><span class="kw">rolling_origin</span>(</a>
+<a class="sourceLine" id="cb9-5" title="5">    <span class="dt">data =</span> sample_df,</a>
+<a class="sourceLine" id="cb9-6" title="6">    <span class="dt">initial =</span> <span class="dv">36</span>,</a>
+<a class="sourceLine" id="cb9-7" title="7">    <span class="dt">assess =</span> i,</a>
+<a class="sourceLine" id="cb9-8" title="8">    <span class="dt">cumulative =</span> T,</a>
+<a class="sourceLine" id="cb9-9" title="9">    <span class="dt">lag =</span> <span class="dv">12</span></a>
+<a class="sourceLine" id="cb9-10" title="10">  ) </a>
+<a class="sourceLine" id="cb9-11" title="11">}) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb9-12" title="12"><span class="st">  </span><span class="kw">bind_rows</span>()</a>
+<a class="sourceLine" id="cb9-13" title="13"></a>
+<a class="sourceLine" id="cb9-14" title="14">cv_splits</a></code></pre></div>
+<pre><code>## # A tibble: 31 x 2
+##    splits          id     
+##    &lt;list&gt;          &lt;chr&gt;  
+##  1 &lt;split [36/13]&gt; Slice01
+##  2 &lt;split [37/13]&gt; Slice02
+##  3 &lt;split [38/13]&gt; Slice03
+##  4 &lt;split [39/13]&gt; Slice04
+##  5 &lt;split [40/13]&gt; Slice05
+##  6 &lt;split [41/13]&gt; Slice06
+##  7 &lt;split [42/13]&gt; Slice07
+##  8 &lt;split [43/13]&gt; Slice08
+##  9 &lt;split [44/13]&gt; Slice09
+## 10 &lt;split [45/13]&gt; Slice10
+## # ... with 21 more rows</code></pre>
+</div>
+<div id="run-cross-validation" class="section level2">
+<h2>Run cross validation</h2>
+<p>This anonymous function does the following <em>within each cross validtion fold</em>:</p>
+<ul>
+<li>Separate the train and test sets for the current CV iteration</li>
+<li>Produce forecasts with traditional models</li>
+<li>Produce forecasts with ML models</li>
+<li>Produce forecasts with Prophet model</li>
+<li>Produce an ensemble forecast by combining traditional, ML, and Prophet models</li>
+<li>Backtransform forecasts to original units</li>
+<li>Report mean and standard deviation of RMSE</li>
+</ul>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb11-1" title="1"><span class="co"># Inititalize H2O cluster</span></a>
+<a class="sourceLine" id="cb11-2" title="2"><span class="kw">h2o.init</span>()</a></code></pre></div>
+<pre><code>##  Connection successful!
+## 
+## R is connected to the H2O cluster: 
+##     H2O cluster uptime:         19 minutes 13 seconds 
+##     H2O cluster timezone:       America/New_York 
+##     H2O data parsing timezone:  UTC 
+##     H2O cluster version:        3.30.0.1 
+##     H2O cluster version age:    3 months and 11 days !!! 
+##     H2O cluster name:           H2O_started_from_R_Owner_kkh141 
+##     H2O cluster total nodes:    1 
+##     H2O cluster total memory:   3.39 GB 
+##     H2O cluster total cores:    4 
+##     H2O cluster allowed cores:  4 
+##     H2O cluster healthy:        TRUE 
+##     H2O Connection ip:          localhost 
+##     H2O Connection port:        54321 
+##     H2O Connection proxy:       NA 
+##     H2O Internal Security:      FALSE 
+##     H2O API Extensions:         Amazon S3, Algos, AutoML, Core V3, TargetEncoder, Core V4 
+##     R Version:                  R version 3.6.1 (2019-07-05)</code></pre>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb13-1" title="1"><span class="kw">h2o.no_progress</span>()</a></code></pre></div>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb14-1" title="1">model_comp &lt;-<span class="st"> </span><span class="kw">map</span>(cv_splits<span class="op">$</span>splits, <span class="cf">function</span>(cv) {</a>
+<a class="sourceLine" id="cb14-2" title="2">  </a>
+<a class="sourceLine" id="cb14-3" title="3">  <span class="co">######################</span></a>
+<a class="sourceLine" id="cb14-4" title="4">  <span class="co">## Train/test split ##</span></a>
+<a class="sourceLine" id="cb14-5" title="5">  <span class="co">#####################</span></a>
+<a class="sourceLine" id="cb14-6" title="6">  </a>
+<a class="sourceLine" id="cb14-7" title="7">  train &lt;-<span class="st"> </span><span class="kw">analysis</span>(cv) </a>
+<a class="sourceLine" id="cb14-8" title="8">  test &lt;-<span class="st"> </span><span class="kw">assessment</span>(cv) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb14-9" title="9"><span class="st">    </span><span class="kw">slice</span>(<span class="kw">seq</span>(<span class="dv">13</span>, <span class="kw">nrow</span>(.), <span class="dv">1</span>))</a>
+<a class="sourceLine" id="cb14-10" title="10">  test_w_lags &lt;-<span class="st"> </span><span class="kw">assessment</span>(cv)</a>
+<a class="sourceLine" id="cb14-11" title="11">  </a>
+<a class="sourceLine" id="cb14-12" title="12">  <span class="co">###################################################</span></a>
+<a class="sourceLine" id="cb14-13" title="13">  <span class="co">## Traditional models using the forecast package ##</span></a>
+<a class="sourceLine" id="cb14-14" title="14">  <span class="co">###################################################</span></a>
+<a class="sourceLine" id="cb14-15" title="15">  </a>
+<a class="sourceLine" id="cb14-16" title="16">  <span class="co"># target time series variable</span></a>
+<a class="sourceLine" id="cb14-17" title="17">  y &lt;-<span class="st"> </span><span class="kw">ts</span>(train<span class="op">$</span>Adj_PMPM, <span class="dt">start =</span> <span class="dv">2016</span>, <span class="dt">freq =</span> <span class="dv">12</span>)</a>
+<a class="sourceLine" id="cb14-18" title="18">  </a>
+<a class="sourceLine" id="cb14-19" title="19">  <span class="co"># Seasonal naive</span></a>
+<a class="sourceLine" id="cb14-20" title="20">  snaive_fcast &lt;-<span class="st"> </span><span class="kw">snaive_model</span>(y, <span class="dt">h =</span> <span class="kw">nrow</span>(test))</a>
+<a class="sourceLine" id="cb14-21" title="21">  <span class="co"># Arima fit/forecast</span></a>
+<a class="sourceLine" id="cb14-22" title="22">  arima_fcast &lt;-<span class="st"> </span><span class="kw">arima_model</span>(y, <span class="dt">h =</span> <span class="kw">nrow</span>(test))</a>
+<a class="sourceLine" id="cb14-23" title="23">  <span class="co"># ETS fit/forecast</span></a>
+<a class="sourceLine" id="cb14-24" title="24">  ets_fcast &lt;-<span class="st"> </span><span class="kw">ets_model</span>(y, <span class="dt">h =</span> <span class="kw">nrow</span>(test))</a>
+<a class="sourceLine" id="cb14-25" title="25">  </a>
+<a class="sourceLine" id="cb14-26" title="26">  <span class="co">#######################################</span></a>
+<a class="sourceLine" id="cb14-27" title="27">  <span class="co">## Machine learning models using H2O  #</span></a>
+<a class="sourceLine" id="cb14-28" title="28">  <span class="co">#######################################</span></a>
+<a class="sourceLine" id="cb14-29" title="29">  </a>
+<a class="sourceLine" id="cb14-30" title="30">  <span class="co"># Engineer features for training</span></a>
+<a class="sourceLine" id="cb14-31" title="31">  ml_train &lt;-<span class="st"> </span>train <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb14-32" title="32"><span class="st">    </span><span class="kw">inner_join</span>(date_ohe, <span class="dt">by =</span> <span class="st">&quot;Inc_Month&quot;</span>) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb14-33" title="33"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">Adj_PMPM_Lag_12 =</span> <span class="kw">lag</span>(Adj_PMPM, <span class="dv">12</span>)) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb14-34" title="34"><span class="st">    </span><span class="kw">select</span>(Adj_PMPM,</a>
+<a class="sourceLine" id="cb14-35" title="35">           Adj_PMPM_Lag_<span class="dv">12</span>,</a>
+<a class="sourceLine" id="cb14-36" title="36">           <span class="kw">contains</span>(<span class="st">&quot;Month_&quot;</span>),</a>
+<a class="sourceLine" id="cb14-37" title="37">           <span class="kw">contains</span>(<span class="st">&quot;Year_&quot;</span>)) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb14-38" title="38"><span class="st">    </span><span class="kw">drop_na</span>()</a>
+<a class="sourceLine" id="cb14-39" title="39">  </a>
+<a class="sourceLine" id="cb14-40" title="40">  <span class="co"># Engineer features for testing</span></a>
+<a class="sourceLine" id="cb14-41" title="41">  ml_test &lt;-<span class="st"> </span>test_w_lags <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb14-42" title="42"><span class="st">    </span><span class="kw">inner_join</span>(date_ohe, <span class="dt">by =</span> <span class="st">&quot;Inc_Month&quot;</span>) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb14-43" title="43"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">Adj_PMPM_Lag_12 =</span> <span class="kw">lag</span>(Adj_PMPM, <span class="dv">12</span>)) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb14-44" title="44"><span class="st">    </span><span class="kw">select</span>(Adj_PMPM,</a>
+<a class="sourceLine" id="cb14-45" title="45">           Adj_PMPM_Lag_<span class="dv">12</span>,</a>
+<a class="sourceLine" id="cb14-46" title="46">           <span class="kw">contains</span>(<span class="st">&quot;Month_&quot;</span>),</a>
+<a class="sourceLine" id="cb14-47" title="47">           <span class="kw">contains</span>(<span class="st">&quot;Year_&quot;</span>)) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb14-48" title="48"><span class="st">    </span><span class="kw">drop_na</span>()</a>
+<a class="sourceLine" id="cb14-49" title="49">  </a>
+<a class="sourceLine" id="cb14-50" title="50">  <span class="co"># Feature/target names as strings for H2O input</span></a>
+<a class="sourceLine" id="cb14-51" title="51">  X =<span class="st"> </span>ml_train <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">select</span>(<span class="op">-</span>Adj_PMPM) <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">colnames</span>()</a>
+<a class="sourceLine" id="cb14-52" title="52">  y =<span class="st"> &quot;Adj_PMPM&quot;</span></a>
+<a class="sourceLine" id="cb14-53" title="53">  </a>
+<a class="sourceLine" id="cb14-54" title="54">  <span class="co"># Random forest</span></a>
+<a class="sourceLine" id="cb14-55" title="55">  rf_fcast &lt;-<span class="st"> </span><span class="kw">rf_model</span>(X, y, ml_train, ml_test)</a>
+<a class="sourceLine" id="cb14-56" title="56">  </a>
+<a class="sourceLine" id="cb14-57" title="57">  <span class="co"># GLM</span></a>
+<a class="sourceLine" id="cb14-58" title="58">  glm_fcast &lt;-<span class="st"> </span><span class="kw">glm_model</span>(X, y, ml_train, ml_test)</a>
+<a class="sourceLine" id="cb14-59" title="59">  </a>
+<a class="sourceLine" id="cb14-60" title="60">  <span class="co">######################</span></a>
+<a class="sourceLine" id="cb14-61" title="61">  <span class="co">## Facebook Prophet ##</span></a>
+<a class="sourceLine" id="cb14-62" title="62">  <span class="co">######################</span></a>
+<a class="sourceLine" id="cb14-63" title="63">  </a>
+<a class="sourceLine" id="cb14-64" title="64">  <span class="co"># Format training data per Prophet specs</span></a>
+<a class="sourceLine" id="cb14-65" title="65">  prophet_train &lt;-<span class="st"> </span>train <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb14-66" title="66"><span class="st">    </span><span class="kw">select</span>(<span class="dt">ds =</span> Inc_Month,</a>
+<a class="sourceLine" id="cb14-67" title="67">           <span class="dt">y =</span> Adj_PMPM)</a>
+<a class="sourceLine" id="cb14-68" title="68">  </a>
+<a class="sourceLine" id="cb14-69" title="69">  <span class="co"># Format testing data per Prophet specs</span></a>
+<a class="sourceLine" id="cb14-70" title="70">  prophet_test &lt;-<span class="st"> </span>test <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb14-71" title="71"><span class="st">    </span><span class="kw">select</span>(<span class="dt">ds =</span> Inc_Month,</a>
+<a class="sourceLine" id="cb14-72" title="72">           <span class="dt">y =</span> Adj_PMPM)</a>
+<a class="sourceLine" id="cb14-73" title="73">  </a>
+<a class="sourceLine" id="cb14-74" title="74">  <span class="co"># Format train/test</span></a>
+<a class="sourceLine" id="cb14-75" title="75">  prophet_fcast &lt;-<span class="st"> </span><span class="kw">prophet_model</span>(<span class="dt">train_df =</span> prophet_train, </a>
+<a class="sourceLine" id="cb14-76" title="76">                                 <span class="dt">test_df =</span> prophet_test)</a>
+<a class="sourceLine" id="cb14-77" title="77">  </a>
+<a class="sourceLine" id="cb14-78" title="78">  <span class="co">##############</span></a>
+<a class="sourceLine" id="cb14-79" title="79">  <span class="co">## Ensemble ##</span></a>
+<a class="sourceLine" id="cb14-80" title="80">  <span class="co">##############</span></a>
+<a class="sourceLine" id="cb14-81" title="81">  </a>
+<a class="sourceLine" id="cb14-82" title="82">  model_list &lt;-<span class="st"> </span><span class="kw">list</span>(snaive_fcast, arima_fcast, ets_fcast, </a>
+<a class="sourceLine" id="cb14-83" title="83">                     rf_fcast, glm_fcast, prophet_fcast)</a>
+<a class="sourceLine" id="cb14-84" title="84">  </a>
+<a class="sourceLine" id="cb14-85" title="85">  ensemble_fcast &lt;-<span class="st"> </span>model_list <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb14-86" title="86"><span class="st">    </span><span class="kw">reduce</span>(<span class="st">`</span><span class="dt">+</span><span class="st">`</span>)<span class="op">/</span><span class="kw">length</span>(model_list)</a>
+<a class="sourceLine" id="cb14-87" title="87">  </a>
+<a class="sourceLine" id="cb14-88" title="88">  <span class="co">##################</span></a>
+<a class="sourceLine" id="cb14-89" title="89">  <span class="co">## Measure RMSE ##</span></a>
+<a class="sourceLine" id="cb14-90" title="90">  <span class="co">##################</span></a>
+<a class="sourceLine" id="cb14-91" title="91">  </a>
+<a class="sourceLine" id="cb14-92" title="92">  <span class="co"># function to transform forecasts to original units and calc RMSE</span></a>
+<a class="sourceLine" id="cb14-93" title="93">  backtransform_forecasts &lt;-<span class="st"> </span><span class="cf">function</span>(fcast) {</a>
+<a class="sourceLine" id="cb14-94" title="94">    backtransform &lt;-<span class="st"> </span>fcast<span class="op">*</span>test<span class="op">$</span>Population<span class="op">*</span>test<span class="op">$</span>Effective_Days_Index</a>
+<a class="sourceLine" id="cb14-95" title="95">    actual &lt;-<span class="st"> </span>test<span class="op">$</span>Total_Claims</a>
+<a class="sourceLine" id="cb14-96" title="96">    <span class="kw">rmse_vec</span>(actual, backtransform)</a>
+<a class="sourceLine" id="cb14-97" title="97">  }</a>
+<a class="sourceLine" id="cb14-98" title="98">  </a>
+<a class="sourceLine" id="cb14-99" title="99">  <span class="co"># apply RMSE calculation to each model</span></a>
+<a class="sourceLine" id="cb14-100" title="100">  rmse_tbl &lt;-<span class="st"> </span><span class="kw">list</span>(</a>
+<a class="sourceLine" id="cb14-101" title="101">    <span class="dt">snaive =</span> snaive_fcast,</a>
+<a class="sourceLine" id="cb14-102" title="102">    <span class="dt">arima =</span> arima_fcast,</a>
+<a class="sourceLine" id="cb14-103" title="103">    <span class="dt">ets =</span> ets_fcast,</a>
+<a class="sourceLine" id="cb14-104" title="104">    <span class="dt">h2o_rf =</span> rf_fcast,</a>
+<a class="sourceLine" id="cb14-105" title="105">    <span class="dt">h2o_glm =</span> glm_fcast,</a>
+<a class="sourceLine" id="cb14-106" title="106">    <span class="dt">prophet =</span> prophet_fcast,</a>
+<a class="sourceLine" id="cb14-107" title="107">    <span class="dt">ensemble =</span> ensemble_fcast</a>
+<a class="sourceLine" id="cb14-108" title="108">  ) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb14-109" title="109"><span class="st">    </span><span class="kw">map</span>(backtransform_forecasts) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb14-110" title="110"><span class="st">    </span><span class="kw">bind_cols</span>() <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb14-111" title="111"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">horizon =</span> <span class="kw">nrow</span>(test))</a>
+<a class="sourceLine" id="cb14-112" title="112">  </a>
+<a class="sourceLine" id="cb14-113" title="113">  <span class="kw">return</span>(rmse_tbl)</a>
+<a class="sourceLine" id="cb14-114" title="114">})</a></code></pre></div>
+</div>
+<div id="evaluate-performance-of-models" class="section level2">
+<h2>Evaluate performance of models</h2>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb15-1" title="1">model_performance &lt;-<span class="st"> </span><span class="kw">bind_rows</span>(model_comp) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb15-2" title="2"><span class="st">  </span><span class="kw">gather</span>(key, value, <span class="op">-</span>horizon) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb15-3" title="3"><span class="st">  </span><span class="kw">group_by</span>(key, horizon) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb15-4" title="4"><span class="st">  </span><span class="kw">summarise</span>(</a>
+<a class="sourceLine" id="cb15-5" title="5">    <span class="dt">Mean_Rmse =</span> <span class="kw">mean</span>(value),</a>
+<a class="sourceLine" id="cb15-6" title="6">    <span class="dt">Sd_Rmse =</span> <span class="kw">sd</span>(value)</a>
+<a class="sourceLine" id="cb15-7" title="7">  ) </a>
+<a class="sourceLine" id="cb15-8" title="8"></a>
+<a class="sourceLine" id="cb15-9" title="9">DT<span class="op">::</span><span class="kw">datatable</span>(model_performance) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb15-10" title="10"><span class="st">  </span>DT<span class="op">::</span><span class="kw">formatRound</span>(<span class="dt">columns =</span> <span class="kw">c</span>(<span class="st">&quot;Mean_Rmse&quot;</span>, <span class="st">&quot;Sd_Rmse&quot;</span>), <span class="dt">digits =</span> <span class="dv">0</span>)</a></code></pre></div>
+<div id="htmlwidget-1" style="width:100%;height:auto;" class="datatables html-widget"></div>
+<script type="application/json" data-for="htmlwidget-1">{"x":{"filter":"none","data":[["1","2","3","4","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20","21","22","23","24","25","26","27","28"],["arima","arima","arima","arima","ensemble","ensemble","ensemble","ensemble","ets","ets","ets","ets","h2o_glm","h2o_glm","h2o_glm","h2o_glm","h2o_rf","h2o_rf","h2o_rf","h2o_rf","prophet","prophet","prophet","prophet","snaive","snaive","snaive","snaive"],[1,3,6,11,1,3,6,11,1,3,6,11,1,3,6,11,1,3,6,11,1,3,6,11,1,3,6,11],[2960.86095273783,3289.60365780976,3648.88946792067,3802.75349060314,2271.47771657273,2443.24168621099,2631.57587292108,3213.00289198189,2397.58411414185,2773.0347166435,2964.07322434276,3574.811338721,2477.20887379453,2794.47527052389,2828.51226369324,3194.23941538471,3131.62803867541,3430.93062045458,3338.56567295188,4069.26156224627,2899.39923430492,2866.02253263219,3053.09934898981,3445.03200674861,2472.3033177564,2970.33084470457,3055.08209681017,3155.10336827668],[2053.81096714645,1542.3508122841,1286.87745572942,1744.0969571765,2094.68369009624,1736.13032135034,1328.42775856771,894.306019758172,2235.12091337724,1516.88001897388,1224.540853066,353.666165944718,2055.92292043469,1641.36102021521,1355.13388961399,785.616121324006,2112.30588301195,1383.9545208795,1245.70989656964,757.072982116878,2391.19001568072,1494.55559690648,745.660187921847,40.83725231143,1925.84461890767,1467.0106863635,1048.79944840749,31.4511561979539]],"container":"<table class=\"display\">\n  <thead>\n    <tr>\n      <th> <\/th>\n      <th>key<\/th>\n      <th>horizon<\/th>\n      <th>Mean_Rmse<\/th>\n      <th>Sd_Rmse<\/th>\n    <\/tr>\n  <\/thead>\n<\/table>","options":{"columnDefs":[{"targets":[3,4],"render":"function(data, type, row, meta) { return DTWidget.formatRound(data, 0, 3, \",\", \".\"); }"},{"className":"dt-right","targets":[2,3,4]},{"orderable":false,"targets":0}],"order":[],"autoWidth":false,"orderClasses":false}},"evals":["options.columnDefs.0.render"],"jsHooks":[]}</script>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb16-1" title="1">model_performance <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb16-2" title="2"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Mean_Rmse, <span class="dt">y =</span> Sd_Rmse)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb16-3" title="3"><span class="st">  </span><span class="kw">facet_wrap</span>(<span class="op">~</span>horizon, <span class="dt">ncol =</span> <span class="dv">1</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb16-4" title="4"><span class="st">  </span><span class="kw">geom_point</span>(<span class="kw">aes</span>(<span class="dt">color =</span> key, <span class="dt">shape =</span> key), <span class="dt">size =</span> <span class="dv">2</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb16-5" title="5"><span class="st">  </span><span class="kw">scale_x_continuous</span>(<span class="dt">breaks =</span> scales<span class="op">::</span><span class="kw">pretty_breaks</span>(<span class="dt">n =</span> <span class="dv">10</span>)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb16-6" title="6"><span class="st">  </span><span class="kw">scale_shape_manual</span>(<span class="dt">values =</span> <span class="kw">c</span>(<span class="dv">13</span><span class="op">:</span><span class="dv">20</span>)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb16-7" title="7"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Mean and standard deviation of RMSE by horizon&quot;</span>,</a>
+<a class="sourceLine" id="cb16-8" title="8">       <span class="dt">x =</span> <span class="st">&quot;Mean RMSE&quot;</span>,</a>
+<a class="sourceLine" id="cb16-9" title="9">       <span class="dt">y =</span> <span class="st">&quot;SD RMSE&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb16-10" title="10"><span class="st">  </span><span class="kw">theme_bw</span>()</a></code></pre></div>
+<p><img src="/post/2020-07-12-point-forecasts-using-traditional-ml-prophet_files/figure-html/unnamed-chunk-12-1.png" width="672" /></p>
+<p>Some interesting takeaways:</p>
+<ul>
+<li><p>The simple seasonal naive is arguably the best model for the 11-month horizon in terms of accuracy and stability.</p></li>
+<li><p>The ensemble model is the consistently the most accurate across the board.</p></li>
+<li><p>Regarding the traditional models, ETS and SNAIVE are consistently more accurate than the Arima model.</p></li>
+<li><p>Regarding the ML models, the GLM is more impressive than the Random Forest. The GLM model is on par with the ETS and SNAIVE traditional models.</p></li>
+<li><p>Prophet shows decent performance, especially in the 11-month horizon, but there are better traditional and ML alternatives in this application.</p></li>
+</ul>
+</div>
+<div id="potential-improvements" class="section level2">
+<h2>Potential improvements</h2>
+<ul>
+<li><p>The cross validation strategy is easily parallelizable on a multi-core machine.</p></li>
+<li><p>Perform hyperparameter tuning for the ML models.</p></li>
+<li><p>Engineer additional lagged values as predictors in the ML models.</p></li>
+</ul>
+</div>
+<div id="conclusion" class="section level2">
+<h2>Conclusion</h2>
+<p>This is a useful template for quickly comparing different categories of forecast models. This post compares traditional, machine learning, and Prophet models with monthly data. Other types of intervals (e.g. daily) can be used with this template so long as the models, seasonalities, and features are specified accordingly. By encapsulating each individual model in its own function, making tweaks and adding new models is easy.</p>
+</div>
+
+</main>
+
+  <footer>
+  <script src="//yihui.name/js/math-code.js"></script>
+<script async src="//mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+<script async src="//yihui.name/js/center-img.js"></script>
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-143402170-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-143402170-1');
+</script>
+
+
+  
+  <hr/>
+  <a href="https://github.com/dannymorris">Github</a> | <a href="https://www.linkedin.com/in/drmorris87/">LinkedIn</a> | <a href="mailto:drmorris87@outlook.com">Email</a>
+  
+  </footer>
+  </body>
+</html>
+

@@ -3,6 +3,11 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>/post/2020/07/12/time-series-forecasting-as-a-supervised-machine-learning-problem/</loc>
+    <lastmod>2020-07-12T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>/post/2020/07/01/forecasting-demand-for-30-000-walmart-products/</loc>
     <lastmod>2020-07-01T00:00:00+00:00</lastmod>
   </url>
@@ -58,20 +63,14 @@
   </url>
   
   <url>
-    <loc>/tags/api/</loc>
-    <lastmod>2019-07-06T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
     <loc>/categories/api/</loc>
     <lastmod>2019-07-06T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
-    <loc>/tags/aws/</loc>
-    <lastmod>2019-12-07T00:00:00+00:00</lastmod>
+    <loc>/tags/api/</loc>
+    <lastmod>2019-07-06T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -82,13 +81,19 @@
   </url>
   
   <url>
-    <loc>/tags/analytics/</loc>
-    <lastmod>2020-06-18T00:00:00+00:00</lastmod>
+    <loc>/tags/aws/</loc>
+    <lastmod>2019-12-07T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/categories/analytics/</loc>
+    <lastmod>2020-06-18T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/analytics/</loc>
     <lastmod>2020-06-18T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
@@ -100,20 +105,14 @@
   </url>
   
   <url>
-    <loc>/tags/classification/</loc>
-    <lastmod>2020-06-07T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
     <loc>/categories/classification/</loc>
     <lastmod>2020-06-07T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
-    <loc>/tags/cluster-analysis/</loc>
-    <lastmod>2020-06-18T00:00:00+00:00</lastmod>
+    <loc>/tags/classification/</loc>
+    <lastmod>2020-06-07T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -124,8 +123,8 @@
   </url>
   
   <url>
-    <loc>/tags/computer-vision/</loc>
-    <lastmod>2019-12-07T00:00:00+00:00</lastmod>
+    <loc>/tags/cluster-analysis/</loc>
+    <lastmod>2020-06-18T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -136,43 +135,43 @@
   </url>
   
   <url>
-    <loc>/tags/forecasting/</loc>
-    <lastmod>2020-07-01T00:00:00+00:00</lastmod>
+    <loc>/tags/computer-vision/</loc>
+    <lastmod>2019-12-07T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/categories/forecasting/</loc>
-    <lastmod>2020-07-01T00:00:00+00:00</lastmod>
+    <lastmod>2020-07-12T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/forecasting/</loc>
+    <lastmod>2020-07-12T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/</loc>
-    <lastmod>2020-07-01T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/tags/machine-learning/</loc>
-    <lastmod>2020-07-01T00:00:00+00:00</lastmod>
-    <priority>0</priority>
+    <lastmod>2020-07-12T00:00:00+00:00</lastmod>
   </url>
   
   <url>
     <loc>/categories/machine-learning/</loc>
-    <lastmod>2020-07-01T00:00:00+00:00</lastmod>
+    <lastmod>2020-07-12T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/machine-learning/</loc>
+    <lastmod>2020-07-12T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/post/</loc>
-    <lastmod>2020-07-01T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>/tags/predictive-modeling/</loc>
-    <lastmod>2020-06-17T00:00:00+00:00</lastmod>
+    <lastmod>2020-07-12T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -183,7 +182,7 @@
   </url>
   
   <url>
-    <loc>/tags/python/</loc>
+    <loc>/tags/predictive-modeling/</loc>
     <lastmod>2020-06-17T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
@@ -195,14 +194,20 @@
   </url>
   
   <url>
-    <loc>/tags/r/</loc>
-    <lastmod>2020-07-01T00:00:00+00:00</lastmod>
+    <loc>/tags/python/</loc>
+    <lastmod>2020-06-17T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/categories/r/</loc>
-    <lastmod>2020-07-01T00:00:00+00:00</lastmod>
+    <lastmod>2020-07-12T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
+    <loc>/tags/r/</loc>
+    <lastmod>2020-07-12T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -213,13 +218,13 @@
   </url>
   
   <url>
-    <loc>/tags/shiny/</loc>
+    <loc>/categories/shiny/</loc>
     <lastmod>2019-07-06T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
-    <loc>/categories/shiny/</loc>
+    <loc>/tags/shiny/</loc>
     <lastmod>2019-07-06T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
@@ -231,13 +236,13 @@
   </url>
   
   <url>
-    <loc>/tags/text-mining/</loc>
+    <loc>/categories/text-mining/</loc>
     <lastmod>2019-02-17T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
-    <loc>/categories/text-mining/</loc>
+    <loc>/tags/text-mining/</loc>
     <lastmod>2019-02-17T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
