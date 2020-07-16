@@ -252,7 +252,7 @@ prophet_model <- function(train_df, test_df) {
 }
 ```
 
-## Ensemble model
+### Ensemble model
 
 The ensemble model is a simple average of the previously defined models. A dedicated function is not necessary.
 
@@ -480,15 +480,15 @@ model_performance %>%
 
 Some interesting takeaways:
 
-- The simple seasonal naive is arguably the best model for the 11-month horizon in terms of accuracy and stability.
+- The seasonal naive model is generally the most accurate and stable model, ranking 1st or tied for 1st in the 1-, 3-, and 11- month horizon range and performing very well in the 6-month horizon range..
 
-- The ensemble model is the consistently the most accurate across the board.
+- The ensemble model is very accurate though not quite as stable as other models.
 
-- Regarding the traditional models, ETS and SNAIVE are consistently more accurate than the Arima model.
+- Among the traditional models, exponential smoothing and seasonal naive models outperformed the Arima model by a large margin.
 
-- Regarding the ML models, the GLM is more impressive than the Random Forest. The GLM model is on par with the ETS and SNAIVE traditional models.
+- Among the ML models, the GLM model is the clear winner in all horizon ranges. Compared to the other model types, it did very well overall. The Random Forest and MLP models are neither accurate nor stable. Perhaps this is due to overfitting.
 
-- Prophet shows decent performance, especially in the 11-month horizon, but there are better traditional and ML alternatives in this application.
+- The Prophet model performed quite well in the 3-, 6-, and 11-month horizon ranges. However, it did poorly in the 1-month horizon range.
 
 ## Customizing this template
 

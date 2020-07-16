@@ -114,8 +114,8 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <li><a href="#traditional-models">Traditional models</a></li>
 <li><a href="#machine-learning-models">Machine learning models</a></li>
 <li><a href="#prophet-model">Prophet model</a></li>
-</ul></li>
 <li><a href="#ensemble-model">Ensemble model</a></li>
+</ul></li>
 <li><a href="#configure-rolling-origin-cross-validation-with-varying-horizons">Configure rolling origin cross validation with varying horizons</a></li>
 <li><a href="#run-cross-validation">Run cross validation</a></li>
 <li><a href="#model-performance">Model performance</a><ul>
@@ -339,10 +339,10 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <a class="sourceLine" id="cb12-8" title="8">  <span class="kw">return</span>(fcast)</a>
 <a class="sourceLine" id="cb12-9" title="9">}</a></code></pre></div>
 </div>
-</div>
-<div id="ensemble-model" class="section level2">
-<h2>Ensemble model</h2>
+<div id="ensemble-model" class="section level3">
+<h3>Ensemble model</h3>
 <p>The ensemble model is a simple average of the previously defined models. A dedicated function is not necessary.</p>
+</div>
 </div>
 <div id="configure-rolling-origin-cross-validation-with-varying-horizons" class="section level2">
 <h2>Configure rolling origin cross validation with varying horizons</h2>
@@ -399,14 +399,14 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <pre><code>##  Connection successful!
 ## 
 ## R is connected to the H2O cluster: 
-##     H2O cluster uptime:         1 hours 5 minutes 
+##     H2O cluster uptime:         1 hours 39 minutes 
 ##     H2O cluster timezone:       America/New_York 
 ##     H2O data parsing timezone:  UTC 
 ##     H2O cluster version:        3.30.0.1 
 ##     H2O cluster version age:    3 months and 12 days !!! 
 ##     H2O cluster name:           H2O_started_from_R_Owner_wqt072 
 ##     H2O cluster total nodes:    1 
-##     H2O cluster total memory:   3.35 GB 
+##     H2O cluster total memory:   3.36 GB 
 ##     H2O cluster total cores:    4 
 ##     H2O cluster allowed cores:  4 
 ##     H2O cluster healthy:        TRUE 
@@ -591,11 +591,11 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p><img src="/post/2020-07-12-point-forecasts-using-traditional-ml-prophet_files/figure-html/unnamed-chunk-17-1.png" width="672" /></p>
 <p>Some interesting takeaways:</p>
 <ul>
-<li><p>The simple seasonal naive is arguably the best model for the 11-month horizon in terms of accuracy and stability.</p></li>
-<li><p>The ensemble model is the consistently the most accurate across the board.</p></li>
-<li><p>Regarding the traditional models, ETS and SNAIVE are consistently more accurate than the Arima model.</p></li>
-<li><p>Regarding the ML models, the GLM is more impressive than the Random Forest. The GLM model is on par with the ETS and SNAIVE traditional models.</p></li>
-<li><p>Prophet shows decent performance, especially in the 11-month horizon, but there are better traditional and ML alternatives in this application.</p></li>
+<li><p>The seasonal naive model is generally the most accurate and stable model, ranking 1st or tied for 1st in the 1-, 3-, and 11- month horizon range and performing very well in the 6-month horizon range..</p></li>
+<li><p>The ensemble model is very accurate though not quite as stable as other models.</p></li>
+<li><p>Among the traditional models, exponential smoothing and seasonal naive models outperformed the Arima model by a large margin.</p></li>
+<li><p>Among the ML models, the GLM model is the clear winner in all horizon ranges. Compared to the other model types, it did very well overall. The Random Forest and MLP models are neither accurate nor stable. Perhaps this is due to overfitting.</p></li>
+<li><p>The Prophet model performed quite well in the 3-, 6-, and 11-month horizon ranges. However, it did poorly in the 1-month horizon range.</p></li>
 </ul>
 </div>
 </div>
