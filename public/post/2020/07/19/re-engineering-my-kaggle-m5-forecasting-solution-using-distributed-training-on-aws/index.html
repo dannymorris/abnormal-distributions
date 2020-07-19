@@ -37,6 +37,7 @@
 <li><a href="#overview">Overview</a></li>
 <li><a href="#recap-of-original-solution">Recap of original solution</a></li>
 <li><a href="#the-new-solution">The new solution</a><ul>
+<li><a href="#some-initial-compromises">Some initial compromises</a></li>
 <li><a href="#getting-data-into-s3">Getting data into S3</a></li>
 <li><a href="#launching-the-training-job">Launching the training job</a></li>
 </ul></li>
@@ -74,6 +75,10 @@
 <li><p>Large-scale, distributed training using AWS SageMaker with multiple EC2 instances and data distributed in S3.</p></li>
 <li><p>SageMaker XGBoost algorithm</p></li>
 </ul>
+<div id="some-initial-compromises" class="section level3">
+<h3>Some initial compromises</h3>
+<p>In a perfect world, I would leverage k-fold cross validation and hyperparameter tuning to reach the final model. In this context, however, I decided to do neither. The main reason is because both steps would be significantly time and resource consuming, including costs for using AWS services. To keep my costs down, I ignored these two steps and instead relied on the collective knowledge of the Kaggle competition participants to formulate a sound training strategy. For example, instead of hyperparameter tuning I used many of the same hyperparameter values that were used by the top performers. I also consulted the XGBoost docs to learn about setting hyperparameter values to minimize the risk of overfitting. Regarding cross validation, many of the participants felt the final evaluation data was not well represented by the training data. Thus, there is an argument to be made against the use of cross validation in this competition.</p>
+</div>
 <div id="getting-data-into-s3" class="section level3">
 <h3>Getting data into S3</h3>
 <p>To enable distributed training using AWS SageMaker, I needed to get my training data into S3. To do this, I did the following:</p>
