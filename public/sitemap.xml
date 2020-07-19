@@ -3,6 +3,11 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>/post/2020/07/19/re-engineering-my-kaggle-m5-forecasting-solution-using-distributed-training-on-aws/</loc>
+    <lastmod>2020-07-19T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>/post/2020/07/12/time-series-forecasting-as-a-supervised-machine-learning-problem/</loc>
     <lastmod>2020-07-12T00:00:00+00:00</lastmod>
   </url>
@@ -76,13 +81,13 @@
   
   <url>
     <loc>/tags/aws/</loc>
-    <lastmod>2019-12-07T00:00:00+00:00</lastmod>
+    <lastmod>2020-07-19T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/categories/aws/</loc>
-    <lastmod>2019-12-07T00:00:00+00:00</lastmod>
+    <lastmod>2020-07-19T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -142,36 +147,36 @@
   
   <url>
     <loc>/tags/forecasting/</loc>
-    <lastmod>2020-07-12T00:00:00+00:00</lastmod>
+    <lastmod>2020-07-19T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/categories/forecasting/</loc>
-    <lastmod>2020-07-12T00:00:00+00:00</lastmod>
+    <lastmod>2020-07-19T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/</loc>
-    <lastmod>2020-07-12T00:00:00+00:00</lastmod>
+    <lastmod>2020-07-19T00:00:00+00:00</lastmod>
   </url>
   
   <url>
     <loc>/tags/machine-learning/</loc>
-    <lastmod>2020-07-12T00:00:00+00:00</lastmod>
+    <lastmod>2020-07-19T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/categories/machine-learning/</loc>
-    <lastmod>2020-07-12T00:00:00+00:00</lastmod>
+    <lastmod>2020-07-19T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/post/</loc>
-    <lastmod>2020-07-12T00:00:00+00:00</lastmod>
+    <lastmod>2020-07-19T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   

@@ -6,10 +6,20 @@
     <description>Recent content in Home on Abnormal Distributions</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sun, 12 Jul 2020 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sun, 19 Jul 2020 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Re-engineering my Kaggle M5 Forecasting solution using distributed training on AWS</title>
+      <link>/post/2020/07/19/re-engineering-my-kaggle-m5-forecasting-solution-using-distributed-training-on-aws/</link>
+      <pubDate>Sun, 19 Jul 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2020/07/19/re-engineering-my-kaggle-m5-forecasting-solution-using-distributed-training-on-aws/</guid>
+      <description>OverviewRecap of original solutionThe new solutionGetting data into S3Launching the training jobWork in progress
+OverviewI recently participated in the M5 Forecasting - Accuracy Kaggle competition to forecast daily sales for over 30,000 WalMart products. My best solution, which was a bottom-level design that modeled each product in isolation, placed in the top 28%. I was initially pleased with this outcome considering it was my first major competition, but I wasn’t entirely satisfied, especially since my methodology was not too different from the top performers.</description>
+    </item>
     
     <item>
       <title>A template for comparing point forecasts using traditional models, Prophet, and supervised machine learning</title>

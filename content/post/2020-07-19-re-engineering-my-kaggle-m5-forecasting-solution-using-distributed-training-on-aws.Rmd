@@ -1,0 +1,226 @@
+---
+title: Re-engineering my Kaggle M5 Forecasting solution using distributed training
+  on AWS
+author: Danny Morris
+date: '2020-07-19'
+output: 
+  blogdown::html_page:
+    toc: true
+    highlight: pygments
+slug: re-engineering-my-kaggle-m5-forecasting-solution-using-distributed-training-on-aws
+categories:
+  - Machine Learning
+  - Forecasting
+  - AWS
+tags:
+  - Machine Learning
+  - Forecasting
+  - AWS
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include=F}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
+**Work in progress**
+
+## Overview
+
+I recently participated in the [M5 Forecasting - Accuracy](https://www.kaggle.com/c/m5-forecasting-accuracy) Kaggle competition to forecast daily sales for over 30,000 WalMart products. My best solution, which was a bottom-level design that modeled each product in isolation, placed in the top 28%. I was initially pleased with this outcome considering it was my first major competition, but I wasn't entirely satisfied, especially since my methodology was not too different from the top performers. I've decided to take a stab at re-engineering my solution to see if I can improve my rank.
+
+## Recap of original solution
+
+My original solution was a pure bottom-level design that fit a unique Random Forest model to each unique product, resulting in over 30,000 models. The entire model pipeline (feature engineering, training, inference) was done in-memory on a 48-core AWS EC2 instance. The total runtime was less than 2 hours using parallel processing. The final score of 0.769 placed in the top 28%. 
+
+The strengths of this design include:
+
+- Relatively lightweight since each product was handled in isolation and the amount of data for an individual product was quite small on average (e.g. 1500 rows, 170 columns).
+- Completed entirely in-memory using parallel processing.
+- Relatively fast (< 2 hours)
+- Relatively accurate
+
+There were some weaknesses, including:
+
+- Ignored some categorical features. Based on my analysis of the top performer's results, the main difference in my feature engineering pipeline was the exclusion of a handful of categorical features including item ID, category ID, department ID, store ID, and state ID.
+
+- Ignored interactions and correlations between products. For example, if product A and product B are in the same category and product A goes on sale, then sales for product A will likely increase AND sales for product B will likely decrease. My original bottom-level solution was incapable of learning these dynamics.
+
+- Insufficient resources to do large-scale training. For example, if all products were merged into a single data set, the total size would be $\approx$ 17.6GB, making it significantly more challenging to train in-memory on a single machine using R. 
+
+- The choice to use Random Forests was a departure from the use of GBMs by the top performers. Perhaps a Random Forest could be tuned to perform better, but the impressive performance of GBMs (LightGBM in particular) is good reason to follow suit.
+
+## The new solution
+
+My new solution addresses the aforementioned weaknesses. It has the following properties:
+
+- Incorporates categorical features (item ID, category ID, department ID, store ID, and state ID) in the training data using label encoding.
+
+- Large-scale, distributed training using AWS SageMaker with multiple EC2 instances and data distributed in S3.
+
+- SageMaker XGBoost algorithm
+
+### Getting data into S3
+
+To enable distributed training using AWS SageMaker, I needed to get my training data into S3. To do this, I did the following:
+
+- Launch a c5.24xlarge EC2 instance (96 cores, 192GB memory) using the [RStudio AMI](https://www.louisaslett.com/RStudio_AMI/)
+- Store raw competition data on-disk
+- Engineer features for each product using parallel processing
+- Upload clean training data and competition evaluation data for each individual product to S3, resulting in 30,000+ CSV files
+
+The main goal is to get clean training data into S3. Fortunately, the full training data does not have to be stored in a single file. Instead, it can be distributed across multiple files. This means I can process and upload product-level data to s3 using parallel processing without overloading the local EC2 instance. By "sharding" the training data, AWS SageMaker allows for distributed training by loading a subset of the files to each instance in the cluster. For example, in a cluster of 15 EC2 instance each instance receives approximately 1/15th of the total training data.
+
+Note: The SageMaker XGBoost requires no header row (i.e. column names), so be sure to remove these from the data before uploading to S3.
+
+```
+# S3 data structure
+
+bucket
+└───train
+│   │   FOODS_1_001_CA_1_evaluation.csv
+│   │   FOODS_1_001_CA_2_evaluation.csv
+|   |   ...
+└───eval
+│   |   FOODS_1_001_CA_1_evaluation.csv
+│   |   FOODS_1_001_CA_2_evaluation.csv
+|   |   ...
+```
+
+### Launching the training job
+
+I opened a ml.t2.xlarge SageMaker Notebook instance to launch my training job and used [this Jupyter notebook](https://github.com/awslabs/amazon-sagemaker-examples/blob/master/advanced_functionality/data_distribution_types/data_distribution_types.ipynb) as a reference.
+
+Some of the key features of the training job include:
+
+- Cluster of 15 ml.m4.4xlarge instances for distributed training
+- `S3DataDistributionType` parameter set to "ShardedByS3Key"
+- XGBoost hyperparameters
+  - num_round = 3000
+  - eta = 0.1
+  - objective = "reg:tweedie"
+  - tweedie_variance_power = 1.5
+  - eval_metric = "rmse"
+  - rate_drop = 0.2
+  - min_child_weight = 7
+  - max_depth = 5
+  - colsample_bytree = 0.7
+  - subsample = 0.7
+  
+The complete Python script for launching the training job looks like this:
+
+```
+#############
+# Libraries #
+#############
+
+import boto3
+from sagemaker import get_execution_role
+import sagemaker.amazon.common as smac
+import time
+import json
+
+########################
+# S3 bucket and prefix #
+########################
+
+bucket = 'abn-distro'
+prefix = 'm5_store_items'
+
+####################
+## Execution role ##
+####################
+
+role = get_execution_role()
+
+#######################
+## XGBoost container ##
+#######################
+
+from sagemaker.amazon.amazon_estimator import get_image_uri
+container = get_image_uri(boto3.Session().region_name, 'xgboost')
+
+#########################
+## Training parameters ##
+#########################
+
+sharded_training_params = {
+    "RoleArn": role,
+    "AlgorithmSpecification": {
+        "TrainingImage": container,
+        "TrainingInputMode": "File"
+    },
+    "ResourceConfig": {
+        "InstanceCount": 15,
+        "InstanceType": "ml.m4.4xlarge",
+        "VolumeSizeInGB": 10
+    },
+    "InputDataConfig": [
+        {
+            "ChannelName": "train",
+            "ContentType": "csv",
+            "DataSource": {
+                "S3DataSource": {
+                    "S3DataDistributionType": "ShardedByS3Key",
+                    "S3DataType": "S3Prefix",
+                    "S3Uri": "s3://{}/{}/train/".format(bucket, prefix)
+                }
+            },
+            "CompressionType": "None",
+            "RecordWrapperType": "None"
+        },
+    ],
+    "OutputDataConfig": {
+        "S3OutputPath": "s3://{}/{}/".format(bucket, prefix)
+    },
+    "HyperParameters": {
+        "num_round": "3000",
+        "eta": "0.1",
+        "objective": "reg:tweedie",
+        "tweedie_variance_power": "1.5",
+        "eval_metric": "rmse",
+        "rate_drop": "0.2",
+        "min_child_weight": "7",
+        "max_depth": "5",
+        "colsample_bytree": "0.7",
+        "subsample": "0.7"
+    },
+    "StoppingCondition": {
+        "MaxRuntimeInSeconds": 18000
+    }
+}
+
+#######################
+## Training job name ##
+#######################
+
+sharded_job = 'm5-sharded-xgboost-' + time.strftime("%Y-%m-%d-%H-%M-%S", time.gmtime())
+sharded_training_params['TrainingJobName'] = sharded_job
+
+#########################
+## Launch training job ##
+#########################
+
+region = boto3.Session().region_name
+sm = boto3.Session().client('sagemaker')
+
+sm.create_training_job(**sharded_training_params)
+
+status = sm.describe_training_job(TrainingJobName=sharded_job)['TrainingJobStatus']
+print(status)
+
+sm.get_waiter('training_job_completed_or_stopped').wait(TrainingJobName=sharded_job)
+
+status = sm.describe_training_job(TrainingJobName=sharded_job)['TrainingJobStatus']
+print("Training job ended with status: " + status)
+
+if status == 'Failed':
+    message = sm.describe_training_job(TrainingJobName=sharded_job)['FailureReason']
+    print('Training failed with the following error: {}'.format(message))
+    raise Exception('Training job failed')
+```
+
+
+
+
