@@ -40,6 +40,7 @@
 <li><a href="#some-initial-compromises">Some initial compromises</a></li>
 <li><a href="#getting-data-into-s3">Getting data into S3</a></li>
 <li><a href="#launching-the-training-job">Launching the training job</a></li>
+<li><a href="#create-model">Create model</a></li>
 </ul></li>
 </ul>
 </div>
@@ -232,6 +233,30 @@ if status == &#39;Failed&#39;:
     message = sm.describe_training_job(TrainingJobName=sharded_job)[&#39;FailureReason&#39;]
     print(&#39;Training failed with the following error: {}&#39;.format(message))
     raise Exception(&#39;Training job failed&#39;)</code></pre>
+</div>
+<div id="create-model" class="section level3">
+<h3>Create model</h3>
+<pre><code>##################
+## Create model ##
+##################
+
+region = boto3.Session().region_name
+sm = boto3.Session().client(&#39;sagemaker&#39;)
+
+from sagemaker.amazon.amazon_estimator import get_image_uri
+container = get_image_uri(boto3.Session().region_name, &#39;xgboost&#39;)
+
+model_name = &#39;m5-sharded-xgboost-2020-07-19-17-02-04&#39;
+model_url = &#39;s3://abn-distro/m5_store_items/m5-sharded-xgboost-2020-07-19-17-02-04/output/model.tar.gz&#39;
+
+sharded_model_response = sm.create_model(
+    ModelName=model_name,
+    ExecutionRoleArn=role,
+    PrimaryContainer={
+        &#39;Image&#39;: container,
+        &#39;ModelDataUrl&#39;: model_url
+    }
+)</code></pre>
 </div>
 </div>
 

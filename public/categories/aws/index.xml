@@ -17,7 +17,7 @@
       <pubDate>Sun, 19 Jul 2020 00:00:00 +0000</pubDate>
       
       <guid>/post/2020/07/19/re-engineering-my-kaggle-m5-forecasting-solution-using-distributed-training-on-aws/</guid>
-      <description>OverviewRecap of original solutionThe new solutionSome initial compromisesGetting data into S3Launching the training jobWork in progress
+      <description>OverviewRecap of original solutionThe new solutionSome initial compromisesGetting data into S3Launching the training jobCreate modelWork in progress
 OverviewI recently participated in the M5 Forecasting - Accuracy Kaggle competition to forecast daily sales for over 30,000 WalMart products. My best solution, which was a bottom-level design that modeled each product in isolation, placed in the top 28%. I was initially pleased with this outcome considering it was my first major competition, but I wasn’t entirely satisfied, especially since my methodology was not too different from the top performers.</description>
     </item>
     
