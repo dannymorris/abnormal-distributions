@@ -1,7 +1,7 @@
 ---
-title: My first Kaggle competion - Forecasting demand for over 30,000 Walmart products using machine learning and a bottom-level approach
+title: "Kaggle M5 Forecasting - Accuracy: Top 28% solution using true bottom-level forecasting with Random Forests" 
 author: Danny Morris
-date: '`r Sys.Date()`'
+date: '2020-07-08'
 output: 
   blogdown::html_page:
     toc: true

@@ -21,11 +21,11 @@
     </item>
     
     <item>
-      <title>My first Kaggle competion - Forecasting demand for over 30,000 Walmart products using machine learning and a bottom-level approach</title>
-      <link>/post/2020/07/01/forecasting-demand-for-30-000-walmart-products/</link>
-      <pubDate>Wed, 01 Jul 2020 00:00:00 +0000</pubDate>
+      <title>Kaggle M5 Forecasting - Accuracy: Top 28% solution using true bottom-level forecasting with Random Forests</title>
+      <link>/post/2020/07/08/forecasting-demand-for-30-000-walmart-products/</link>
+      <pubDate>Wed, 08 Jul 2020 00:00:00 +0000</pubDate>
       
-      <guid>/post/2020/07/01/forecasting-demand-for-30-000-walmart-products/</guid>
+      <guid>/post/2020/07/08/forecasting-demand-for-30-000-walmart-products/</guid>
       <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
     </item>
     
