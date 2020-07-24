@@ -6,10 +6,20 @@
     <description>Recent content in Python on Abnormal Distributions</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Wed, 17 Jun 2020 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Thu, 23 Jul 2020 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/tags/python/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Distributed machine learning on AWS using the SageMaker SDK in Python</title>
+      <link>/post/2020/07/23/distributed-machine-learning-training-on-aws/</link>
+      <pubDate>Thu, 23 Jul 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2020/07/23/distributed-machine-learning-training-on-aws/</guid>
+      <description>Overview I recently participated in the M5 Forecasting - Accuracy Kaggle competition to forecast daily sales for over 30,000 WalMart products. I had some initial struggles processing the data and training models in-memory, so I eventually turned to running distributed training jobs using AWS SageMaker.
+This post outlines the basic steps required to run a distributed machine learning job on AWS using the SageMaker SDK in Python. The steps are broken down into the following:</description>
+    </item>
     
     <item>
       <title>Quantifying &#34;month composition&#34; to improve monthly forecasts (Python)</title>

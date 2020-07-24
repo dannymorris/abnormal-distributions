@@ -26,4 +26,4 @@ footnotereturnlinkcontents = "↩"
     
 [params]
     description = "A website built through Hugo and blogdown."
-    footer = "[Github](https://github.com/dannymorris) | [LinkedIn](https://www.linkedin.com/in/drmorris87/) | [Email](mailto:drmorris87@outlook.com)"
+    footer = "[GitHub](https://github.com/dannymorris) | [LinkedIn](https://www.linkedin.com/in/drmorris87/) | [Email](mailto:drmorris87@outlook.com)"
