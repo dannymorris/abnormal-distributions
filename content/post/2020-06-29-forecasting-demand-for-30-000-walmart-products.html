@@ -1,5 +1,5 @@
 ---
-title: "Kaggle M5 Forecasting - Accuracy: Top 28% solution using true bottom-level forecasting with Random Forests" 
+title: "My top 6% solution in the Kaggle M5 Forecasting - Accuracy competition using a machine learning ensemble" 
 author: Danny Morris
 date: '2020-07-08'
 output: 
@@ -11,156 +11,121 @@ categories:
   - R
   - Forecasting
   - Machine Learning
+  - AWS
 tags:
   - R
   - Forecasting
   - Machine Learning
+  - AWS
 editor_options: 
   chunk_output_type: console
 ---
 
-<style type="text/css">
-a.sourceLine { display: inline-block; line-height: 1.25; }
-a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
-a.sourceLine:empty { height: 1.2em; }
-.sourceCode { overflow: visible; }
-code.sourceCode { white-space: pre; position: relative; }
-div.sourceCode { margin: 1em 0; }
-pre.sourceCode { margin: 0; }
-@media screen {
-div.sourceCode { overflow: auto; }
-}
-@media print {
-code.sourceCode { white-space: pre-wrap; }
-a.sourceLine { text-indent: -1em; padding-left: 1em; }
-}
-pre.numberSource a.sourceLine
-  { position: relative; left: -4em; }
-pre.numberSource a.sourceLine::before
-  { content: attr(title);
-    position: relative; left: -1em; text-align: right; vertical-align: baseline;
-    border: none; pointer-events: all; display: inline-block;
-    -webkit-touch-callout: none; -webkit-user-select: none;
-    -khtml-user-select: none; -moz-user-select: none;
-    -ms-user-select: none; user-select: none;
-    padding: 0 4px; width: 4em;
-    color: #aaaaaa;
-  }
-pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
-div.sourceCode
-  {  }
-@media screen {
-a.sourceLine::before { text-decoration: underline; }
-}
-code span.al { color: #ff0000; font-weight: bold; } /* Alert */
-code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
-code span.at { color: #7d9029; } /* Attribute */
-code span.bn { color: #40a070; } /* BaseN */
-code span.bu { } /* BuiltIn */
-code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
-code span.ch { color: #4070a0; } /* Char */
-code span.cn { color: #880000; } /* Constant */
-code span.co { color: #60a0b0; font-style: italic; } /* Comment */
-code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
-code span.do { color: #ba2121; font-style: italic; } /* Documentation */
-code span.dt { color: #902000; } /* DataType */
-code span.dv { color: #40a070; } /* DecVal */
-code span.er { color: #ff0000; font-weight: bold; } /* Error */
-code span.ex { } /* Extension */
-code span.fl { color: #40a070; } /* Float */
-code span.fu { color: #06287e; } /* Function */
-code span.im { } /* Import */
-code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
-code span.kw { color: #007020; font-weight: bold; } /* Keyword */
-code span.op { color: #666666; } /* Operator */
-code span.ot { color: #007020; } /* Other */
-code span.pp { color: #bc7a00; } /* Preprocessor */
-code span.sc { color: #4070a0; } /* SpecialChar */
-code span.ss { color: #bb6688; } /* SpecialString */
-code span.st { color: #4070a0; } /* String */
-code span.va { color: #19177c; } /* Variable */
-code span.vs { color: #4070a0; } /* VerbatimString */
-code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
-</style>
 
 <div id="TOC">
 <ul>
 <li><a href="#overview">Overview</a></li>
-<li><a href="#kaggle-competition-overview">Kaggle competition overview</a></li>
-<li><a href="#bottom-level-forecasting">Bottom-level forecasting</a></li>
-<li><a href="#machine-learning">Machine learning</a></li>
-<li><a href="#summary-of-the-final-forecasting-system">Summary of the final forecasting system</a></li>
+<li><a href="#competition-overview">Competition overview</a></li>
+<li><a href="#forecasting-as-a-supervised-machine-learning-problem">Forecasting as a supervised machine learning problem</a></li>
+<li><a href="#general-feature-engineering">General feature engineering</a></li>
+<li><a href="#models">Models</a><ul>
+<li><a href="#one-model-per-product-using-random-forests">One model per product using Random Forests</a></li>
+<li><a href="#one-model-per-store-using-xgboost">One model per store using XGBoost</a></li>
+<li><a href="#model-performance-with-and-without-ensembling">Model performance with and without ensembling</a></li>
+</ul></li>
 <li><a href="#summary-of-my-development-and-evaluation-strategy">Summary of my development and evaluation strategy</a></li>
 <li><a href="#potential-improvements">Potential improvements</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
 </ul>
 </div>
 
-<p><em>Disclaimer: The final private leaderboard shows my score in the 46th percentile. I made a rookie mistake and failed to submit my most recent predictions that were an improvement over my previous submissions. If I had, my score of 0.76922 would have put my ranking in the top 28%</em></p>
+<p><em>Disclaimer: The final competition leaderboard shows my score in the 46th percentile. I made a rookie mistake and failed to submit my (then) best model, which would have put my ranking in the top 28%. In the days following the end of the competition, I continued to test out new ideas in hopes of improving my score. I finally achieved a score that would have placed in the top 6%.</em></p>
 <div id="overview" class="section level2">
 <h2>Overview</h2>
-<p>I just completed my first <a href="https://www.kaggle.com/c/m5-forecasting-accuracy">Kaggle competition</a> in which the goal was to produce accurate daily sales point forecasts for over 30,000 Walmart products. I finished in the top 28%. Not great, but considering it was my first competition I am pleased. I <strong>learned a lot</strong> during this competition that I am happy to share.</p>
-<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" title="1"><span class="kw">library</span>(tidyverse)</a>
-<a class="sourceLine" id="cb1-2" title="2"></a>
-<a class="sourceLine" id="cb1-3" title="3"><span class="kw">read_csv</span>(<span class="st">&quot;leaderboard.csv&quot;</span>) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb1-4" title="4"><span class="st">  </span><span class="kw">filter</span>(Score <span class="op">&lt;=</span><span class="st"> </span><span class="dv">8</span>) <span class="op">%&gt;%</span></a>
-<a class="sourceLine" id="cb1-5" title="5"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Score)) <span class="op">+</span></a>
-<a class="sourceLine" id="cb1-6" title="6"><span class="st">  </span><span class="kw">geom_density</span>() <span class="op">+</span></a>
-<a class="sourceLine" id="cb1-7" title="7"><span class="st">  </span><span class="kw">geom_vline</span>(<span class="kw">aes</span>(<span class="dt">xintercept =</span> <span class="fl">0.76922</span>), <span class="dt">color =</span> <span class="st">&#39;blue&#39;</span>, <span class="dt">lwd =</span> <span class="dv">2</span>) <span class="op">+</span></a>
-<a class="sourceLine" id="cb1-8" title="8"><span class="st">  </span><span class="kw">geom_segment</span>(<span class="kw">aes</span>(<span class="dt">x =</span> <span class="fl">1.2</span>, <span class="dt">y =</span> <span class="fl">0.01</span>, <span class="dt">xend =</span> <span class="fl">0.85</span>, <span class="dt">yend =</span> <span class="fl">0.01</span>),</a>
-<a class="sourceLine" id="cb1-9" title="9">               <span class="dt">color =</span> <span class="st">&quot;blue&quot;</span>, <span class="dt">lwd =</span> <span class="fl">1.2</span>,</a>
-<a class="sourceLine" id="cb1-10" title="10">               <span class="dt">arrow =</span> <span class="kw">arrow</span>(<span class="dt">length =</span> <span class="kw">unit</span>(<span class="fl">0.3</span>, <span class="st">&quot;cm&quot;</span>))) <span class="op">+</span></a>
-<a class="sourceLine" id="cb1-11" title="11"><span class="st">  </span><span class="kw">annotate</span>(<span class="st">&quot;text&quot;</span>, <span class="dt">x =</span> <span class="fl">1.4</span>, <span class="dt">y =</span> <span class="fl">0.015</span>, <span class="dt">label =</span> <span class="st">&quot;me&quot;</span>, <span class="dt">color =</span> <span class="st">&quot;blue&quot;</span>) <span class="op">+</span></a>
-<a class="sourceLine" id="cb1-12" title="12"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Distribution of M5 Forecasting - Accuracy Kaggle competition scores&quot;</span>,</a>
-<a class="sourceLine" id="cb1-13" title="13">       <span class="dt">subtitle =</span> <span class="st">&quot;My score placed me in the top 28%&quot;</span>,</a>
-<a class="sourceLine" id="cb1-14" title="14">       <span class="dt">x =</span> <span class="st">&quot;Score (lower is better)&quot;</span>) <span class="op">+</span></a>
-<a class="sourceLine" id="cb1-15" title="15"><span class="st">  </span><span class="kw">theme_bw</span>()</a></code></pre></div>
-<p><img src="/post/2020-06-29-forecasting-demand-for-30-000-walmart-products_files/figure-html/unnamed-chunk-2-1.png" width="672" /></p>
+<p>I participated in the <a href="https://www.kaggle.com/c/m5-forecasting-accuracy">M5 Forecasting - Accuracy Kaggle competition</a>, in which the goal was to submit daily forecasts for over 30,000 Walmart products. I developed a solution that landed in the top 6%. I <strong>learned a lot</strong> from this experience and I want to share my general strategy.</p>
 </div>
-<div id="kaggle-competition-overview" class="section level2">
-<h2>Kaggle competition overview</h2>
-<p>From the competition webpage…</p>
-<p><em>In this competition, the fifth iteration, you will use hierarchical sales data from Walmart, the world’s largest company by revenue, to forecast daily sales for the next 28 days. The data, covers stores in three US States (California, Texas, and Wisconsin) and includes item level, department, product categories, and store details. In addition, it has explanatory variables such as price, promotions, day of the week, and special events.</em></p>
+<div id="competition-overview" class="section level2">
+<h2>Competition overview</h2>
+<p>The goal in this competition was to produce accurate point forecasts for over 30,000 Walmart products. The evaluation data (unseen by competitors) spanned 28 days between the months of May and June in 2016. The average product had about 4-5 years of daily sales data available for training. There were over 5,000 teams and individual competitors who submitted predictions.</p>
 </div>
-<div id="bottom-level-forecasting" class="section level2">
-<h2>Bottom-level forecasting</h2>
-<p>My goal was to build an accurate, efficient, and scalable demand forecasting system using a “bottom-level” approach. The bottom-level approach models each time series independently from the rest. In this context, each product is a time series that receives its own model. This is similar to the bottom-up approach for hiearchical forecasting described by Rob Hyndman, except the <a href="https://otexts.com/fpp2/bottom-up.html">bottom-up approach</a> aggregates the bottom-level forecasts to their respective categories. Even though the products in the competition data belong to product categories, I (questionably) chose to ignore this hierarchical structure and model each bottom-level product separately.</p>
-<p>Advantages of bottom-level forecasting:</p>
+<div id="forecasting-as-a-supervised-machine-learning-problem" class="section level2">
+<h2>Forecasting as a supervised machine learning problem</h2>
+<p>I decided at the beginning of the competition that I wanted to gain experience treating time series forecasting as a supervised machine learning problem. Unlike traditional time series algorithms, machine learning algorithms require explicit feature engineering to work effectively. I viewed this competition as an opportunity to practice feature engineering.</p>
+</div>
+<div id="general-feature-engineering" class="section level2">
+<h2>General feature engineering</h2>
+<p>I used the following features in my models:</p>
 <ul>
-<li>Historical dynamics of each time series are captured in the model.</li>
-<li>Conceptually very simple.</li>
+<li>Rolling sales statistics: rolling 28-day mean and standard deviation</li>
+<li>Price: actual price plus indicators for promotion and price increase</li>
+<li>Date-based features: year, quarter, month, month-day, month-week, weekday</li>
+<li>SNAP indicators (supplement nutrition assistance program)</li>
+<li>Holidays (provided by competion): national and local holidays</li>
+<li>Sporting events: NBA finals, U.S. Open, Horse races, MLB games</li>
+<li>Product identifiers (item, store, state, category, department)</li>
 </ul>
-<p>Disadvantages of bottom-level forecasting:</p>
+<p>To produce a 28-day forecast, the rolling sales statistics were lagged by 28 days. The lagged values were used as feature values in the forecast period.</p>
+<p>Features provided by competition:</p>
 <ul>
-<li>Large number of time series models.</li>
-<li>Relationships between time series are ignored.</li>
-<li>Noisy time series are difficult to model.</li>
+<li>Actual price</li>
+<li>SNAP indicators</li>
+<li>Holidays</li>
+<li>Product identifiers</li>
+</ul>
+<p>Features I engineered:</p>
+<ul>
+<li>Rolling sales statistics</li>
+<li>Price promotion and price hike</li>
+<li>Date-part features</li>
+<li>Sporting events</li>
 </ul>
 </div>
-<div id="machine-learning" class="section level2">
-<h2>Machine learning</h2>
-<p>I decided at the beginning of the competition that I wanted to gain experience treating time series forecasting as a supervised machine learning problem using tree-based algorithms. Most of my previous experience with time series forecasting involved the use of traditional methods (e.g. Arima) and Facebook Prophet, but through my own research I learned that tree-based machine learning algorithms (e.g. XGBoost, Random Forest) can produce highly accurate point forecasts given their flexibility and tolerance to noise.</p>
-</div>
-<div id="summary-of-the-final-forecasting-system" class="section level2">
-<h2>Summary of the final forecasting system</h2>
+<div id="models" class="section level2">
+<h2>Models</h2>
+<p>My top 6% solution was an ensemble (simple average) of two machine learning approaches, including:</p>
+<div id="one-model-per-product-using-random-forests" class="section level3">
+<h3>One model per product using Random Forests</h3>
+<p>The training data were split by product, resulting in over 30,000 series, and each product was modeled in isolation using a fast Random Forest from the <code>ranger</code> package in R. Since products were modeled in isolation, information about other products was ignored during training. The methodology was carried out on a 48-core AWS EC2 instance (c5.12xlarge) using parallel processing. The total training time was <span class="math inline">\(\approx\)</span> 70 minutes. Predictions were generated at the end of each training iteration.</p>
+<p>The Random Forests were assigned the following hyperparameters:</p>
 <ul>
-<li><p>Automatic product-level forecasts using a parallelized <a href="https://www.jstatsoft.org/article/view/v040i01/v40i01.pdf">split-apply-combine</a> technique on a 48-core AWS EC2 instance (c5.12xlarge). Total runtime is under 2 hours.</p></li>
-<li><p>Single, repeatable pipeline for data preprocessing, feature engineering, training, and forecasting applied to each product independently.</p></li>
-<li><p>Over 150 predictors including holidays, sporting events, price promotions, calendar indicators, and historical demand statistics. Lagging and leading indicators were derived from relevant features (e.g. day after Thanksgiving, day before Super Bowl, etc.) to improve predictive accuracy.</p></li>
-<li><p>Random Forest algorithm from the <code>ranger</code> package using mostly default parameters.</p></li>
-<li><p>Built entirely in R.</p></li>
+<li>number of trees = 750</li>
+<li>features per tree = 0.5</li>
+<li>instances per tree = 0.7</li>
 </ul>
+<p>The features in these models were a combination of numeric (rolling sales stats, actual price) and one-hot encoded binary. The one-hot encoded features included the date-based features, price promotion, price hike, SNAP indicators, holidays, and sporting events. The product identifiers were excluded due to redundancy since each product was modeled in isolation. In total, the number of features was <span class="math inline">\(\approx\)</span> 170.</p>
+</div>
+<div id="one-model-per-store-using-xgboost" class="section level3">
+<h3>One model per store using XGBoost</h3>
+<p>The training data were split by store, resulting in 10 subsets of training data. Using AWS Sagemaker and the built-in XGBoost algorithm, I engineered a distributed training pipeline by uploading the distributed data to S3 and launching a distributed training job utilizing 5 EC2 instances. Sagemaker spreads the training data evenly across each training instance, and the XGBoost algorithm is optimized for distributed training. The total training time was <span class="math inline">\(\approx\)</span> 3 hours. Predictions were made using a Sagemaker Batch Transform job after all training had completed.</p>
+<p>The XGBoost models were assigned the following hyperparameters:</p>
+<ul>
+<li>number of trees = 1500</li>
+<li>learning rate = 0.1</li>
+<li>distribution = poisson</li>
+<li>features per tree = 0.8</li>
+<li>instances per tree = 0.8</li>
+<li>evaluation metric = RMSE</li>
+</ul>
+<p>The features in these models were a combination of numeric (rolling stats stats, actual price), one-hot encoded, and label encoded. The one-hot encoded features included sporting events, SNAP indicators, price promotion, and price hike. The label encoded features included date-based features, holidays, and product identifiers. In total, the number of features was <span class="math inline">\(\approx\)</span> 45.</p>
+</div>
+<div id="model-performance-with-and-without-ensembling" class="section level3">
+<h3>Model performance with and without ensembling</h3>
+<ul>
+<li><p>One model per product using Random Forest: <strong>0.76</strong> (top 28%)</p></li>
+<li><p>One model per store using XGBoost on AWS: <strong>0.77</strong> (top 30%)</p></li>
+<li><p>Ensemble via simple average: <strong>0.65</strong> (top 6%)</p></li>
+</ul>
+</div>
 </div>
 <div id="summary-of-my-development-and-evaluation-strategy" class="section level2">
 <h2>Summary of my development and evaluation strategy</h2>
-<p>Developing and evaluating the bottom-level forecasting system was difficult due to the sheer volume of data (55+ million rows) and products (30,000+). I realized that I couldn’t possibly develop and evaluate a system for all 30,000 products using preferred strategies such as multiple model comparison, cross validation, and hyperparameter tuning. In light of this, I had to make some decisions to drastically simplify the development process at the expense of extensive testing.</p>
+<p>Developing and evaluating this solution was difficult due to the sheer volume of data (55+ million rows) and products (30,000+). I learned a lot through trial and error as well as researching existing solutions and their expected performance. I realized that I couldn’t possibly develop and evaluate a system for all 30,000 products using preferred strategies such as multiple model comparison, cross validation, and hyperparameter tuning. In light of this, I had to make some decisions to drastically simplify the development process at the expense of extensive testing.</p>
 <ul>
-<li><p>Draw a small yet diverse sample of 100 products for iterative development.</p></li>
-<li><p>For each product, limit the training data to include observations from 2012-01-01 to 2016-04-24. This reduced the available data by <span class="math inline">\(\approx\)</span> 15% and removed some unwanted noise in the data prior to the cutoff.</p></li>
-<li><p>For each product, limit the testing data to include observations from 2016-04-25 to 2016-05-22.</p></li>
-<li><p>Use Random Forest (via the <a href="https://arxiv.org/pdf/1508.04409.pdf">ranger</a> package) which is highly regarded for being fast, accurate, resistant to outliers, unaffected by the scales of the features, resistant to overfitting, and capable of overcoming high dimensionality.</p></li>
-<li><p>Use theoretical and cultural knowledge to engineer a standardized feature engineering pipeline and let the algorithm quantify the importances of feature for each product separately.</p></li>
-<li><p>Measure the RMSSE on the testing data for each product, then average all RMSSE values to quantify the overall performance of the system.</p></li>
-<li><p>Continue making tweaks until the average RMSSE is sufficiently minimized.</p></li>
+<li><p>Draw a small yet diverse sample of 1000 products.</p></li>
+<li><p>For each product, reduce the training data by about 20%.</p></li>
+<li><p>For each product, limit the testing data to a small 28-day sample corresponding with the final 28 days of the training data.</p></li>
+<li><p>Use the H2O machine learning framework on an EC2 instance to train and tune (manually) the Random Forest and gradient boosted models.</p></li>
+<li><p>Continue tweaking features and hyperparameters until RMSE on training and testing sets were sufficiently low and in agreement to avoid overfitting (in theory).</p></li>
 </ul>
 </div>
 <div id="potential-improvements" class="section level2">
@@ -168,8 +133,14 @@ code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warni
 <p>If I were to compete in this competition again, I would experiement with the following changes:</p>
 <ol style="list-style-type: decimal">
 <li><p>More and/or better features related to weather, economic conditions, natural disasters, elections, etc.</p></li>
-<li><p>Specific hierarchical forecasting strategies, particularly the one mentioned <a href="https://arxiv.org/abs/1912.00370">in this paper</a>.</p></li>
+<li><p>Experiment with hierarchical forecasting strategies, particularly the one mentioned <a href="https://arxiv.org/abs/1912.00370">in this paper</a>.</p></li>
 <li><p>Ensemble of simple, traditional models since this strategy worked very well in the M4 Forecasting competition.</p></li>
-<li><p>More extensive evaluation strategy</p></li>
+<li><p>More extensive evaluation strategy, including hyperparameter tuning using AWS Sagemaker.</p></li>
 </ol>
+</div>
+<div id="conclusion" class="section level2">
+<h2>Conclusion</h2>
+<p>This competition forced me to think about doing machine learning and forecasting at scale. It required a blend of technical and theoretical knowledge to engineer a solution for large volumes of data that generalized well to unseen data. I was very pleased to have discovered a high performing solution through the use of ensembling.</p>
+<p>Despite my previous experience with AWS Sagemaker, I was delighted at how simple and effective it was to engineer the distributed training pipeline. In a production setting, I would highly recommend using AWS for exploring, training and deploying machine learning models at scale.</p>
+<p>Finally, ensembling led to the single greatest improvement in performance.</p>
 </div>

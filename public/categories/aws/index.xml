@@ -22,6 +22,15 @@ This post outlines the basic steps required to run a distributed machine learnin
     </item>
     
     <item>
+      <title>My top 6% solution in the Kaggle M5 Forecasting - Accuracy competition using a machine learning ensemble</title>
+      <link>/post/2020/07/08/forecasting-demand-for-30-000-walmart-products/</link>
+      <pubDate>Wed, 08 Jul 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2020/07/08/forecasting-demand-for-30-000-walmart-products/</guid>
+      <description>OverviewCompetition overviewForecasting as a supervised machine learning problemGeneral feature engineeringModelsOne model per product using Random ForestsOne model per store using XGBoostModel performance with and without ensemblingSummary of my development and evaluation strategyPotential improvementsConclusionDisclaimer: The final competition leaderboard shows my score in the 46th percentile. I made a rookie mistake and failed to submit my (then) best model, which would have put my ranking in the top 28%.</description>
+    </item>
+    
+    <item>
       <title>Object detection using AWS SageMaker and GluonCV </title>
       <link>/post/2019/12/07/object-detection-using-aws-sagemaker-and-gluoncv/</link>
       <pubDate>Sat, 07 Dec 2019 00:00:00 +0000</pubDate>

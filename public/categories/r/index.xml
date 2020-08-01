@@ -21,12 +21,12 @@
     </item>
     
     <item>
-      <title>Kaggle M5 Forecasting - Accuracy: Top 28% solution using true bottom-level forecasting with Random Forests</title>
+      <title>My top 6% solution in the Kaggle M5 Forecasting - Accuracy competition using a machine learning ensemble</title>
       <link>/post/2020/07/08/forecasting-demand-for-30-000-walmart-products/</link>
       <pubDate>Wed, 08 Jul 2020 00:00:00 +0000</pubDate>
       
       <guid>/post/2020/07/08/forecasting-demand-for-30-000-walmart-products/</guid>
-      <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
+      <description>OverviewCompetition overviewForecasting as a supervised machine learning problemGeneral feature engineeringModelsOne model per product using Random ForestsOne model per store using XGBoostModel performance with and without ensemblingSummary of my development and evaluation strategyPotential improvementsConclusionDisclaimer: The final competition leaderboard shows my score in the 46th percentile. I made a rookie mistake and failed to submit my (then) best model, which would have put my ranking in the top 28%.</description>
     </item>
     
     <item>
