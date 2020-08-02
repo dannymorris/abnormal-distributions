@@ -3,6 +3,11 @@
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   
   <url>
+    <loc>/post/2020/07/26/bottom-level-forecasting-isolated-series-vs-cross-sectional/</loc>
+    <lastmod>2020-07-26T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>/post/2020/07/23/distributed-machine-learning-training-on-aws/</loc>
     <lastmod>2020-07-23T00:00:00+00:00</lastmod>
   </url>
@@ -147,36 +152,36 @@
   
   <url>
     <loc>/tags/forecasting/</loc>
-    <lastmod>2020-07-12T00:00:00+00:00</lastmod>
+    <lastmod>2020-07-26T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/categories/forecasting/</loc>
-    <lastmod>2020-07-12T00:00:00+00:00</lastmod>
+    <lastmod>2020-07-26T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/</loc>
-    <lastmod>2020-07-23T00:00:00+00:00</lastmod>
+    <lastmod>2020-07-26T00:00:00+00:00</lastmod>
   </url>
   
   <url>
     <loc>/tags/machine-learning/</loc>
-    <lastmod>2020-07-23T00:00:00+00:00</lastmod>
+    <lastmod>2020-07-26T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/categories/machine-learning/</loc>
-    <lastmod>2020-07-23T00:00:00+00:00</lastmod>
+    <lastmod>2020-07-26T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/post/</loc>
-    <lastmod>2020-07-23T00:00:00+00:00</lastmod>
+    <lastmod>2020-07-26T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -206,13 +211,13 @@
   
   <url>
     <loc>/tags/r/</loc>
-    <lastmod>2020-07-12T00:00:00+00:00</lastmod>
+    <lastmod>2020-07-26T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
   <url>
     <loc>/categories/r/</loc>
-    <lastmod>2020-07-12T00:00:00+00:00</lastmod>
+    <lastmod>2020-07-26T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   

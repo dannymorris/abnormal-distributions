@@ -1,0 +1,438 @@
+---
+title: 'Bottom-level forecasting using machine learning: Isolated series vs. Global methods'
+author: Danny Morris
+date: '2020-07-26'
+output: 
+  blogdown::html_page:
+    toc: true
+    highlight: pygments
+slug: bottom-level-forecasting-isolated-series-vs-cross-sectional
+categories:
+  - R
+  - Forecasting
+  - Machine Learning
+tags:
+  - R
+  - Forecasting
+  - Machine Learning
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include=F}
+knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
+```
+
+## Overview
+
+My best submission (top 6%) in the recent M5 Forecast - Accuracy Kaggle competition was an ensemble of two machine learning methods for bottom-level forecasting. 
+Each model on its own performed well (in the top 30%), but a simple ensemble via averaging produced a very strong submission.  The methods include:
+
+1. **Isolated series method**. The training data were split by product, resulting in over 30,000 series, and each product was modeled in isolation using a fast Random Forest.
+
+2. **Global method**. The training data were concatenated to form a single data set, and a single XGBoost model was applied to the entire training data.
+
+Each model on its own performed well (in the top 30%), but a simple ensemble via averaging produced a very strong submission. This post describes these two approaches using a sample of data from the Kaggle competiton. The implementations are done in R. The (arbitrary) goal is to test the accuracy and stability of each approach using 14-day forecast periods.
+
+## Packages
+
+```{r}
+library(tidyverse)
+library(aws.s3)
+library(rsample)
+library(yardstick)
+library(ranger)
+library(xgboost)
+```
+
+## Data
+
+```{r}
+model_df <- s3read_using(
+  object = "m5-by-store.csv",
+  bucket = "abn-distro",
+  FUN = read_csv
+)
+
+head(model_df)
+```
+
+## Data visualization
+
+```{r}
+model_df %>%
+  select(date, store_id, Value) %>%
+  ggplot(aes(x = date, y = Value)) +
+  facet_wrap(~store_id) +
+  geom_line(color = "steelblue") +
+  labs(title = "Training data - daily sales by store") +
+  theme_bw()
+```
+
+## Rolling statistics of the target variable as features
+
+The functions below calculate the rolling 30-day mean and rolling 30-day standard deviation of the target variable (sales, represented by column `Value`). These rolling statistics are used as features in the predictive model. These functions are to be applied *within each ROCV iteration* to avoid data leakage. The rolling statistics are learned from the training data, and the values from the last training instance become the feature values for each of the testing instances. 
+
+```{r}
+# rolling standard deviation (default 30-day)
+rolling_sd <- function(x, lag = 30) {
+  zoo::rollapply(x, lag, sd, fill = NA, align = "right")
+}
+
+# rolling mean (default 30-day)
+rolling_mean <- function(x, lag = 30) {
+  zoo::rollmean(x, lag, fill = NA, align = "right")
+}
+
+# function to apply rolling stats to training data to generate features
+get_rolling_stats <- function(df) {
+  df %>%
+    mutate(roll_sd = rolling_sd(Value)) %>%
+    mutate(roll_mean = rolling_mean(Value)) %>%
+    drop_na() 
+}
+```
+
+In my experience, rolling statistics generated from the target variable almost always improve the accuracy of forecasting when using a supervised machine learning approaches. The key is deciding the length of the sliding window (e.g. 7, 30, 60 days, etc.). Shorter windows (e.g. 7 days) capture short-term trends while larger windows capture long-term trends. The best approach is to experiment with various window sizes and choose one (or more) that minimize error in the cross validation experiment.
+
+## Prepare rolling origin cross validation
+
+The basic CV strategy is rolling origin cross validation (ROCV). To keep computation fairly light, 9-fold ROCV is employed using the following configuration.
+
+```{r}
+forecast_horizon <- 14
+initial_train_length <- 1095
+rocv_skip_size <- 14
+expand_training_data <- FALSE
+
+## Interpretation:
+##
+## Forecast period of 14 days
+## Inital ROCV iteration uses first 1095 days (3 years) for training
+## After each iteration, shift train/test data forward by 14 days
+## Do not expand training data after each iteration (see viz)
+```
+
+To ensure all store ids are equally represented in each ROCV iteration, resampling is first applied at the store level. Store-level resamples are then concatenated to form the complete 9-fold ROCV resampling strategy.
+
+```{r}
+# Split data by store
+store_splits <- split(model_df, model_df$store_id)
+
+# Define within-store ROCV iterations
+rocv_by_store <- map2(store_splits, names(store_splits), function(df,nm) {
+  train_test_idx <- rolling_origin(
+    data = df,
+    initial = initial_train_length,
+    assess = forecast_horizon,
+    cumulative = expand_training_data,
+    skip = rocv_skip_size
+  ) %>%
+    mutate(store_id = nm) %>%
+    mutate(Iteration = row_number())
+}) %>%
+  bind_rows()
+
+# Concatenate within-store ROCV, then split by ROCV iteration
+rocv_by_iteration <- rocv_by_store %>%
+  split(.$Iteration) 
+
+rocv_by_iteration
+```
+
+## Global method
+
+The global forecasting method lumps all training data into a single data set. The key to this method is to include relevant categorical features in the training data to enable the algorithm to learn the hierarchical structure of the data. The relevant categorical feature in this context is `store_id`. Without this feature, the algorithm would not learn levels, trends, and seasonalities within each store.
+
+Because all stores are modeled together, this will result in two things: 1) larger training data per ROCV iteration, 2) shorter total training time since only 9 total models are fit in the ROCV experiment.
+
+The algorithm used in this post for the global method is Random Forest, although any supervised regression algorithm can be used as long as the data is formatted appropriately.
+
+### Prepare training data
+
+```{r}
+global_training <- map(rocv_by_iteration, function(idx) {
+  
+  model_df <- map(idx$splits, function(split) {
+    
+    # Use this for testing:
+    #
+    # idx <- rocv_by_iteration$`1`
+    # split <- idx$splits[[1]]
+    
+    # Training data
+    # Rolling lag features are derived from this sample
+    train <- analysis(split) %>% 
+      get_rolling_stats() %>% 
+      mutate(Split = "Train")
+    
+    # Pull last values for rolling statistics from training data
+    # These are used as feature values in test set
+    train_last_lags <- train %>% 
+      filter(row_number() == max(row_number())) %>%
+      select(roll_mean, roll_sd)
+    
+    # Testing data
+    # Carry over rolling lags from last training instance
+    test <- assessment(split) %>% 
+      mutate(roll_mean = train_last_lags$roll_mean,
+             roll_sd = train_last_lags$roll_sd) %>%
+      mutate(Split = "Test")
+    
+    # Return training/testing data
+    out <- bind_rows(train, test)
+    
+    return(out)
+  }) 
+  
+  bind_rows(model_df)
+})
+```
+
+```{r, echo = F, cache = T, fig.height=10, fig.width=10}
+map2(global_training, names(global_training), function(x, y) {
+  x %>% mutate(Iteration = as.numeric(y))
+}) %>%
+  bind_rows() %>%
+  ggplot(aes(x = date, y = Value)) +
+  facet_wrap(~Iteration, ncol = 1) +
+  geom_line(aes(color = Split, group = Split)) +
+  scale_color_manual(values = c("red", "steelblue")) +
+  labs(title = "9-fold rolling origin cross validation strategy for global method",
+       subtitle = "Each fold contains data for all 12 stores") +
+  theme_bw()
+```
+
+### Fit global models
+
+```{r, cache = T}
+start_global <- Sys.time()
+
+global_models <- map2(global_training, names(global_training), function(resample, iteration) {
+  
+  # Training and testing datda
+  train <- resample %>% filter(Split == "Train")
+  test <- resample %>% filter(Split == "Test")
+  
+  # Fit Random Forest to training data
+  train_fit <- ranger(formula = Value ~ ., 
+                      data = train %>% select(-date, -Split))
+  
+  # Generate predictions for testing data
+  test_pred <- test %>%
+    mutate(Pred = predict(train_fit, data = test)$predictions) %>%
+    select(date, store_id, Value, Pred) %>%
+    mutate(ROCV_Iteration = as.numeric(iteration))
+  
+  # Calculate MASE on testing data
+  test_mase <- test_pred %>%
+    group_by(store_id) %>%
+    mase(truth = Value, estimate = Pred) %>%
+    mutate(ROCV_Iteration = as.numeric(iteration))
+  
+  # Capture memory used by training data and model object
+  train_data_memory <- object.size(train)
+  model_memory <- object.size(train_fit)
+  
+  # Return predictions and MASE
+  out <- list(predictions = test_pred, 
+              mase = test_mase,
+              train_data_memory = train_data_memory,
+              model_memory = model_memory)
+  
+  return(out)
+})
+
+end_global <- Sys.time()
+```
+
+```{r}
+time_global <- end_global - start_global
+```
+
+## Isolated series method
+
+The isolated series method models each bottom-level series in isolation. In this context, we have 12 series (one per store). In the 9-fold ROCV experiment, each fold contains data on a single store only. Thus, we do not need the `store_id` column since it is entirely redundant.
+
+Because each series is modeled in insolation, this will result in two things: 1) smaller training data per ROCV iteration, 2) longer total training time since 12x9 models are fit in the ROCV experiment.
+
+### Fit isolated models
+
+```{r, cache = T}
+start_iso <- Sys.time()
+
+iso_models <- map2(rocv_by_store$splits, rocv_by_store$Iteration, function(split, iteration) {
+  
+  # Training data
+  train <- analysis(split) %>% 
+    get_rolling_stats()
+  
+  # Pull last values for rolling statistics from training data
+  train_last_lags <- train %>% 
+    filter(row_number() == max(row_number())) %>%
+    select(roll_mean, roll_sd)
+  
+  # Testing data
+  test <- assessment(split) %>% 
+    mutate(roll_mean = train_last_lags$roll_mean,
+           roll_sd = train_last_lags$roll_sd)
+  
+  # Fit Random Forest
+  train_fit <- ranger(formula = Value ~ ., 
+                      data = train %>% select(-date))
+  
+  # Generate predictions for testing data
+  test_pred <- test %>%
+    mutate(Pred = predict(train_fit, data = test)$predictions) %>%
+    select(date, store_id, Value, Pred) %>%
+    mutate(ROCV_Iteration = iteration)
+  
+  # Calculate MASE on testing data
+  # help(mase, package = "yardstick")
+  test_mase <- test_pred %>%
+    group_by(store_id) %>%
+    mase(truth = Value, estimate = Pred) %>%
+    mutate(ROCV_Iteration = iteration)
+  
+  # Capture memory used by training data and model object
+  train_data_memory <- object.size(train)
+  model_memory <- object.size(train_fit)
+  
+  # Return predictions and MASE
+  out <- list(predictions = test_pred, 
+              mase = test_mase,
+              train_data_memory = train_data_memory,
+              model_memory = model_memory)
+  
+  return(out)
+})
+
+end_iso <- Sys.time()
+```
+
+```{r}
+time_iso <- end_iso - start_iso
+```
+
+## Comparison of methods
+
+### MASE by ROCV iteration
+
+```{r}
+global_rocv_mase <- map(global_models, function(m) {
+  m[["mase"]]
+}) %>%
+  bind_rows() %>%
+  mutate(Method = "Global")
+
+iso_rocv_mase <- map(iso_models, function(m) {
+  m[["mase"]]
+}) %>%
+  bind_rows() %>%
+  mutate(Method = "Isolated")
+
+bind_rows(global_rocv_mase, iso_rocv_mase) %>%
+  ggplot(aes(x = ROCV_Iteration, y = .estimate)) +
+  facet_wrap(~store_id, scales = "free_y", ncol = 3) +
+  geom_line(aes(group = Method, color = Method)) +
+  labs(title = "Comparison of MASE by store",
+       subtitle = "Neither method is universally superior",
+       x = "ROCV Iteration",
+       y = "MASE") +
+  theme_bw() 
+```
+
+### Total training time (in minutes)
+
+```{r}
+tibble(
+  Global =  round(time_global, 2),
+  Isolated =  round(time_iso, 2)
+)
+```
+
+In terms of training time, the global method is much faster.
+
+### Memory used to store training data (in Mb)
+
+```{r}
+global_training_data_mem <- map_dbl(global_models, function(m) {
+  m[['train_data_memory']]
+}) %>%
+  mean()
+
+iso_training_data_mem <- map_dbl(iso_models, function(m) {
+  m[['train_data_memory']]
+}) %>%
+  mean()
+
+tibble(
+  Global = global_training_data_mem/1000000,
+  Isolated = iso_training_data_mem/1000000
+)
+```
+
+In terms of training data memory usage, the isolated series method presents a lighter load.
+
+## Ensembling
+
+Ensembling typically produces more accurate and stable predictions. In this example, ensembling is defined as a simple average of the two methods.
+
+```{r}
+# Predictions from global models
+global_predictions <- map(global_models, function(m) {
+  m[['predictions']] %>% 
+    select(date, store_id, Value, Global_Pred = Pred, ROCV_Iteration)
+}) %>%
+  bind_rows() 
+
+# Predictions from isolated models
+iso_predictions <- map(iso_models, function(m) {
+  m[['predictions']] %>% 
+    select(date, store_id, Iso_Pred = Pred, ROCV_Iteration)
+}) %>%
+  bind_rows() 
+
+# Ensemble predictions via simple average
+ensemble_predictions <- inner_join(
+  global_predictions, 
+  iso_predictions, 
+  by = c("date", "store_id", "ROCV_Iteration")
+) %>%
+  mutate(Ens_Pred = (Global_Pred + Iso_Pred)/2)
+```
+
+```{r}
+ensemble_predictions %>%
+  gather(Method, Prediction, Global_Pred, Iso_Pred, Ens_Pred) %>%
+  group_by(store_id, Method, ROCV_Iteration) %>%
+  mase(truth = Value, estimate = Prediction) %>%
+  group_by(Method) %>%
+  summarise(Mean_MASE = mean(.estimate),
+            SD_MASE = sd(.estimate)) %>%
+  gather(Metric, Value, -Method) %>%
+  ggplot(aes(x = Method, y = Value)) +
+  facet_wrap(~Metric, scales = "free_y") +
+  geom_col(aes(fill = Method), show.legend = F) +
+  scale_fill_manual(values = c("steelblue", "gray70", "gray70")) +
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 10)) +
+  labs(title = "Ensembling shows better accuracy and stability over individual methods") +
+  theme_bw()
+```
+
+## Conclusion
+
+When training forecasting models using machine learning, the hierarchical strucutre of the data can be dealt with using an isolated series method, in which each bottom-level series is modeled in isolation, or a global method, in which all bottom-level series are concatenated to form a single training data set. The two methods offer strengths and weaknesses in terms of speed, memory usage, and accuracy. Finally, to improve overall accuracy and stability of the solution, ensembling can be used by taking a simple average of the two methods.
+
+
+
+
+
+
+
+
+
+
+
+
+

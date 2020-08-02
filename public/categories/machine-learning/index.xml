@@ -6,10 +6,19 @@
     <description>Recent content in Machine Learning on Abnormal Distributions</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 23 Jul 2020 00:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Sun, 26 Jul 2020 00:00:00 +0000</lastBuildDate>
     
 	<atom:link href="/categories/machine-learning/index.xml" rel="self" type="application/rss+xml" />
     
+    
+    <item>
+      <title>Bottom-level forecasting using machine learning: Isolated series vs. Global methods</title>
+      <link>/post/2020/07/26/bottom-level-forecasting-isolated-series-vs-cross-sectional/</link>
+      <pubDate>Sun, 26 Jul 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2020/07/26/bottom-level-forecasting-isolated-series-vs-cross-sectional/</guid>
+      <description>a.sourceLine { display: inline-block; line-height: 1.25; }a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }a.sourceLine:empty { height: 1.2em; }.sourceCode { overflow: visible; }code.sourceCode { white-space: pre; position: relative; }div.sourceCode { margin: 1em 0; }pre.sourceCode { margin: 0; }@media screen {div.sourceCode { overflow: auto; }}@media print {code.sourceCode { white-space: pre-wrap; }a.sourceLine { text-indent: -1em; padding-left: 1em; }}pre.</description>
+    </item>
     
     <item>
       <title>Distributed machine learning on AWS using the SageMaker SDK in Python</title>

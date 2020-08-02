@@ -1,0 +1,652 @@
+---
+title: 'Bottom-level forecasting using machine learning: Isolated series vs. Global methods'
+author: Danny Morris
+date: '2020-07-26'
+output: 
+  blogdown::html_page:
+    toc: true
+    highlight: pygments
+slug: bottom-level-forecasting-isolated-series-vs-cross-sectional
+categories:
+  - R
+  - Forecasting
+  - Machine Learning
+tags:
+  - R
+  - Forecasting
+  - Machine Learning
+editor_options: 
+  chunk_output_type: console
+---
+
+<style type="text/css">
+a.sourceLine { display: inline-block; line-height: 1.25; }
+a.sourceLine { pointer-events: none; color: inherit; text-decoration: inherit; }
+a.sourceLine:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+a.sourceLine { text-indent: -1em; padding-left: 1em; }
+}
+pre.numberSource a.sourceLine
+  { position: relative; left: -4em; }
+pre.numberSource a.sourceLine::before
+  { content: attr(title);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; pointer-events: all; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {  }
+@media screen {
+a.sourceLine::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+<div id="TOC">
+<ul>
+<li><a href="#overview">Overview</a></li>
+<li><a href="#packages">Packages</a></li>
+<li><a href="#data">Data</a></li>
+<li><a href="#data-visualization">Data visualization</a></li>
+<li><a href="#rolling-statistics-of-the-target-variable-as-features">Rolling statistics of the target variable as features</a></li>
+<li><a href="#prepare-rolling-origin-cross-validation">Prepare rolling origin cross validation</a></li>
+<li><a href="#global-method">Global method</a><ul>
+<li><a href="#prepare-training-data">Prepare training data</a></li>
+<li><a href="#fit-global-models">Fit global models</a></li>
+</ul></li>
+<li><a href="#isolated-series-method">Isolated series method</a><ul>
+<li><a href="#fit-isolated-models">Fit isolated models</a></li>
+</ul></li>
+<li><a href="#comparison-of-methods">Comparison of methods</a><ul>
+<li><a href="#mase-by-rocv-iteration">MASE by ROCV iteration</a></li>
+<li><a href="#total-training-time-in-minutes">Total training time (in minutes)</a></li>
+<li><a href="#memory-used-to-store-training-data-in-mb">Memory used to store training data (in Mb)</a></li>
+</ul></li>
+<li><a href="#ensembling">Ensembling</a></li>
+<li><a href="#conclusion">Conclusion</a></li>
+</ul>
+</div>
+
+<div id="overview" class="section level2">
+<h2>Overview</h2>
+<p>My best submission (top 6%) in the recent M5 Forecast - Accuracy Kaggle competition was an ensemble of two machine learning methods for bottom-level forecasting.
+Each model on its own performed well (in the top 30%), but a simple ensemble via averaging produced a very strong submission. The methods include:</p>
+<ol style="list-style-type: decimal">
+<li><p><strong>Isolated series method</strong>. The training data were split by product, resulting in over 30,000 series, and each product was modeled in isolation using a fast Random Forest.</p></li>
+<li><p><strong>Global method</strong>. The training data were concatenated to form a single data set, and a single XGBoost model was applied to the entire training data.</p></li>
+</ol>
+<p>Each model on its own performed well (in the top 30%), but a simple ensemble via averaging produced a very strong submission. This post describes these two approaches using a sample of data from the Kaggle competiton. The implementations are done in R. The (arbitrary) goal is to test the accuracy and stability of each approach using 14-day forecast periods.</p>
+</div>
+<div id="packages" class="section level2">
+<h2>Packages</h2>
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb1-1" title="1"><span class="kw">library</span>(tidyverse)</a>
+<a class="sourceLine" id="cb1-2" title="2"><span class="kw">library</span>(aws.s3)</a>
+<a class="sourceLine" id="cb1-3" title="3"><span class="kw">library</span>(rsample)</a>
+<a class="sourceLine" id="cb1-4" title="4"><span class="kw">library</span>(yardstick)</a>
+<a class="sourceLine" id="cb1-5" title="5"><span class="kw">library</span>(ranger)</a>
+<a class="sourceLine" id="cb1-6" title="6"><span class="kw">library</span>(xgboost)</a></code></pre></div>
+</div>
+<div id="data" class="section level2">
+<h2>Data</h2>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb2-1" title="1">model_df &lt;-<span class="st"> </span><span class="kw">s3read_using</span>(</a>
+<a class="sourceLine" id="cb2-2" title="2">  <span class="dt">object =</span> <span class="st">&quot;m5-by-store.csv&quot;</span>,</a>
+<a class="sourceLine" id="cb2-3" title="3">  <span class="dt">bucket =</span> <span class="st">&quot;abn-distro&quot;</span>,</a>
+<a class="sourceLine" id="cb2-4" title="4">  <span class="dt">FUN =</span> read_csv</a>
+<a class="sourceLine" id="cb2-5" title="5">)</a>
+<a class="sourceLine" id="cb2-6" title="6"></a>
+<a class="sourceLine" id="cb2-7" title="7"><span class="kw">head</span>(model_df)</a></code></pre></div>
+<pre><code>## # A tibble: 6 x 138
+##   date       store_id Value event_ChanukahE~ event_Christmas event_CincoDeMa~
+##   &lt;date&gt;     &lt;chr&gt;    &lt;dbl&gt;            &lt;dbl&gt;           &lt;dbl&gt;            &lt;dbl&gt;
+## 1 2013-01-01 CA_1      2552                0               0                0
+## 2 2013-01-01 CA_2      2124                0               0                0
+## 3 2013-01-01 CA_3      3580                0               0                0
+## 4 2013-01-01 CA_4      1384                0               0                0
+## 5 2013-01-01 TX_1      2362                0               0                0
+## 6 2013-01-01 TX_2      3402                0               0                0
+## # ... with 132 more variables: event_ColumbusDay &lt;dbl&gt;, event_Cultural &lt;dbl&gt;,
+## #   event_Easter &lt;dbl&gt;, event_EidAlAdha &lt;dbl&gt;, event_EidalFitr &lt;dbl&gt;,
+## #   event_Fathersday &lt;dbl&gt;, event_Halloween &lt;dbl&gt;, event_IndependenceDay &lt;dbl&gt;,
+## #   event_LaborDay &lt;dbl&gt;, event_LentStart &lt;dbl&gt;, event_LentWeek2 &lt;dbl&gt;,
+## #   event_MartinLutherKingDay &lt;dbl&gt;, event_MemorialDay &lt;dbl&gt;,
+## #   event_Mothersday &lt;dbl&gt;, event_NA &lt;dbl&gt;, event_National &lt;dbl&gt;,
+## #   event_NBAFinalsEnd &lt;dbl&gt;, event_NBAFinalsStart &lt;dbl&gt;, event_NewYear &lt;dbl&gt;,
+## #   event_OrthodoxChristmas &lt;dbl&gt;, event_OrthodoxEaster &lt;dbl&gt;,
+## #   event_PesachEnd &lt;dbl&gt;, event_PresidentsDay &lt;dbl&gt;, event_PurimEnd &lt;dbl&gt;,
+## #   event_Ramadanstarts &lt;dbl&gt;, event_Religious &lt;dbl&gt;, event_Sporting &lt;dbl&gt;,
+## #   event_StPatricksDay &lt;dbl&gt;, event_SuperBowl &lt;dbl&gt;, event_Thanksgiving &lt;dbl&gt;,
+## #   event_ValentinesDay &lt;dbl&gt;, event_VeteransDay &lt;dbl&gt;,
+## #   event_ChanukahEnd_Lead_1 &lt;dbl&gt;, event_Christmas_Lead_1 &lt;dbl&gt;,
+## #   event_CincoDeMayo_Lead_1 &lt;dbl&gt;, event_ColumbusDay_Lead_1 &lt;dbl&gt;,
+## #   event_Cultural_Lead_1 &lt;dbl&gt;, event_Easter_Lead_1 &lt;dbl&gt;,
+## #   event_EidAlAdha_Lead_1 &lt;dbl&gt;, event_EidalFitr_Lead_1 &lt;dbl&gt;,
+## #   event_Fathersday_Lead_1 &lt;dbl&gt;, event_Halloween_Lead_1 &lt;dbl&gt;,
+## #   event_IndependenceDay_Lead_1 &lt;dbl&gt;, event_LaborDay_Lead_1 &lt;dbl&gt;,
+## #   event_LentStart_Lead_1 &lt;dbl&gt;, event_LentWeek2_Lead_1 &lt;dbl&gt;,
+## #   event_MartinLutherKingDay_Lead_1 &lt;dbl&gt;, event_MemorialDay_Lead_1 &lt;dbl&gt;,
+## #   event_Mothersday_Lead_1 &lt;dbl&gt;, event_NA_Lead_1 &lt;dbl&gt;,
+## #   event_National_Lead_1 &lt;dbl&gt;, event_NBAFinalsEnd_Lead_1 &lt;dbl&gt;,
+## #   event_NBAFinalsStart_Lead_1 &lt;dbl&gt;, event_NewYear_Lead_1 &lt;dbl&gt;,
+## #   event_OrthodoxChristmas_Lead_1 &lt;dbl&gt;, event_OrthodoxEaster_Lead_1 &lt;dbl&gt;,
+## #   event_PesachEnd_Lead_1 &lt;dbl&gt;, event_PresidentsDay_Lead_1 &lt;dbl&gt;,
+## #   event_PurimEnd_Lead_1 &lt;dbl&gt;, event_Ramadanstarts_Lead_1 &lt;dbl&gt;,
+## #   event_Religious_Lead_1 &lt;dbl&gt;, event_Sporting_Lead_1 &lt;dbl&gt;,
+## #   event_StPatricksDay_Lead_1 &lt;dbl&gt;, event_SuperBowl_Lead_1 &lt;dbl&gt;,
+## #   event_Thanksgiving_Lead_1 &lt;dbl&gt;, event_ValentinesDay_Lead_1 &lt;dbl&gt;,
+## #   event_VeteransDay_Lead_1 &lt;dbl&gt;, event_ChanukahEnd_Lead_2 &lt;dbl&gt;,
+## #   event_Christmas_Lead_2 &lt;dbl&gt;, event_CincoDeMayo_Lead_2 &lt;dbl&gt;,
+## #   event_ColumbusDay_Lead_2 &lt;dbl&gt;, event_Cultural_Lead_2 &lt;dbl&gt;,
+## #   event_Easter_Lead_2 &lt;dbl&gt;, event_EidAlAdha_Lead_2 &lt;dbl&gt;,
+## #   event_EidalFitr_Lead_2 &lt;dbl&gt;, event_Fathersday_Lead_2 &lt;dbl&gt;,
+## #   event_Halloween_Lead_2 &lt;dbl&gt;, event_IndependenceDay_Lead_2 &lt;dbl&gt;,
+## #   event_LaborDay_Lead_2 &lt;dbl&gt;, event_LentStart_Lead_2 &lt;dbl&gt;,
+## #   event_LentWeek2_Lead_2 &lt;dbl&gt;, event_MartinLutherKingDay_Lead_2 &lt;dbl&gt;,
+## #   event_MemorialDay_Lead_2 &lt;dbl&gt;, event_Mothersday_Lead_2 &lt;dbl&gt;,
+## #   event_NA_Lead_2 &lt;dbl&gt;, event_National_Lead_2 &lt;dbl&gt;,
+## #   event_NBAFinalsEnd_Lead_2 &lt;dbl&gt;, event_NBAFinalsStart_Lead_2 &lt;dbl&gt;,
+## #   event_NewYear_Lead_2 &lt;dbl&gt;, event_OrthodoxChristmas_Lead_2 &lt;dbl&gt;,
+## #   event_OrthodoxEaster_Lead_2 &lt;dbl&gt;, event_PesachEnd_Lead_2 &lt;dbl&gt;,
+## #   event_PresidentsDay_Lead_2 &lt;dbl&gt;, event_PurimEnd_Lead_2 &lt;dbl&gt;,
+## #   event_Ramadanstarts_Lead_2 &lt;dbl&gt;, event_Religious_Lead_2 &lt;dbl&gt;,
+## #   event_Sporting_Lead_2 &lt;dbl&gt;, event_StPatricksDay_Lead_2 &lt;dbl&gt;,
+## #   event_SuperBowl_Lead_2 &lt;dbl&gt;, event_Thanksgiving_Lead_2 &lt;dbl&gt;, ...</code></pre>
+</div>
+<div id="data-visualization" class="section level2">
+<h2>Data visualization</h2>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb4-1" title="1">model_df <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb4-2" title="2"><span class="st">  </span><span class="kw">select</span>(date, store_id, Value) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb4-3" title="3"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> date, <span class="dt">y =</span> Value)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-4" title="4"><span class="st">  </span><span class="kw">facet_wrap</span>(<span class="op">~</span>store_id) <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-5" title="5"><span class="st">  </span><span class="kw">geom_line</span>(<span class="dt">color =</span> <span class="st">&quot;steelblue&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-6" title="6"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Training data - daily sales by store&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb4-7" title="7"><span class="st">  </span><span class="kw">theme_bw</span>()</a></code></pre></div>
+<p><img src="/post/2020-07-26-bottom-level-forecasting-isolated-vs-global-ml_files/figure-html/unnamed-chunk-4-1.png" width="672" /></p>
+</div>
+<div id="rolling-statistics-of-the-target-variable-as-features" class="section level2">
+<h2>Rolling statistics of the target variable as features</h2>
+<p>The functions below calculate the rolling 30-day mean and rolling 30-day standard deviation of the target variable (sales, represented by column <code>Value</code>). These rolling statistics are used as features in the predictive model. These functions are to be applied <em>within each ROCV iteration</em> to avoid data leakage. The rolling statistics are learned from the training data, and the values from the last training instance become the feature values for each of the testing instances.</p>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb5-1" title="1"><span class="co"># rolling standard deviation (default 30-day)</span></a>
+<a class="sourceLine" id="cb5-2" title="2">rolling_sd &lt;-<span class="st"> </span><span class="cf">function</span>(x, <span class="dt">lag =</span> <span class="dv">30</span>) {</a>
+<a class="sourceLine" id="cb5-3" title="3">  zoo<span class="op">::</span><span class="kw">rollapply</span>(x, lag, sd, <span class="dt">fill =</span> <span class="ot">NA</span>, <span class="dt">align =</span> <span class="st">&quot;right&quot;</span>)</a>
+<a class="sourceLine" id="cb5-4" title="4">}</a>
+<a class="sourceLine" id="cb5-5" title="5"></a>
+<a class="sourceLine" id="cb5-6" title="6"><span class="co"># rolling mean (default 30-day)</span></a>
+<a class="sourceLine" id="cb5-7" title="7">rolling_mean &lt;-<span class="st"> </span><span class="cf">function</span>(x, <span class="dt">lag =</span> <span class="dv">30</span>) {</a>
+<a class="sourceLine" id="cb5-8" title="8">  zoo<span class="op">::</span><span class="kw">rollmean</span>(x, lag, <span class="dt">fill =</span> <span class="ot">NA</span>, <span class="dt">align =</span> <span class="st">&quot;right&quot;</span>)</a>
+<a class="sourceLine" id="cb5-9" title="9">}</a>
+<a class="sourceLine" id="cb5-10" title="10"></a>
+<a class="sourceLine" id="cb5-11" title="11"><span class="co"># function to apply rolling stats to training data to generate features</span></a>
+<a class="sourceLine" id="cb5-12" title="12">get_rolling_stats &lt;-<span class="st"> </span><span class="cf">function</span>(df) {</a>
+<a class="sourceLine" id="cb5-13" title="13">  df <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-14" title="14"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">roll_sd =</span> <span class="kw">rolling_sd</span>(Value)) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-15" title="15"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">roll_mean =</span> <span class="kw">rolling_mean</span>(Value)) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb5-16" title="16"><span class="st">    </span><span class="kw">drop_na</span>() </a>
+<a class="sourceLine" id="cb5-17" title="17">}</a></code></pre></div>
+<p>In my experience, rolling statistics generated from the target variable almost always improve the accuracy of forecasting when using a supervised machine learning approaches. The key is deciding the length of the sliding window (e.g. 7, 30, 60 days, etc.). Shorter windows (e.g. 7 days) capture short-term trends while larger windows capture long-term trends. The best approach is to experiment with various window sizes and choose one (or more) that minimize error in the cross validation experiment.</p>
+</div>
+<div id="prepare-rolling-origin-cross-validation" class="section level2">
+<h2>Prepare rolling origin cross validation</h2>
+<p>The basic CV strategy is rolling origin cross validation (ROCV). To keep computation fairly light, 9-fold ROCV is employed using the following configuration.</p>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb6-1" title="1">forecast_horizon &lt;-<span class="st"> </span><span class="dv">14</span></a>
+<a class="sourceLine" id="cb6-2" title="2">initial_train_length &lt;-<span class="st"> </span><span class="dv">1095</span></a>
+<a class="sourceLine" id="cb6-3" title="3">rocv_skip_size &lt;-<span class="st"> </span><span class="dv">14</span></a>
+<a class="sourceLine" id="cb6-4" title="4">expand_training_data &lt;-<span class="st"> </span><span class="ot">FALSE</span></a>
+<a class="sourceLine" id="cb6-5" title="5"></a>
+<a class="sourceLine" id="cb6-6" title="6"><span class="co">## Interpretation:</span></a>
+<a class="sourceLine" id="cb6-7" title="7"><span class="co">##</span></a>
+<a class="sourceLine" id="cb6-8" title="8"><span class="co">## Forecast period of 14 days</span></a>
+<a class="sourceLine" id="cb6-9" title="9"><span class="co">## Inital ROCV iteration uses first 1095 days (3 years) for training</span></a>
+<a class="sourceLine" id="cb6-10" title="10"><span class="co">## After each iteration, shift train/test data forward by 14 days</span></a>
+<a class="sourceLine" id="cb6-11" title="11"><span class="co">## Do not expand training data after each iteration (see viz)</span></a></code></pre></div>
+<p>To ensure all store ids are equally represented in each ROCV iteration, resampling is first applied at the store level. Store-level resamples are then concatenated to form the complete 9-fold ROCV resampling strategy.</p>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb7-1" title="1"><span class="co"># Split data by store</span></a>
+<a class="sourceLine" id="cb7-2" title="2">store_splits &lt;-<span class="st"> </span><span class="kw">split</span>(model_df, model_df<span class="op">$</span>store_id)</a>
+<a class="sourceLine" id="cb7-3" title="3"></a>
+<a class="sourceLine" id="cb7-4" title="4"><span class="co"># Define within-store ROCV iterations</span></a>
+<a class="sourceLine" id="cb7-5" title="5">rocv_by_store &lt;-<span class="st"> </span><span class="kw">map2</span>(store_splits, <span class="kw">names</span>(store_splits), <span class="cf">function</span>(df,nm) {</a>
+<a class="sourceLine" id="cb7-6" title="6">  train_test_idx &lt;-<span class="st"> </span><span class="kw">rolling_origin</span>(</a>
+<a class="sourceLine" id="cb7-7" title="7">    <span class="dt">data =</span> df,</a>
+<a class="sourceLine" id="cb7-8" title="8">    <span class="dt">initial =</span> initial_train_length,</a>
+<a class="sourceLine" id="cb7-9" title="9">    <span class="dt">assess =</span> forecast_horizon,</a>
+<a class="sourceLine" id="cb7-10" title="10">    <span class="dt">cumulative =</span> expand_training_data,</a>
+<a class="sourceLine" id="cb7-11" title="11">    <span class="dt">skip =</span> rocv_skip_size</a>
+<a class="sourceLine" id="cb7-12" title="12">  ) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb7-13" title="13"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">store_id =</span> nm) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb7-14" title="14"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">Iteration =</span> <span class="kw">row_number</span>())</a>
+<a class="sourceLine" id="cb7-15" title="15">}) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb7-16" title="16"><span class="st">  </span><span class="kw">bind_rows</span>()</a>
+<a class="sourceLine" id="cb7-17" title="17"></a>
+<a class="sourceLine" id="cb7-18" title="18"><span class="co"># Concatenate within-store ROCV, then split by ROCV iteration</span></a>
+<a class="sourceLine" id="cb7-19" title="19">rocv_by_iteration &lt;-<span class="st"> </span>rocv_by_store <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb7-20" title="20"><span class="st">  </span><span class="kw">split</span>(.<span class="op">$</span>Iteration) </a>
+<a class="sourceLine" id="cb7-21" title="21"></a>
+<a class="sourceLine" id="cb7-22" title="22">rocv_by_iteration</a></code></pre></div>
+<pre><code>## $`1`
+## # A tibble: 10 x 4
+##    splits            id     store_id Iteration
+##    &lt;list&gt;            &lt;chr&gt;  &lt;chr&gt;        &lt;int&gt;
+##  1 &lt;split [1.1K/14]&gt; Slice1 CA_1             1
+##  2 &lt;split [1.1K/14]&gt; Slice1 CA_2             1
+##  3 &lt;split [1.1K/14]&gt; Slice1 CA_3             1
+##  4 &lt;split [1.1K/14]&gt; Slice1 CA_4             1
+##  5 &lt;split [1.1K/14]&gt; Slice1 TX_1             1
+##  6 &lt;split [1.1K/14]&gt; Slice1 TX_2             1
+##  7 &lt;split [1.1K/14]&gt; Slice1 TX_3             1
+##  8 &lt;split [1.1K/14]&gt; Slice1 WI_1             1
+##  9 &lt;split [1.1K/14]&gt; Slice1 WI_2             1
+## 10 &lt;split [1.1K/14]&gt; Slice1 WI_3             1
+## 
+## $`2`
+## # A tibble: 10 x 4
+##    splits            id     store_id Iteration
+##    &lt;list&gt;            &lt;chr&gt;  &lt;chr&gt;        &lt;int&gt;
+##  1 &lt;split [1.1K/14]&gt; Slice2 CA_1             2
+##  2 &lt;split [1.1K/14]&gt; Slice2 CA_2             2
+##  3 &lt;split [1.1K/14]&gt; Slice2 CA_3             2
+##  4 &lt;split [1.1K/14]&gt; Slice2 CA_4             2
+##  5 &lt;split [1.1K/14]&gt; Slice2 TX_1             2
+##  6 &lt;split [1.1K/14]&gt; Slice2 TX_2             2
+##  7 &lt;split [1.1K/14]&gt; Slice2 TX_3             2
+##  8 &lt;split [1.1K/14]&gt; Slice2 WI_1             2
+##  9 &lt;split [1.1K/14]&gt; Slice2 WI_2             2
+## 10 &lt;split [1.1K/14]&gt; Slice2 WI_3             2
+## 
+## $`3`
+## # A tibble: 10 x 4
+##    splits            id     store_id Iteration
+##    &lt;list&gt;            &lt;chr&gt;  &lt;chr&gt;        &lt;int&gt;
+##  1 &lt;split [1.1K/14]&gt; Slice3 CA_1             3
+##  2 &lt;split [1.1K/14]&gt; Slice3 CA_2             3
+##  3 &lt;split [1.1K/14]&gt; Slice3 CA_3             3
+##  4 &lt;split [1.1K/14]&gt; Slice3 CA_4             3
+##  5 &lt;split [1.1K/14]&gt; Slice3 TX_1             3
+##  6 &lt;split [1.1K/14]&gt; Slice3 TX_2             3
+##  7 &lt;split [1.1K/14]&gt; Slice3 TX_3             3
+##  8 &lt;split [1.1K/14]&gt; Slice3 WI_1             3
+##  9 &lt;split [1.1K/14]&gt; Slice3 WI_2             3
+## 10 &lt;split [1.1K/14]&gt; Slice3 WI_3             3
+## 
+## $`4`
+## # A tibble: 10 x 4
+##    splits            id     store_id Iteration
+##    &lt;list&gt;            &lt;chr&gt;  &lt;chr&gt;        &lt;int&gt;
+##  1 &lt;split [1.1K/14]&gt; Slice4 CA_1             4
+##  2 &lt;split [1.1K/14]&gt; Slice4 CA_2             4
+##  3 &lt;split [1.1K/14]&gt; Slice4 CA_3             4
+##  4 &lt;split [1.1K/14]&gt; Slice4 CA_4             4
+##  5 &lt;split [1.1K/14]&gt; Slice4 TX_1             4
+##  6 &lt;split [1.1K/14]&gt; Slice4 TX_2             4
+##  7 &lt;split [1.1K/14]&gt; Slice4 TX_3             4
+##  8 &lt;split [1.1K/14]&gt; Slice4 WI_1             4
+##  9 &lt;split [1.1K/14]&gt; Slice4 WI_2             4
+## 10 &lt;split [1.1K/14]&gt; Slice4 WI_3             4
+## 
+## $`5`
+## # A tibble: 10 x 4
+##    splits            id     store_id Iteration
+##    &lt;list&gt;            &lt;chr&gt;  &lt;chr&gt;        &lt;int&gt;
+##  1 &lt;split [1.1K/14]&gt; Slice5 CA_1             5
+##  2 &lt;split [1.1K/14]&gt; Slice5 CA_2             5
+##  3 &lt;split [1.1K/14]&gt; Slice5 CA_3             5
+##  4 &lt;split [1.1K/14]&gt; Slice5 CA_4             5
+##  5 &lt;split [1.1K/14]&gt; Slice5 TX_1             5
+##  6 &lt;split [1.1K/14]&gt; Slice5 TX_2             5
+##  7 &lt;split [1.1K/14]&gt; Slice5 TX_3             5
+##  8 &lt;split [1.1K/14]&gt; Slice5 WI_1             5
+##  9 &lt;split [1.1K/14]&gt; Slice5 WI_2             5
+## 10 &lt;split [1.1K/14]&gt; Slice5 WI_3             5
+## 
+## $`6`
+## # A tibble: 10 x 4
+##    splits            id     store_id Iteration
+##    &lt;list&gt;            &lt;chr&gt;  &lt;chr&gt;        &lt;int&gt;
+##  1 &lt;split [1.1K/14]&gt; Slice6 CA_1             6
+##  2 &lt;split [1.1K/14]&gt; Slice6 CA_2             6
+##  3 &lt;split [1.1K/14]&gt; Slice6 CA_3             6
+##  4 &lt;split [1.1K/14]&gt; Slice6 CA_4             6
+##  5 &lt;split [1.1K/14]&gt; Slice6 TX_1             6
+##  6 &lt;split [1.1K/14]&gt; Slice6 TX_2             6
+##  7 &lt;split [1.1K/14]&gt; Slice6 TX_3             6
+##  8 &lt;split [1.1K/14]&gt; Slice6 WI_1             6
+##  9 &lt;split [1.1K/14]&gt; Slice6 WI_2             6
+## 10 &lt;split [1.1K/14]&gt; Slice6 WI_3             6
+## 
+## $`7`
+## # A tibble: 10 x 4
+##    splits            id     store_id Iteration
+##    &lt;list&gt;            &lt;chr&gt;  &lt;chr&gt;        &lt;int&gt;
+##  1 &lt;split [1.1K/14]&gt; Slice7 CA_1             7
+##  2 &lt;split [1.1K/14]&gt; Slice7 CA_2             7
+##  3 &lt;split [1.1K/14]&gt; Slice7 CA_3             7
+##  4 &lt;split [1.1K/14]&gt; Slice7 CA_4             7
+##  5 &lt;split [1.1K/14]&gt; Slice7 TX_1             7
+##  6 &lt;split [1.1K/14]&gt; Slice7 TX_2             7
+##  7 &lt;split [1.1K/14]&gt; Slice7 TX_3             7
+##  8 &lt;split [1.1K/14]&gt; Slice7 WI_1             7
+##  9 &lt;split [1.1K/14]&gt; Slice7 WI_2             7
+## 10 &lt;split [1.1K/14]&gt; Slice7 WI_3             7
+## 
+## $`8`
+## # A tibble: 10 x 4
+##    splits            id     store_id Iteration
+##    &lt;list&gt;            &lt;chr&gt;  &lt;chr&gt;        &lt;int&gt;
+##  1 &lt;split [1.1K/14]&gt; Slice8 CA_1             8
+##  2 &lt;split [1.1K/14]&gt; Slice8 CA_2             8
+##  3 &lt;split [1.1K/14]&gt; Slice8 CA_3             8
+##  4 &lt;split [1.1K/14]&gt; Slice8 CA_4             8
+##  5 &lt;split [1.1K/14]&gt; Slice8 TX_1             8
+##  6 &lt;split [1.1K/14]&gt; Slice8 TX_2             8
+##  7 &lt;split [1.1K/14]&gt; Slice8 TX_3             8
+##  8 &lt;split [1.1K/14]&gt; Slice8 WI_1             8
+##  9 &lt;split [1.1K/14]&gt; Slice8 WI_2             8
+## 10 &lt;split [1.1K/14]&gt; Slice8 WI_3             8
+## 
+## $`9`
+## # A tibble: 10 x 4
+##    splits            id     store_id Iteration
+##    &lt;list&gt;            &lt;chr&gt;  &lt;chr&gt;        &lt;int&gt;
+##  1 &lt;split [1.1K/14]&gt; Slice9 CA_1             9
+##  2 &lt;split [1.1K/14]&gt; Slice9 CA_2             9
+##  3 &lt;split [1.1K/14]&gt; Slice9 CA_3             9
+##  4 &lt;split [1.1K/14]&gt; Slice9 CA_4             9
+##  5 &lt;split [1.1K/14]&gt; Slice9 TX_1             9
+##  6 &lt;split [1.1K/14]&gt; Slice9 TX_2             9
+##  7 &lt;split [1.1K/14]&gt; Slice9 TX_3             9
+##  8 &lt;split [1.1K/14]&gt; Slice9 WI_1             9
+##  9 &lt;split [1.1K/14]&gt; Slice9 WI_2             9
+## 10 &lt;split [1.1K/14]&gt; Slice9 WI_3             9</code></pre>
+</div>
+<div id="global-method" class="section level2">
+<h2>Global method</h2>
+<p>The global forecasting method lumps all training data into a single data set. The key to this method is to include relevant categorical features in the training data to enable the algorithm to learn the hierarchical structure of the data. The relevant categorical feature in this context is <code>store_id</code>. Without this feature, the algorithm would not learn levels, trends, and seasonalities within each store.</p>
+<p>Because all stores are modeled together, this will result in two things: 1) larger training data per ROCV iteration, 2) shorter total training time since only 9 total models are fit in the ROCV experiment.</p>
+<p>The algorithm used in this post for the global method is Random Forest, although any supervised regression algorithm can be used as long as the data is formatted appropriately.</p>
+<div id="prepare-training-data" class="section level3">
+<h3>Prepare training data</h3>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb9-1" title="1">global_training &lt;-<span class="st"> </span><span class="kw">map</span>(rocv_by_iteration, <span class="cf">function</span>(idx) {</a>
+<a class="sourceLine" id="cb9-2" title="2">  </a>
+<a class="sourceLine" id="cb9-3" title="3">  model_df &lt;-<span class="st"> </span><span class="kw">map</span>(idx<span class="op">$</span>splits, <span class="cf">function</span>(split) {</a>
+<a class="sourceLine" id="cb9-4" title="4">    </a>
+<a class="sourceLine" id="cb9-5" title="5">    <span class="co"># Use this for testing:</span></a>
+<a class="sourceLine" id="cb9-6" title="6">    <span class="co">#</span></a>
+<a class="sourceLine" id="cb9-7" title="7">    <span class="co"># idx &lt;- rocv_by_iteration$`1`</span></a>
+<a class="sourceLine" id="cb9-8" title="8">    <span class="co"># split &lt;- idx$splits[[1]]</span></a>
+<a class="sourceLine" id="cb9-9" title="9">    </a>
+<a class="sourceLine" id="cb9-10" title="10">    <span class="co"># Training data</span></a>
+<a class="sourceLine" id="cb9-11" title="11">    <span class="co"># Rolling lag features are derived from this sample</span></a>
+<a class="sourceLine" id="cb9-12" title="12">    train &lt;-<span class="st"> </span><span class="kw">analysis</span>(split) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb9-13" title="13"><span class="st">      </span><span class="kw">get_rolling_stats</span>() <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb9-14" title="14"><span class="st">      </span><span class="kw">mutate</span>(<span class="dt">Split =</span> <span class="st">&quot;Train&quot;</span>)</a>
+<a class="sourceLine" id="cb9-15" title="15">    </a>
+<a class="sourceLine" id="cb9-16" title="16">    <span class="co"># Pull last values for rolling statistics from training data</span></a>
+<a class="sourceLine" id="cb9-17" title="17">    <span class="co"># These are used as feature values in test set</span></a>
+<a class="sourceLine" id="cb9-18" title="18">    train_last_lags &lt;-<span class="st"> </span>train <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb9-19" title="19"><span class="st">      </span><span class="kw">filter</span>(<span class="kw">row_number</span>() <span class="op">==</span><span class="st"> </span><span class="kw">max</span>(<span class="kw">row_number</span>())) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb9-20" title="20"><span class="st">      </span><span class="kw">select</span>(roll_mean, roll_sd)</a>
+<a class="sourceLine" id="cb9-21" title="21">    </a>
+<a class="sourceLine" id="cb9-22" title="22">    <span class="co"># Testing data</span></a>
+<a class="sourceLine" id="cb9-23" title="23">    <span class="co"># Carry over rolling lags from last training instance</span></a>
+<a class="sourceLine" id="cb9-24" title="24">    test &lt;-<span class="st"> </span><span class="kw">assessment</span>(split) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb9-25" title="25"><span class="st">      </span><span class="kw">mutate</span>(<span class="dt">roll_mean =</span> train_last_lags<span class="op">$</span>roll_mean,</a>
+<a class="sourceLine" id="cb9-26" title="26">             <span class="dt">roll_sd =</span> train_last_lags<span class="op">$</span>roll_sd) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb9-27" title="27"><span class="st">      </span><span class="kw">mutate</span>(<span class="dt">Split =</span> <span class="st">&quot;Test&quot;</span>)</a>
+<a class="sourceLine" id="cb9-28" title="28">    </a>
+<a class="sourceLine" id="cb9-29" title="29">    <span class="co"># Return training/testing data</span></a>
+<a class="sourceLine" id="cb9-30" title="30">    out &lt;-<span class="st"> </span><span class="kw">bind_rows</span>(train, test)</a>
+<a class="sourceLine" id="cb9-31" title="31">    </a>
+<a class="sourceLine" id="cb9-32" title="32">    <span class="kw">return</span>(out)</a>
+<a class="sourceLine" id="cb9-33" title="33">  }) </a>
+<a class="sourceLine" id="cb9-34" title="34">  </a>
+<a class="sourceLine" id="cb9-35" title="35">  <span class="kw">bind_rows</span>(model_df)</a>
+<a class="sourceLine" id="cb9-36" title="36">})</a></code></pre></div>
+<p><img src="/post/2020-07-26-bottom-level-forecasting-isolated-vs-global-ml_files/figure-html/unnamed-chunk-9-1.png" width="960" /></p>
+</div>
+<div id="fit-global-models" class="section level3">
+<h3>Fit global models</h3>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb10-1" title="1">start_global &lt;-<span class="st"> </span><span class="kw">Sys.time</span>()</a>
+<a class="sourceLine" id="cb10-2" title="2"></a>
+<a class="sourceLine" id="cb10-3" title="3">global_models &lt;-<span class="st"> </span><span class="kw">map2</span>(global_training, <span class="kw">names</span>(global_training), <span class="cf">function</span>(resample, iteration) {</a>
+<a class="sourceLine" id="cb10-4" title="4">  </a>
+<a class="sourceLine" id="cb10-5" title="5">  <span class="co"># Training and testing datda</span></a>
+<a class="sourceLine" id="cb10-6" title="6">  train &lt;-<span class="st"> </span>resample <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(Split <span class="op">==</span><span class="st"> &quot;Train&quot;</span>)</a>
+<a class="sourceLine" id="cb10-7" title="7">  test &lt;-<span class="st"> </span>resample <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">filter</span>(Split <span class="op">==</span><span class="st"> &quot;Test&quot;</span>)</a>
+<a class="sourceLine" id="cb10-8" title="8">  </a>
+<a class="sourceLine" id="cb10-9" title="9">  <span class="co"># Fit Random Forest to training data</span></a>
+<a class="sourceLine" id="cb10-10" title="10">  train_fit &lt;-<span class="st"> </span><span class="kw">ranger</span>(<span class="dt">formula =</span> Value <span class="op">~</span><span class="st"> </span>., </a>
+<a class="sourceLine" id="cb10-11" title="11">                      <span class="dt">data =</span> train <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">select</span>(<span class="op">-</span>date, <span class="op">-</span>Split))</a>
+<a class="sourceLine" id="cb10-12" title="12">  </a>
+<a class="sourceLine" id="cb10-13" title="13">  <span class="co"># Generate predictions for testing data</span></a>
+<a class="sourceLine" id="cb10-14" title="14">  test_pred &lt;-<span class="st"> </span>test <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb10-15" title="15"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">Pred =</span> <span class="kw">predict</span>(train_fit, <span class="dt">data =</span> test)<span class="op">$</span>predictions) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb10-16" title="16"><span class="st">    </span><span class="kw">select</span>(date, store_id, Value, Pred) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb10-17" title="17"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">ROCV_Iteration =</span> <span class="kw">as.numeric</span>(iteration))</a>
+<a class="sourceLine" id="cb10-18" title="18">  </a>
+<a class="sourceLine" id="cb10-19" title="19">  <span class="co"># Calculate MASE on testing data</span></a>
+<a class="sourceLine" id="cb10-20" title="20">  test_mase &lt;-<span class="st"> </span>test_pred <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb10-21" title="21"><span class="st">    </span><span class="kw">group_by</span>(store_id) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb10-22" title="22"><span class="st">    </span><span class="kw">mase</span>(<span class="dt">truth =</span> Value, <span class="dt">estimate =</span> Pred) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb10-23" title="23"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">ROCV_Iteration =</span> <span class="kw">as.numeric</span>(iteration))</a>
+<a class="sourceLine" id="cb10-24" title="24">  </a>
+<a class="sourceLine" id="cb10-25" title="25">  <span class="co"># Capture memory used by training data and model object</span></a>
+<a class="sourceLine" id="cb10-26" title="26">  train_data_memory &lt;-<span class="st"> </span><span class="kw">object.size</span>(train)</a>
+<a class="sourceLine" id="cb10-27" title="27">  model_memory &lt;-<span class="st"> </span><span class="kw">object.size</span>(train_fit)</a>
+<a class="sourceLine" id="cb10-28" title="28">  </a>
+<a class="sourceLine" id="cb10-29" title="29">  <span class="co"># Return predictions and MASE</span></a>
+<a class="sourceLine" id="cb10-30" title="30">  out &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">predictions =</span> test_pred, </a>
+<a class="sourceLine" id="cb10-31" title="31">              <span class="dt">mase =</span> test_mase,</a>
+<a class="sourceLine" id="cb10-32" title="32">              <span class="dt">train_data_memory =</span> train_data_memory,</a>
+<a class="sourceLine" id="cb10-33" title="33">              <span class="dt">model_memory =</span> model_memory)</a>
+<a class="sourceLine" id="cb10-34" title="34">  </a>
+<a class="sourceLine" id="cb10-35" title="35">  <span class="kw">return</span>(out)</a>
+<a class="sourceLine" id="cb10-36" title="36">})</a>
+<a class="sourceLine" id="cb10-37" title="37"></a>
+<a class="sourceLine" id="cb10-38" title="38">end_global &lt;-<span class="st"> </span><span class="kw">Sys.time</span>()</a></code></pre></div>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb11-1" title="1">time_global &lt;-<span class="st"> </span>end_global <span class="op">-</span><span class="st"> </span>start_global</a></code></pre></div>
+</div>
+</div>
+<div id="isolated-series-method" class="section level2">
+<h2>Isolated series method</h2>
+<p>The isolated series method models each bottom-level series in isolation. In this context, we have 12 series (one per store). In the 9-fold ROCV experiment, each fold contains data on a single store only. Thus, we do not need the <code>store_id</code> column since it is entirely redundant.</p>
+<p>Because each series is modeled in insolation, this will result in two things: 1) smaller training data per ROCV iteration, 2) longer total training time since 12x9 models are fit in the ROCV experiment.</p>
+<div id="fit-isolated-models" class="section level3">
+<h3>Fit isolated models</h3>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb12-1" title="1">start_iso &lt;-<span class="st"> </span><span class="kw">Sys.time</span>()</a>
+<a class="sourceLine" id="cb12-2" title="2"></a>
+<a class="sourceLine" id="cb12-3" title="3">iso_models &lt;-<span class="st"> </span><span class="kw">map2</span>(rocv_by_store<span class="op">$</span>splits, rocv_by_store<span class="op">$</span>Iteration, <span class="cf">function</span>(split, iteration) {</a>
+<a class="sourceLine" id="cb12-4" title="4">  </a>
+<a class="sourceLine" id="cb12-5" title="5">  <span class="co"># Training data</span></a>
+<a class="sourceLine" id="cb12-6" title="6">  train &lt;-<span class="st"> </span><span class="kw">analysis</span>(split) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb12-7" title="7"><span class="st">    </span><span class="kw">get_rolling_stats</span>()</a>
+<a class="sourceLine" id="cb12-8" title="8">  </a>
+<a class="sourceLine" id="cb12-9" title="9">  <span class="co"># Pull last values for rolling statistics from training data</span></a>
+<a class="sourceLine" id="cb12-10" title="10">  train_last_lags &lt;-<span class="st"> </span>train <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb12-11" title="11"><span class="st">    </span><span class="kw">filter</span>(<span class="kw">row_number</span>() <span class="op">==</span><span class="st"> </span><span class="kw">max</span>(<span class="kw">row_number</span>())) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb12-12" title="12"><span class="st">    </span><span class="kw">select</span>(roll_mean, roll_sd)</a>
+<a class="sourceLine" id="cb12-13" title="13">  </a>
+<a class="sourceLine" id="cb12-14" title="14">  <span class="co"># Testing data</span></a>
+<a class="sourceLine" id="cb12-15" title="15">  test &lt;-<span class="st"> </span><span class="kw">assessment</span>(split) <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb12-16" title="16"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">roll_mean =</span> train_last_lags<span class="op">$</span>roll_mean,</a>
+<a class="sourceLine" id="cb12-17" title="17">           <span class="dt">roll_sd =</span> train_last_lags<span class="op">$</span>roll_sd)</a>
+<a class="sourceLine" id="cb12-18" title="18">  </a>
+<a class="sourceLine" id="cb12-19" title="19">  <span class="co"># Fit Random Forest</span></a>
+<a class="sourceLine" id="cb12-20" title="20">  train_fit &lt;-<span class="st"> </span><span class="kw">ranger</span>(<span class="dt">formula =</span> Value <span class="op">~</span><span class="st"> </span>., </a>
+<a class="sourceLine" id="cb12-21" title="21">                      <span class="dt">data =</span> train <span class="op">%&gt;%</span><span class="st"> </span><span class="kw">select</span>(<span class="op">-</span>date))</a>
+<a class="sourceLine" id="cb12-22" title="22">  </a>
+<a class="sourceLine" id="cb12-23" title="23">  <span class="co"># Generate predictions for testing data</span></a>
+<a class="sourceLine" id="cb12-24" title="24">  test_pred &lt;-<span class="st"> </span>test <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb12-25" title="25"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">Pred =</span> <span class="kw">predict</span>(train_fit, <span class="dt">data =</span> test)<span class="op">$</span>predictions) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb12-26" title="26"><span class="st">    </span><span class="kw">select</span>(date, store_id, Value, Pred) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb12-27" title="27"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">ROCV_Iteration =</span> iteration)</a>
+<a class="sourceLine" id="cb12-28" title="28">  </a>
+<a class="sourceLine" id="cb12-29" title="29">  <span class="co"># Calculate MASE on testing data</span></a>
+<a class="sourceLine" id="cb12-30" title="30">  <span class="co"># help(mase, package = &quot;yardstick&quot;)</span></a>
+<a class="sourceLine" id="cb12-31" title="31">  test_mase &lt;-<span class="st"> </span>test_pred <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb12-32" title="32"><span class="st">    </span><span class="kw">group_by</span>(store_id) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb12-33" title="33"><span class="st">    </span><span class="kw">mase</span>(<span class="dt">truth =</span> Value, <span class="dt">estimate =</span> Pred) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb12-34" title="34"><span class="st">    </span><span class="kw">mutate</span>(<span class="dt">ROCV_Iteration =</span> iteration)</a>
+<a class="sourceLine" id="cb12-35" title="35">  </a>
+<a class="sourceLine" id="cb12-36" title="36">  <span class="co"># Capture memory used by training data and model object</span></a>
+<a class="sourceLine" id="cb12-37" title="37">  train_data_memory &lt;-<span class="st"> </span><span class="kw">object.size</span>(train)</a>
+<a class="sourceLine" id="cb12-38" title="38">  model_memory &lt;-<span class="st"> </span><span class="kw">object.size</span>(train_fit)</a>
+<a class="sourceLine" id="cb12-39" title="39">  </a>
+<a class="sourceLine" id="cb12-40" title="40">  <span class="co"># Return predictions and MASE</span></a>
+<a class="sourceLine" id="cb12-41" title="41">  out &lt;-<span class="st"> </span><span class="kw">list</span>(<span class="dt">predictions =</span> test_pred, </a>
+<a class="sourceLine" id="cb12-42" title="42">              <span class="dt">mase =</span> test_mase,</a>
+<a class="sourceLine" id="cb12-43" title="43">              <span class="dt">train_data_memory =</span> train_data_memory,</a>
+<a class="sourceLine" id="cb12-44" title="44">              <span class="dt">model_memory =</span> model_memory)</a>
+<a class="sourceLine" id="cb12-45" title="45">  </a>
+<a class="sourceLine" id="cb12-46" title="46">  <span class="kw">return</span>(out)</a>
+<a class="sourceLine" id="cb12-47" title="47">})</a>
+<a class="sourceLine" id="cb12-48" title="48"></a>
+<a class="sourceLine" id="cb12-49" title="49">end_iso &lt;-<span class="st"> </span><span class="kw">Sys.time</span>()</a></code></pre></div>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb13-1" title="1">time_iso &lt;-<span class="st"> </span>end_iso <span class="op">-</span><span class="st"> </span>start_iso</a></code></pre></div>
+</div>
+</div>
+<div id="comparison-of-methods" class="section level2">
+<h2>Comparison of methods</h2>
+<div id="mase-by-rocv-iteration" class="section level3">
+<h3>MASE by ROCV iteration</h3>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb14-1" title="1">global_rocv_mase &lt;-<span class="st"> </span><span class="kw">map</span>(global_models, <span class="cf">function</span>(m) {</a>
+<a class="sourceLine" id="cb14-2" title="2">  m[[<span class="st">&quot;mase&quot;</span>]]</a>
+<a class="sourceLine" id="cb14-3" title="3">}) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb14-4" title="4"><span class="st">  </span><span class="kw">bind_rows</span>() <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb14-5" title="5"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Method =</span> <span class="st">&quot;Global&quot;</span>)</a>
+<a class="sourceLine" id="cb14-6" title="6"></a>
+<a class="sourceLine" id="cb14-7" title="7">iso_rocv_mase &lt;-<span class="st"> </span><span class="kw">map</span>(iso_models, <span class="cf">function</span>(m) {</a>
+<a class="sourceLine" id="cb14-8" title="8">  m[[<span class="st">&quot;mase&quot;</span>]]</a>
+<a class="sourceLine" id="cb14-9" title="9">}) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb14-10" title="10"><span class="st">  </span><span class="kw">bind_rows</span>() <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb14-11" title="11"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Method =</span> <span class="st">&quot;Isolated&quot;</span>)</a>
+<a class="sourceLine" id="cb14-12" title="12"></a>
+<a class="sourceLine" id="cb14-13" title="13"><span class="kw">bind_rows</span>(global_rocv_mase, iso_rocv_mase) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb14-14" title="14"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> ROCV_Iteration, <span class="dt">y =</span> .estimate)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb14-15" title="15"><span class="st">  </span><span class="kw">facet_wrap</span>(<span class="op">~</span>store_id, <span class="dt">scales =</span> <span class="st">&quot;free_y&quot;</span>, <span class="dt">ncol =</span> <span class="dv">3</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb14-16" title="16"><span class="st">  </span><span class="kw">geom_line</span>(<span class="kw">aes</span>(<span class="dt">group =</span> Method, <span class="dt">color =</span> Method)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb14-17" title="17"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Comparison of MASE by store&quot;</span>,</a>
+<a class="sourceLine" id="cb14-18" title="18">       <span class="dt">subtitle =</span> <span class="st">&quot;Neither method is universally superior&quot;</span>,</a>
+<a class="sourceLine" id="cb14-19" title="19">       <span class="dt">x =</span> <span class="st">&quot;ROCV Iteration&quot;</span>,</a>
+<a class="sourceLine" id="cb14-20" title="20">       <span class="dt">y =</span> <span class="st">&quot;MASE&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb14-21" title="21"><span class="st">  </span><span class="kw">theme_bw</span>() </a></code></pre></div>
+<p><img src="/post/2020-07-26-bottom-level-forecasting-isolated-vs-global-ml_files/figure-html/unnamed-chunk-14-1.png" width="672" /></p>
+</div>
+<div id="total-training-time-in-minutes" class="section level3">
+<h3>Total training time (in minutes)</h3>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb15-1" title="1"><span class="kw">tibble</span>(</a>
+<a class="sourceLine" id="cb15-2" title="2">  <span class="dt">Global =</span>  <span class="kw">round</span>(time_global, <span class="dv">2</span>),</a>
+<a class="sourceLine" id="cb15-3" title="3">  <span class="dt">Isolated =</span>  <span class="kw">round</span>(time_iso, <span class="dv">2</span>)</a>
+<a class="sourceLine" id="cb15-4" title="4">)</a></code></pre></div>
+<pre><code>## # A tibble: 1 x 2
+##   Global    Isolated 
+##   &lt;drtn&gt;    &lt;drtn&gt;   
+## 1 1.67 mins 2.44 mins</code></pre>
+<p>In terms of training time, the global method is much faster.</p>
+</div>
+<div id="memory-used-to-store-training-data-in-mb" class="section level3">
+<h3>Memory used to store training data (in Mb)</h3>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb17-1" title="1">global_training_data_mem &lt;-<span class="st"> </span><span class="kw">map_dbl</span>(global_models, <span class="cf">function</span>(m) {</a>
+<a class="sourceLine" id="cb17-2" title="2">  m[[<span class="st">&#39;train_data_memory&#39;</span>]]</a>
+<a class="sourceLine" id="cb17-3" title="3">}) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb17-4" title="4"><span class="st">  </span><span class="kw">mean</span>()</a>
+<a class="sourceLine" id="cb17-5" title="5"></a>
+<a class="sourceLine" id="cb17-6" title="6">iso_training_data_mem &lt;-<span class="st"> </span><span class="kw">map_dbl</span>(iso_models, <span class="cf">function</span>(m) {</a>
+<a class="sourceLine" id="cb17-7" title="7">  m[[<span class="st">&#39;train_data_memory&#39;</span>]]</a>
+<a class="sourceLine" id="cb17-8" title="8">}) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb17-9" title="9"><span class="st">  </span><span class="kw">mean</span>()</a>
+<a class="sourceLine" id="cb17-10" title="10"></a>
+<a class="sourceLine" id="cb17-11" title="11"><span class="kw">tibble</span>(</a>
+<a class="sourceLine" id="cb17-12" title="12">  <span class="dt">Global =</span> global_training_data_mem<span class="op">/</span><span class="dv">1000000</span>,</a>
+<a class="sourceLine" id="cb17-13" title="13">  <span class="dt">Isolated =</span> iso_training_data_mem<span class="op">/</span><span class="dv">1000000</span></a>
+<a class="sourceLine" id="cb17-14" title="14">)</a></code></pre></div>
+<pre><code>## # A tibble: 1 x 2
+##   Global Isolated
+##    &lt;dbl&gt;    &lt;dbl&gt;
+## 1   12.0     1.21</code></pre>
+<p>In terms of training data memory usage, the isolated series method presents a lighter load.</p>
+</div>
+</div>
+<div id="ensembling" class="section level2">
+<h2>Ensembling</h2>
+<p>Ensembling typically produces more accurate and stable predictions. In this example, ensembling is defined as a simple average of the two methods.</p>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb19-1" title="1"><span class="co"># Predictions from global models</span></a>
+<a class="sourceLine" id="cb19-2" title="2">global_predictions &lt;-<span class="st"> </span><span class="kw">map</span>(global_models, <span class="cf">function</span>(m) {</a>
+<a class="sourceLine" id="cb19-3" title="3">  m[[<span class="st">&#39;predictions&#39;</span>]] <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb19-4" title="4"><span class="st">    </span><span class="kw">select</span>(date, store_id, Value, <span class="dt">Global_Pred =</span> Pred, ROCV_Iteration)</a>
+<a class="sourceLine" id="cb19-5" title="5">}) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb19-6" title="6"><span class="st">  </span><span class="kw">bind_rows</span>() </a>
+<a class="sourceLine" id="cb19-7" title="7"></a>
+<a class="sourceLine" id="cb19-8" title="8"><span class="co"># Predictions from isolated models</span></a>
+<a class="sourceLine" id="cb19-9" title="9">iso_predictions &lt;-<span class="st"> </span><span class="kw">map</span>(iso_models, <span class="cf">function</span>(m) {</a>
+<a class="sourceLine" id="cb19-10" title="10">  m[[<span class="st">&#39;predictions&#39;</span>]] <span class="op">%&gt;%</span><span class="st"> </span></a>
+<a class="sourceLine" id="cb19-11" title="11"><span class="st">    </span><span class="kw">select</span>(date, store_id, <span class="dt">Iso_Pred =</span> Pred, ROCV_Iteration)</a>
+<a class="sourceLine" id="cb19-12" title="12">}) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb19-13" title="13"><span class="st">  </span><span class="kw">bind_rows</span>() </a>
+<a class="sourceLine" id="cb19-14" title="14"></a>
+<a class="sourceLine" id="cb19-15" title="15"><span class="co"># Ensemble predictions via simple average</span></a>
+<a class="sourceLine" id="cb19-16" title="16">ensemble_predictions &lt;-<span class="st"> </span><span class="kw">inner_join</span>(</a>
+<a class="sourceLine" id="cb19-17" title="17">  global_predictions, </a>
+<a class="sourceLine" id="cb19-18" title="18">  iso_predictions, </a>
+<a class="sourceLine" id="cb19-19" title="19">  <span class="dt">by =</span> <span class="kw">c</span>(<span class="st">&quot;date&quot;</span>, <span class="st">&quot;store_id&quot;</span>, <span class="st">&quot;ROCV_Iteration&quot;</span>)</a>
+<a class="sourceLine" id="cb19-20" title="20">) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb19-21" title="21"><span class="st">  </span><span class="kw">mutate</span>(<span class="dt">Ens_Pred =</span> (Global_Pred <span class="op">+</span><span class="st"> </span>Iso_Pred)<span class="op">/</span><span class="dv">2</span>)</a></code></pre></div>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb20-1" title="1">ensemble_predictions <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb20-2" title="2"><span class="st">  </span><span class="kw">gather</span>(Method, Prediction, Global_Pred, Iso_Pred, Ens_Pred) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb20-3" title="3"><span class="st">  </span><span class="kw">group_by</span>(store_id, Method, ROCV_Iteration) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb20-4" title="4"><span class="st">  </span><span class="kw">mase</span>(<span class="dt">truth =</span> Value, <span class="dt">estimate =</span> Prediction) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb20-5" title="5"><span class="st">  </span><span class="kw">group_by</span>(Method) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb20-6" title="6"><span class="st">  </span><span class="kw">summarise</span>(<span class="dt">Mean_MASE =</span> <span class="kw">mean</span>(.estimate),</a>
+<a class="sourceLine" id="cb20-7" title="7">            <span class="dt">SD_MASE =</span> <span class="kw">sd</span>(.estimate)) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb20-8" title="8"><span class="st">  </span><span class="kw">gather</span>(Metric, Value, <span class="op">-</span>Method) <span class="op">%&gt;%</span></a>
+<a class="sourceLine" id="cb20-9" title="9"><span class="st">  </span><span class="kw">ggplot</span>(<span class="kw">aes</span>(<span class="dt">x =</span> Method, <span class="dt">y =</span> Value)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb20-10" title="10"><span class="st">  </span><span class="kw">facet_wrap</span>(<span class="op">~</span>Metric, <span class="dt">scales =</span> <span class="st">&quot;free_y&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb20-11" title="11"><span class="st">  </span><span class="kw">geom_col</span>(<span class="kw">aes</span>(<span class="dt">fill =</span> Method), <span class="dt">show.legend =</span> F) <span class="op">+</span></a>
+<a class="sourceLine" id="cb20-12" title="12"><span class="st">  </span><span class="kw">scale_fill_manual</span>(<span class="dt">values =</span> <span class="kw">c</span>(<span class="st">&quot;steelblue&quot;</span>, <span class="st">&quot;gray70&quot;</span>, <span class="st">&quot;gray70&quot;</span>)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb20-13" title="13"><span class="st">  </span><span class="kw">scale_y_continuous</span>(<span class="dt">breaks =</span> scales<span class="op">::</span><span class="kw">pretty_breaks</span>(<span class="dt">n =</span> <span class="dv">10</span>)) <span class="op">+</span></a>
+<a class="sourceLine" id="cb20-14" title="14"><span class="st">  </span><span class="kw">labs</span>(<span class="dt">title =</span> <span class="st">&quot;Ensembling shows better accuracy and stability over individual methods&quot;</span>) <span class="op">+</span></a>
+<a class="sourceLine" id="cb20-15" title="15"><span class="st">  </span><span class="kw">theme_bw</span>()</a></code></pre></div>
+<p><img src="/post/2020-07-26-bottom-level-forecasting-isolated-vs-global-ml_files/figure-html/unnamed-chunk-18-1.png" width="672" /></p>
+</div>
+<div id="conclusion" class="section level2">
+<h2>Conclusion</h2>
+<p>When training forecasting models using machine learning, the hierarchical strucutre of the data can be dealt with using an isolated series method, in which each bottom-level series is modeled in isolation, or a global method, in which all bottom-level series are concatenated to form a single training data set. The two methods offer strengths and weaknesses in terms of speed, memory usage, and accuracy. Finally, to improve overall accuracy and stability of the solution, ensembling can be used by taking a simple average of the two methods.</p>
+</div>
