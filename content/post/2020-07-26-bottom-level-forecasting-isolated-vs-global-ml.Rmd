@@ -25,16 +25,15 @@ knitr::opts_chunk$set(echo = TRUE, message = F, warning = F)
 
 ## Overview
 
-My best submission (top 6%) in the recent M5 Forecast - Accuracy Kaggle competition was an ensemble of two machine learning methods for bottom-level forecasting. 
-Each model on its own performed well (in the top 30%), but a simple ensemble via averaging produced a very strong submission.  The methods include:
+My best submission (top 6%) in the recent M5 Forecast - Accuracy Kaggle competition was an ensemble of two machine learning methods for bottom-level forecasting. Each method on its own performed well (in the top 30%), but a simple ensemble via averaging produced a very strong submission. The methods include:
 
-1. **Isolated series method**. The training data were split by product, resulting in over 30,000 series, and each product was modeled in isolation using a fast Random Forest.
+1. **Global method**. The training data were concatenated by store, resulting in 12 subsets of training data. Each subset contained approximately 2500 products. For each subset, product-level forecasts were made using a single XGBoost model applied to the entire subset.
 
-2. **Global method**. The training data were concatenated to form a single data set, and a single XGBoost model was applied to the entire training data.
+2. **Isolated series method**. The training data were split by product, resulting in over 30,000 series, and each product was modeled and forecasted in isolation using a fast Random Forest.
 
-Each model on its own performed well (in the top 30%), but a simple ensemble via averaging produced a very strong submission. This post describes these two approaches using a sample of data from the Kaggle competiton. The implementations are done in R. The (arbitrary) goal is to test the accuracy and stability of each approach using 14-day forecast periods.
+This post compares these two methods using a sample of data from the Kaggle competiton. The implementations are done in R using fast Random Forest algorithms for both methods. The data contain aggregated daily sales for each of the 12 store locations. Using the global method, all stores are represented in the training data and a single model is used for learning and forecasting. Using the isolated method, each store is modeled and forecasted in isolation. The goal in this post is to test the accuracy and stability of each method using 14-day forecast periods. Rolling origin cross validation is used for robust evaluation.
 
-## Packages
+## R packages
 
 ```{r}
 library(tidyverse)
@@ -42,7 +41,6 @@ library(aws.s3)
 library(rsample)
 library(yardstick)
 library(ranger)
-library(xgboost)
 ```
 
 ## Data
@@ -71,17 +69,17 @@ model_df %>%
 
 ## Rolling statistics of the target variable as features
 
-The functions below calculate the rolling 30-day mean and rolling 30-day standard deviation of the target variable (sales, represented by column `Value`). These rolling statistics are used as features in the predictive model. These functions are to be applied *within each ROCV iteration* to avoid data leakage. The rolling statistics are learned from the training data, and the values from the last training instance become the feature values for each of the testing instances. 
+The functions below calculate the rolling 30-day mean and rolling 30-day standard deviation of the target variable (sales, represented by column `Value`). These rolling statistics are used as features in the predictive model. These functions are to be applied *within each cross validation iteration* to avoid data leakage. The rolling statistics are learned from the training data, and the values from the last training instance become the feature values for each of the testing instances. 
 
 ```{r}
 # rolling standard deviation (default 30-day)
-rolling_sd <- function(x, lag = 30) {
-  zoo::rollapply(x, lag, sd, fill = NA, align = "right")
+rolling_sd <- function(x, window_size = 30) {
+  zoo::rollapply(x, window_size, sd, fill = NA, align = "right")
 }
 
 # rolling mean (default 30-day)
-rolling_mean <- function(x, lag = 30) {
-  zoo::rollmean(x, lag, fill = NA, align = "right")
+rolling_mean <- function(x, window_size = 30) {
+  zoo::rollmean(x, window_size, fill = NA, align = "right")
 }
 
 # function to apply rolling stats to training data to generate features
@@ -93,11 +91,11 @@ get_rolling_stats <- function(df) {
 }
 ```
 
-In my experience, rolling statistics generated from the target variable almost always improve the accuracy of forecasting when using a supervised machine learning approaches. The key is deciding the length of the sliding window (e.g. 7, 30, 60 days, etc.). Shorter windows (e.g. 7 days) capture short-term trends while larger windows capture long-term trends. The best approach is to experiment with various window sizes and choose one (or more) that minimize error in the cross validation experiment.
+In my experience, using these rolling statistics as features in a machine learning model usually improves forecast accuracy. The key is deciding the size of the sliding window (e.g. 7, 30, 60 days, etc.). Shorter windows (e.g. 7 days) capture short-term trends while larger windows capture long-term trends. The best approach is to experiment with various window sizes and evaluate using cross validation.
 
 ## Prepare rolling origin cross validation
 
-The basic CV strategy is rolling origin cross validation (ROCV). To keep computation fairly light, 9-fold ROCV is employed using the following configuration.
+The basic CV strategy is rolling origin cross validation (ROCV). To keep computation fairly light, 9-fold ROCV is deployed using the following configuration.
 
 ```{r}
 forecast_horizon <- 14
@@ -133,11 +131,7 @@ rocv_by_store <- map2(store_splits, names(store_splits), function(df,nm) {
 }) %>%
   bind_rows()
 
-# Concatenate within-store ROCV, then split by ROCV iteration
-rocv_by_iteration <- rocv_by_store %>%
-  split(.$Iteration) 
-
-rocv_by_iteration
+rocv_by_store
 ```
 
 ## Global method
@@ -146,16 +140,20 @@ The global forecasting method lumps all training data into a single data set. Th
 
 Because all stores are modeled together, this will result in two things: 1) larger training data per ROCV iteration, 2) shorter total training time since only 9 total models are fit in the ROCV experiment.
 
-The algorithm used in this post for the global method is Random Forest, although any supervised regression algorithm can be used as long as the data is formatted appropriately.
-
 ### Prepare training data
+
+```{r}
+# Customize the ROCV strategy so that each fold contains all stores
+rocv_by_iteration <- rocv_by_store %>%
+  split(.$Iteration) 
+```
 
 ```{r}
 global_training <- map(rocv_by_iteration, function(idx) {
   
   model_df <- map(idx$splits, function(split) {
     
-    # Use this for testing:
+    # Use this for debugging:
     #
     # idx <- rocv_by_iteration$`1`
     # split <- idx$splits[[1]]
@@ -263,11 +261,16 @@ start_iso <- Sys.time()
 
 iso_models <- map2(rocv_by_store$splits, rocv_by_store$Iteration, function(split, iteration) {
   
+  # Use this for debugging:
+  #
+  # split <- rocv_by_store$splits[[1]]
+  # iteration <- rocv_by_store$Iteration[[1]]
+  
   # Training data
   train <- analysis(split) %>% 
     get_rolling_stats()
   
-  # Pull last values for rolling statistics from training data
+  # Pull last values of rolling statistics from training data
   train_last_lags <- train %>% 
     filter(row_number() == max(row_number())) %>%
     select(roll_mean, roll_sd)
@@ -422,7 +425,7 @@ ensemble_predictions %>%
 
 ## Conclusion
 
-When training forecasting models using machine learning, the hierarchical strucutre of the data can be dealt with using an isolated series method, in which each bottom-level series is modeled in isolation, or a global method, in which all bottom-level series are concatenated to form a single training data set. The two methods offer strengths and weaknesses in terms of speed, memory usage, and accuracy. Finally, to improve overall accuracy and stability of the solution, ensembling can be used by taking a simple average of the two methods.
+When training forecasting models using machine learning, bottom-level forecasts can be achieved using an isolated series method, in which each bottom-level series is modeled in isolation, or a global method, in which all bottom-level series are concatenated to form a single training data set. The two methods offer strengths and weaknesses in terms of speed, memory usage, and accuracy. Finally, to improve overall accuracy and stability of the solution, ensembling can be used by taking a simple average of the two methods.
 
 
 
