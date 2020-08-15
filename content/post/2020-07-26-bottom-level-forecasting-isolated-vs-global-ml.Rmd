@@ -166,7 +166,7 @@ global_training <- map(rocv_by_iteration, function(idx) {
     
     # Pull last values for rolling statistics from training data
     # These are used as feature values in test set
-    train_last_lags <- train %>% 
+    train_last_lags <- train %>%
       filter(row_number() == max(row_number())) %>%
       select(roll_mean, roll_sd)
     

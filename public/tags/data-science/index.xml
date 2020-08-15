@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>Data Science on Abnormal Distributions</title>
+    <link>/tags/data-science/</link>
+    <description>Recent content in Data Science on Abnormal Distributions</description>
+    <generator>Hugo -- gohugo.io</generator>
+    <language>en-us</language>
+    <lastBuildDate>Sun, 09 Aug 2020 00:00:00 +0000</lastBuildDate>
+    
+	<atom:link href="/tags/data-science/index.xml" rel="self" type="application/rss+xml" />
+    
+    
+    <item>
+      <title>Three underrated data science skills</title>
+      <link>/post/2020/08/09/top-data-science-skills/</link>
+      <pubDate>Sun, 09 Aug 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/post/2020/08/09/top-data-science-skills/</guid>
+      <description>Dynamic expansion of skillsPersuasionEmpathyConclusionThis short post lists three critical data science skills that I feel don’t receive enough attention. Do a quick Google search for “top data science skills” and you will find a lot of conversation around programming, statistics, machine learning, and data visualization. Like many, in the earlier stages of my career I focused solely on developing these technical skills. To be clear, these are important skills that data scientists should strive to possess (to varying degrees).</description>
+    </item>
+    
+  </channel>
+</rss>
