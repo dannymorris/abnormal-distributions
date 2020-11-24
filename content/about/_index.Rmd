@@ -49,3 +49,11 @@ The subjects that interest me the most include (in no particular order):
 - Git
 - Docker
 - R Shiny
+
+## Data Science without a STEM Degree
+
+I am often asked how I got into data science without a STEM degree. My answer is usually split into two parts:
+
+1. Studying sociology inspired me to learn more about myself and society using data, analytics, experimentation, and critical thinking as the mechanisms.
+
+- One of my first undergraduate courses got me hooked on statistics, data visualization, and R programming. From that point on, I was fiercely motivated to learn more about these topics, spending at least 5-10 hours a week reading and developing new skills outside of my normal classwork. Through hard work and constant learning, I acquired the skills to become a data scientist.
