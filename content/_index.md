@@ -6,7 +6,7 @@ title: Home
 
 # Abnormal Distributions
 
-My name is Danny Morris and welcome to my website. I am a Data Scientist specializing in forecasting, machine learning, and solution engineering. My main tools are R, Python, and AWS. I love learning more than anything, so I launched this site to document my methodologies. I also love helping others, so I hope you find this content useful and inspiring.
+My name is Danny Morris and welcome to my personal website. I have built a career as a Data Scientist using my expertise in reproducible programming (R, SQL, Python), analytics methodologies, and technology. Looking ahead, my focus is on analytics leadership. I enjoy learning and writing, so I launched this site as a form of documentation. If you come across these pages, my hope is that you find something useful.
 
 This site is built with [blogdown](https://github.com/rstudio/blogdown) and deployed with [Netlify](https://www.netlify.com/).
 
