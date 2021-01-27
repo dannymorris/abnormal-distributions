@@ -53,40 +53,18 @@
   </url>
   
   <url>
+    <loc>/archive/object-detection-using-aws-sagemaker-and-gluoncv/</loc>
+    <lastmod>2019-12-07T00:00:00+00:00</lastmod>
+  </url>
+  
+  <url>
     <loc>/post/2019/12/07/object-detection-using-aws-sagemaker-and-gluoncv/</loc>
     <lastmod>2019-12-07T00:00:00+00:00</lastmod>
   </url>
   
   <url>
-    <loc>/post/2019/07/06/deploying-a-shiny-app-with-shiny-server-on-an-aws-ec2-instance/</loc>
-    <lastmod>2019-07-06T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/post/2019/07/06/deploying-a-plumber-api-on-aws-ec2-instance/</loc>
-    <lastmod>2019-07-06T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/post/2019/07/01/row-wise-min-and-max-values-in-a-sparse-matrix/</loc>
-    <lastmod>2019-07-01T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
     <loc>/post/2019/02/17/text-classification-using-text2vec/</loc>
     <lastmod>2019-02-17T00:00:00+00:00</lastmod>
-  </url>
-  
-  <url>
-    <loc>/tags/api/</loc>
-    <lastmod>2019-07-06T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>/categories/api/</loc>
-    <lastmod>2019-07-06T00:00:00+00:00</lastmod>
-    <priority>0</priority>
   </url>
   
   <url>
@@ -118,8 +96,14 @@
   </url>
   
   <url>
+    <loc>/archive/</loc>
+    <lastmod>2019-12-07T00:00:00+00:00</lastmod>
+    <priority>0</priority>
+  </url>
+  
+  <url>
     <loc>/categories/</loc>
-    <lastmod>2019-07-06T00:00:00+00:00</lastmod>
+    <lastmod>2020-07-23T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   
@@ -243,26 +227,8 @@
   </url>
   
   <url>
-    <loc>/tags/rcpp/</loc>
-    <lastmod>2019-07-01T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>/tags/shiny/</loc>
-    <lastmod>2019-07-06T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
-    <loc>/categories/shiny/</loc>
-    <lastmod>2019-07-06T00:00:00+00:00</lastmod>
-    <priority>0</priority>
-  </url>
-  
-  <url>
     <loc>/tags/</loc>
-    <lastmod>2019-07-06T00:00:00+00:00</lastmod>
+    <lastmod>2020-07-23T00:00:00+00:00</lastmod>
     <priority>0</priority>
   </url>
   

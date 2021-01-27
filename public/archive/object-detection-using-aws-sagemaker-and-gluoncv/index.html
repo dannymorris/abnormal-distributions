@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Object detection using AWS SageMaker and GluonCV  | Abnormal Distributions</title>
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/fonts.css" />
+    
+  </head>
+
+  <body>
+    <nav>
+    <ul class="menu">
+      
+      <li><a href="/">Home</a></li>
+      
+      <li><a href="/about/">About Me</a></li>
+      
+      <li><a href="/post/">All Posts</a></li>
+      
+      <li><a href="/categories/">By Topic</a></li>
+      
+    </ul>
+    <hr/>
+    </nav>
+
+<div class="article-meta">
+<h1><span class="title">Object detection using AWS SageMaker and GluonCV</span></h1>
+<h2 class="author">Danny Morris</h2>
+<h2 class="date">2019/12/07</h2>
+</div>
+
+<main>
+
+
+<p>This post briefly describes how I built an object detection model using AWS SageMaker and GluonCV to detect Blue Cross Blue Shield logos. Full code and notebooks can be found in the <a href="https://github.com/dannymorris/gluoncv-logo-detection">GitHub repo</a>.</p>
+
+<h3 id="collecting-and-preparing-training-images">Collecting and preparing training images</h3>
+
+<p>To collect images for training, I searched Google for &ldquo;bluecross blueshied logo&rdquo;, &ldquo;bluecross blueshield letter&rdquo;, &ldquo;bluecross blueshield building&rdquo;, &ldquo;bluecross blueshield shirt&rdquo;, &ldquo;bluecross blueshield event&rdquo;, &ldquo;bluecross blueshield shirt&rdquo;, and &ldquo;bluecross blueshield bus&rdquo;. The logos in the images varied in size, shape, angle, clarity, and background. I ended up with 400 images for training and validation. The raw, unlabeled images were stored in an S3 bucket</p>
+
+<p>To prepare the images for training, I used OpenCV to convert raw images to gray scale. The effectiveness of gray scale coversion is debatable, but I decided that I was only interesetd in capturing the shape of the logo without respect for color. The gray scale images were put into the S3 bucket.</p>
+
+<pre><code># Python function that accepts raw image S3 key and creates a gray scale copy
+def convert_to_gray(s3_key):
+    # defining s3 bucket object
+    s3 = boto3.client(&quot;s3&quot;)
+    bucket_name = &quot;bcbs-logo-training-images&quot;
+    # fetching object from bucket
+    file_obj = s3.get_object(Bucket=bucket_name, Key=s3_key)
+    # reading the file content in bytes
+    file_content = file_obj[&quot;Body&quot;].read()
+    # creating 1D array from bytes data range between[0,255]
+    np_array = np.fromstring(file_content, np.uint8)
+    # decoding array
+    image_np = cv2.imdecode(np_array, cv2.IMREAD_COLOR)
+    # converting image from RGB to Grayscale
+    gray = cv2.cvtColor(image_np, cv2.COLOR_BGR2GRAY)
+    return gray
+    
+gray_imgs = list(map(convert_to_gray, keys))
+</code></pre>
+
+<p>Here is an example training image with an angled logo.</p>
+
+<p><img src="/img/bcbs-logo-sample-gray.PNG" alt="" /></p>
+
+<h3 id="labeling-images-with-bounding-box">Labeling images with bounding box</h3>
+
+<p>AWS Ground Truth is a useful service for labeling training data. <a href="https://aws.amazon.com/getting-started/tutorials/build-training-datasets-amazon-sagemaker-ground-truth/">This article</a> walks through the basic steps to use Grouth Truth for image labeling. The result of Ground Truth is a &ldquo;manifest file&rdquo; that contains the S3 locations and bounding box annotations for the training images.</p>
+
+<p>Here is an example labeled image.</p>
+
+<p><img src="/img/bcbs-logo-sample-label.PNG" alt="" /></p>
+
+<h3 id="training">Training</h3>
+
+<p>To train the model, I launched a ml.t2.medium SageMaker Notebook instance and connected to a conda_mxnet_p36 kernel. Getting started with MXNet and GluonCV could not have been easier using the fully managed SageMaker notebooks and kernels.</p>
+
+<p>I elected to use the pre-trained weights from a <a href="https://arxiv.org/pdf/1704.04861.pdf">MobileNet SSD</a> network, while replacing the pre-trained output layer with a new output layer that predicts my custom class (BCBS logos). GluonCV includes MobileNet as one of its pre-trained models for object detection, making it very easy to get started with this network. MobileNets are lightweight neural networks for computer vision applications. They have significantly fewer parameters compared to popular models for similar applications, making them more efficient for training and prediction at the cost of minimal reduction in accuracy.</p>
+
+<p>I launched the training job on a single GPU instance (ml.p3.2xlarge).</p>
+
+<pre><code>mxnet_estimator = MXNet(entry_point = 'train_bcbs_logo_detection_ssd.py',
+                        source_dir = 'entry_point',
+                        role = role,
+                        train_instance_type = 'ml.p3.2xlarge',
+                        train_instance_count = 1,
+                        framework_version = '1.4.0', 
+                        py_version = 'py3')
+                        
+
+s3_train_data = 's3://bcbs-logo-training-images/gray_images'
+s3_label_data = 's3://bcbs-logo-training-images/gray_images/labels/bcbs-logo-labeling/manifests/output/'
+
+mxnet_estimator.fit({'train': s3_train_data, 'labels': s3_label_data})                       
+</code></pre>
+
+<h3 id="evaluation">Evaluation</h3>
+
+<p>Different loss functions can be used on a validation set to evaluate object detection models. For this application, I followed the recommendation of GluonCV and monitored the &ldquo;Smooth L1&rdquo; loss. This is a simple regression loss that compares the four numbers that make up the ground truth bounding box to the four numbers that make up the predicted bounding box. In my final training job, I obtained a Smooth L1 loss of 0.599 after 19 epochs.</p>
+
+<p><img src="/img/bcbs-logo-inference-shirt.PNG" alt="" /></p>
+
+<p><img src="/img/bcbs-logo-inference-member-card.PNG" alt="" /></p>
+
+<p><img src="/img/bcbs-logo-inference-building.PNG" alt="" /></p>
+
+<h3 id="deployment">Deployment</h3>
+
+<p>SageMaker makes it easy to deploy models as endpoints with just a few lines of code. In a production setting, this model endpoint could be invoked directly or placed behind an API Gateway.</p>
+
+<pre><code>mxnet_estimator.deploy(
+    instance_type='ml.m5.xlarge', 
+    initial_instance_count=1,
+    endpoint_name=&quot;bcbs-logo-detection&quot;
+)
+</code></pre>
+
+</main>
+
+  <footer>
+  <script src="//yihui.name/js/math-code.js"></script>
+<script async src="//mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML"></script>
+
+<script async src="//yihui.name/js/center-img.js"></script>
+
+
+<script async src="https://www.googletagmanager.com/gtag/js?id=UA-143402170-1"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'UA-143402170-1');
+</script>
+
+
+  
+  <hr/>
+  <a href="https://github.com/dannymorris">GitHub</a> | <a href="https://www.linkedin.com/in/drmorris87/">LinkedIn</a> | <a href="mailto:drmorris87@outlook.com">Email</a>
+  
+  </footer>
+  </body>
+</html>
+
