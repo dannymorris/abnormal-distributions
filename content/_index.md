@@ -6,7 +6,7 @@ title: Home
 
 # Abnormal Distributions
 
-My name is Danny Morris and welcome to my personal website. Though I have built a successful career as a Data Scientist, my focus moving forward is on analytics leadership. I enjoy learning, teaching, and writing, so I launched this site as a form of documentation. If you come across these pages, my hope is that you find something useful.
+My name is Danny Morris and welcome to my personal website! Though I have built a successful career as a Data Scientist, my focus moving forward is on analytics leadership. I enjoy learning, teaching, and writing, so I launched this site as a form of documentation. If you come across these pages, my hope is that you find something useful.
 
 This site is built with [blogdown](https://github.com/rstudio/blogdown) and deployed with [Netlify](https://www.netlify.com/).
 
