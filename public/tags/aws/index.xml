@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>AWS on Abnormal Distributions</title>
@@ -6,11 +6,7 @@
     <description>Recent content in AWS on Abnormal Distributions</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 23 Jul 2020 00:00:00 +0000</lastBuildDate>
-    
-	<atom:link href="/tags/aws/index.xml" rel="self" type="application/rss+xml" />
-    
-    
+    <lastBuildDate>Thu, 23 Jul 2020 00:00:00 +0000</lastBuildDate><atom:link href="/tags/aws/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Distributed machine learning on AWS using the SageMaker SDK in Python</title>
       <link>/post/2020/07/23/distributed-machine-learning-training-on-aws/</link>
@@ -37,7 +33,7 @@ This post outlines the basic steps required to run a distributed machine learnin
       
       <guid>/archive/object-detection-using-aws-sagemaker-and-gluoncv/</guid>
       <description>This post briefly describes how I built an object detection model using AWS SageMaker and GluonCV to detect Blue Cross Blue Shield logos. Full code and notebooks can be found in the GitHub repo.
-Collecting and preparing training images To collect images for training, I searched Google for &amp;ldquo;bluecross blueshied logo&amp;rdquo;, &amp;ldquo;bluecross blueshield letter&amp;rdquo;, &amp;ldquo;bluecross blueshield building&amp;rdquo;, &amp;ldquo;bluecross blueshield shirt&amp;rdquo;, &amp;ldquo;bluecross blueshield event&amp;rdquo;, &amp;ldquo;bluecross blueshield shirt&amp;rdquo;, and &amp;ldquo;bluecross blueshield bus&amp;rdquo;.</description>
+Collecting and preparing training images To collect images for training, I searched Google for &amp;ldquo;bluecross blueshied logo&amp;rdquo;, &amp;ldquo;bluecross blueshield letter&amp;rdquo;, &amp;ldquo;bluecross blueshield building&amp;rdquo;, &amp;ldquo;bluecross blueshield shirt&amp;rdquo;, &amp;ldquo;bluecross blueshield event&amp;rdquo;, &amp;ldquo;bluecross blueshield shirt&amp;rdquo;, and &amp;ldquo;bluecross blueshield bus&amp;rdquo;. The logos in the images varied in size, shape, angle, clarity, and background.</description>
     </item>
     
     <item>
@@ -47,7 +43,7 @@ Collecting and preparing training images To collect images for training, I searc
       
       <guid>/post/2019/12/07/object-detection-using-aws-sagemaker-and-gluoncv/</guid>
       <description>This post briefly describes how I built an object detection model using AWS SageMaker and GluonCV to detect Blue Cross Blue Shield logos. Full code and notebooks can be found in the GitHub repo.
-Collecting and preparing training images To collect images for training, I searched Google for &amp;ldquo;bluecross blueshied logo&amp;rdquo;, &amp;ldquo;bluecross blueshield letter&amp;rdquo;, &amp;ldquo;bluecross blueshield building&amp;rdquo;, &amp;ldquo;bluecross blueshield shirt&amp;rdquo;, &amp;ldquo;bluecross blueshield event&amp;rdquo;, &amp;ldquo;bluecross blueshield shirt&amp;rdquo;, and &amp;ldquo;bluecross blueshield bus&amp;rdquo;.</description>
+Collecting and preparing training images To collect images for training, I searched Google for &amp;ldquo;bluecross blueshied logo&amp;rdquo;, &amp;ldquo;bluecross blueshield letter&amp;rdquo;, &amp;ldquo;bluecross blueshield building&amp;rdquo;, &amp;ldquo;bluecross blueshield shirt&amp;rdquo;, &amp;ldquo;bluecross blueshield event&amp;rdquo;, &amp;ldquo;bluecross blueshield shirt&amp;rdquo;, and &amp;ldquo;bluecross blueshield bus&amp;rdquo;. The logos in the images varied in size, shape, angle, clarity, and background.</description>
     </item>
     
   </channel>

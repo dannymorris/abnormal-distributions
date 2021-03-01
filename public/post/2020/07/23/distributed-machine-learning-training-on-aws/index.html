@@ -15,8 +15,6 @@
       
       <li><a href="/">Home</a></li>
       
-      <li><a href="/about/">About Me</a></li>
-      
       <li><a href="/post/">All Posts</a></li>
       
       <li><a href="/categories/">By Topic</a></li>
@@ -32,25 +30,17 @@
 </div>
 
 <main>
-
-
 <h2 id="overview">Overview</h2>
-
 <p>I recently participated in the <a href="https://www.kaggle.com/c/m5-forecasting-accuracy">M5 Forecasting - Accuracy</a> Kaggle competition to forecast daily sales for over 30,000 WalMart products. I had some initial struggles processing the data and training models in-memory, so I eventually turned to running distributed training jobs using AWS SageMaker.</p>
-
 <p>This post outlines the basic steps required to run a distributed machine learning job on AWS using the SageMaker SDK in Python. The steps are broken down into the following:</p>
-
 <ul>
 <li>Distributed data storage in S3</li>
 <li>Distributed training using multiple EC2 instances</li>
 <li>Publishing a model</li>
 <li>Executing a Batch Transform job to generate predictions</li>
 </ul>
-
 <h2 id="distributed-data-storage">Distributed data storage</h2>
-
 <p>For distributed machine learning on AWS, training data can be stored in S3 as a single file or distributed across multiple files. An example of distributed data storage is shown below.</p>
-
 <pre><code>bucket
 └───train
 │   │   FOODS_1_001_CA_1_evaluation.csv
@@ -60,24 +50,16 @@
 │   |   FOODS_1_001_CA_1_evaluation.csv
 │   |   FOODS_1_001_CA_2_evaluation.csv
 |   |   ...
-</code></pre>
-
-<p>Note: Some SageMaker algorithms (e.g. XGBoost) require no header row (i.e. no column names).</p>
-
+</code></pre><p>Note: Some SageMaker algorithms (e.g. XGBoost) require no header row (i.e. no column names).</p>
 <h2 id="distributed-training">Distributed training</h2>
-
 <p>Distributed training is possible whether or not the data is stored in a single file or multiple files. If it&rsquo;s stored in a single file, the training computations are distributed across the number of EC2 instances specified by the user. If the data is distributed, SageMaker can handle the data in one of two ways: 1) Fully number of EC2 instances specified by the user. Option 1 leads to slower training times and greater memory consumption, yet it likely produces more accurate models since each EC2 instance is seeing the full training data. Option 2 is faster and memory efficient yet slightly less accurate since each EC2 instance only sees a portion of the total training data.</p>
-
 <p>The following code sample launches a training job using the <code>create_training_job</code> function with the following specifications:</p>
-
 <ul>
 <li>XGBoost built-in SageMaker algorithm</li>
 <li>15 EC2 instances forming the disributed compute environment</li>
 <li>Distributed training data in S3 is split equally across the 15 EC2 instances (i.e. each EC2 sees roughly 1/15th of the total training data) for fast training times.</li>
 </ul>
-
 <p>Note: I recommend running this code in a fully managed SageMaker Notebook instance (e.g. ml.t2.medium) for easy setup.</p>
-
 <pre><code>#############
 # Libraries #
 #############
@@ -186,12 +168,8 @@ if status == 'Failed':
     message = sm.describe_training_job(TrainingJobName=sharded_job)['FailureReason']
     print('Training failed with the following error: {}'.format(message))
     raise Exception('Training job failed')
-</code></pre>
-
-<h2 id="publish-model">Publish model</h2>
-
+</code></pre><h2 id="publish-model">Publish model</h2>
 <p>Once the training job has successfully completed, publish the model using the <code>create_model</code> function in the SageMaker SDK. The location of the S3 bucket that contains your model artifacts and and the registry path of the image that contains inference code are required to publish the model. Since the XGBoost algorithm is a built-in SageMaker algorithm, the image containing inference code is fully managed by AWS.</p>
-
 <pre><code>##################
 ## Create model ##
 ##################
@@ -216,12 +194,8 @@ sharded_model_response = sm.create_model(
         'ModelDataUrl': model_url
     }
 )
-</code></pre>
-
-<h2 id="launch-batch-transform">Launch Batch Transform</h2>
-
+</code></pre><h2 id="launch-batch-transform">Launch Batch Transform</h2>
 <p>Batch Transform is a service for generating predictions for many records at once, such as a single CSV file with many rows. This is akin to batch data processing. Once the model is published, use the <code>create_transform_job</code> function to launch a Batch Transform inference job. The results (predictions) are stored in S3.</p>
-
 <pre><code>###############################
 ## Configure batch transform ##
 ###############################
@@ -277,10 +251,7 @@ while(True):
         raise Exception('Transform job failed') 
     print(&quot;Transform job is still in status: &quot; + status)    
     time.sleep(30) 
-</code></pre>
-
-<h2 id="conclusion">Conclusion</h2>
-
+</code></pre><h2 id="conclusion">Conclusion</h2>
 <p>Using AWS SageMaker, distributed data storage and distributed training eliminates the challenges of dealing with data and computations that are too large for in-memory processing.</p>
 
 </main>

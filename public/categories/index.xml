@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Categories on Abnormal Distributions</title>
@@ -6,56 +6,7 @@
     <description>Recent content in Categories on Abnormal Distributions</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 23 Jul 2020 00:00:00 +0000</lastBuildDate>
-    
-	<atom:link href="/categories/index.xml" rel="self" type="application/rss+xml" />
-    
-    
-    <item>
-      <title>AWS</title>
-      <link>/categories/aws/</link>
-      <pubDate>Thu, 23 Jul 2020 00:00:00 +0000</pubDate>
-      
-      <guid>/categories/aws/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>Analytics</title>
-      <link>/categories/analytics/</link>
-      <pubDate>Thu, 18 Jun 2020 00:00:00 +0000</pubDate>
-      
-      <guid>/categories/analytics/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>Classification</title>
-      <link>/categories/classification/</link>
-      <pubDate>Sun, 07 Jun 2020 00:00:00 +0000</pubDate>
-      
-      <guid>/categories/classification/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>Cluster Analysis</title>
-      <link>/categories/cluster-analysis/</link>
-      <pubDate>Thu, 18 Jun 2020 00:00:00 +0000</pubDate>
-      
-      <guid>/categories/cluster-analysis/</guid>
-      <description></description>
-    </item>
-    
-    <item>
-      <title>Computer Vision</title>
-      <link>/categories/computer-vision/</link>
-      <pubDate>Sat, 07 Dec 2019 00:00:00 +0000</pubDate>
-      
-      <guid>/categories/computer-vision/</guid>
-      <description></description>
-    </item>
-    
+    <lastBuildDate>Sun, 09 Aug 2020 00:00:00 +0000</lastBuildDate><atom:link href="/categories/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Data Science</title>
       <link>/categories/data-science/</link>
@@ -84,11 +35,20 @@
     </item>
     
     <item>
-      <title>Predictive Modeling</title>
-      <link>/categories/predictive-modeling/</link>
-      <pubDate>Wed, 17 Jun 2020 00:00:00 +0000</pubDate>
+      <title>R</title>
+      <link>/categories/r/</link>
+      <pubDate>Sun, 26 Jul 2020 00:00:00 +0000</pubDate>
       
-      <guid>/categories/predictive-modeling/</guid>
+      <guid>/categories/r/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>AWS</title>
+      <link>/categories/aws/</link>
+      <pubDate>Thu, 23 Jul 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/categories/aws/</guid>
       <description></description>
     </item>
     
@@ -102,11 +62,47 @@
     </item>
     
     <item>
-      <title>R</title>
-      <link>/categories/r/</link>
-      <pubDate>Sun, 26 Jul 2020 00:00:00 +0000</pubDate>
+      <title>Analytics</title>
+      <link>/categories/analytics/</link>
+      <pubDate>Thu, 18 Jun 2020 00:00:00 +0000</pubDate>
       
-      <guid>/categories/r/</guid>
+      <guid>/categories/analytics/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Cluster Analysis</title>
+      <link>/categories/cluster-analysis/</link>
+      <pubDate>Thu, 18 Jun 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/categories/cluster-analysis/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Predictive Modeling</title>
+      <link>/categories/predictive-modeling/</link>
+      <pubDate>Wed, 17 Jun 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/categories/predictive-modeling/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Classification</title>
+      <link>/categories/classification/</link>
+      <pubDate>Sun, 07 Jun 2020 00:00:00 +0000</pubDate>
+      
+      <guid>/categories/classification/</guid>
+      <description></description>
+    </item>
+    
+    <item>
+      <title>Computer Vision</title>
+      <link>/categories/computer-vision/</link>
+      <pubDate>Sat, 07 Dec 2019 00:00:00 +0000</pubDate>
+      
+      <guid>/categories/computer-vision/</guid>
       <description></description>
     </item>
     

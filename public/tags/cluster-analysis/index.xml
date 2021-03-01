@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Cluster Analysis on Abnormal Distributions</title>
@@ -6,11 +6,7 @@
     <description>Recent content in Cluster Analysis on Abnormal Distributions</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Thu, 18 Jun 2020 00:00:00 +0000</lastBuildDate>
-    
-	<atom:link href="/tags/cluster-analysis/index.xml" rel="self" type="application/rss+xml" />
-    
-    
+    <lastBuildDate>Thu, 18 Jun 2020 00:00:00 +0000</lastBuildDate><atom:link href="/tags/cluster-analysis/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Segmenting Medicare STAR measures based on time-based trends in the distributions of contract scores</title>
       <link>/post/2020/06/18/clustering-medicare-star-measures-using-time-based-statistics/</link>

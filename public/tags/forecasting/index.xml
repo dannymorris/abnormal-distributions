@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes" ?>
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Forecasting on Abnormal Distributions</title>
@@ -6,11 +6,7 @@
     <description>Recent content in Forecasting on Abnormal Distributions</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>en-us</language>
-    <lastBuildDate>Sun, 26 Jul 2020 00:00:00 +0000</lastBuildDate>
-    
-	<atom:link href="/tags/forecasting/index.xml" rel="self" type="application/rss+xml" />
-    
-    
+    <lastBuildDate>Sun, 26 Jul 2020 00:00:00 +0000</lastBuildDate><atom:link href="/tags/forecasting/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>Bottom-level forecasting using machine learning: Isolated series vs. Global methods</title>
       <link>/post/2020/07/26/bottom-level-forecasting-isolated-series-vs-cross-sectional/</link>
